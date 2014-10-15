@@ -7,7 +7,7 @@ from functions import setweights
 from AtlasStyle import *
 
 #InputDir = "/Users/wbhimji/Data/BosonTaggingMVA_ForJoeGregory/Data/v4/"
-InputDir = "/Users/wbhimji/Data/BoostedBosonNtuples/CamKt12LCTopoSplitFilteredMu67SmallR0YCut9/"
+InputDir = "/Users/wbhimji/Data/BoostedBosonNtuples/TopoSplitFilteredMu67SmallR0YCut9/"
 treename = 'physics'
 SetAtlasStyle()
 ROOT.gROOT.LoadMacro("MakeROCBen.C")
@@ -25,12 +25,12 @@ branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']
 AlgBranchStubs = ['_pt','_eta', '_phi', '_m', '_Tau2','_Tau1', '_WIDTH', '_SPLIT12', '_PlanarFlow']
 #'_ZCUT12', '_Dip12', '_DipExcl12', '_ActiveArea', '_VoronoiArea', '_Angularity', '_QW', '_PullMag', '_PullPhi', '_Pull_C00', '_Pull_C01', '_Pull_C10', '_Pull_C11', '_QJetMAvg', '_QJetMVol', '_TJetMAvg', '_TJetMVol', '_Aplanarity', '_Sphericity', '_ThrustMin', '_ThrustMaj', '_FoxWolf20', '_CBeta2', '_JetCharge', '_MassDropSplit', '_MassDropRecl', '_MassRatio', '_ys12']
 branches.extend(['jet_' + Algorithm + branch for branch in AlgBranchStubs]) 
-plotbranchstubs = ['_m', '_Tau2','_Tau1', '_SPLIT12', '_PlanarFlow']
+plotbranchstubs = ['_m','_Tau1', '_SPLIT12', '_PlanarFlow','_Tau21','_massdrop', '_yt']
 plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs]
 
 print "Reading in files"
 for typename in ['sig','bkg']:
-    filename = InputDir + Algorithm + "_1_inclusive_" + typename  + ".root"
+    filename = InputDir + Algorithm.replace('CamKt12LC','') + "_1_inclusive_" + typename  + ".root"
     files[typename] = TFile(filename)
     trees[typename] = files[typename].Get(treename)
     
@@ -55,13 +55,17 @@ for typename in ['sig','bkg']:
     histname = histnamestub + '_m'
     hist[histname] = TH1D(histname,'Mass',200,0.,300.*1000)
     histname = histnamestub + '_SPLIT12'
-    hist[histname] = TH1D(histname,'Split12',100,0.,100.*1000)
+    hist[histname] = TH1D(histname,'Split12',200,0.,100.*1000)
     histname = histnamestub + '_Tau1'
-   # hist[histname] = TH1D(histname,'Mass Drop',200,0.1,1.)
     hist[histname] = TH1D(histname,'Tau1',200,0.2,0.5)
     histname = histnamestub + '_Tau2'
-    hist[histname] = TH1D(histname,'Tau2',200,0.2,0.5)
-#    hist[histname] = TH1D(histname,'Momentum Balance',200,0.2,1.)
+    hist[histname] = TH1D(histname,'Tau2',200,0.2,0.4)
+    histname = histnamestub + '_Tau21'
+    hist[histname] = TH1D(histname,'Tau21',200,0.2,1.5)
+    histname = histnamestub + '_massdrop'
+    hist[histname] = TH1D(histname,'Mass Drop',200,0.1,1.)
+    histname = histnamestub + '_yt'
+    hist[histname] = TH1D(histname,'Momentum Balance',200,0.2,1.)
     histname = histnamestub + '_PlanarFlow'
     hist[histname] = TH1D(histname,'Planar Flow',200,0.2,1.)
   
@@ -110,8 +114,8 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
     else:
         roc[branchname].SetLineColor(index+2)
         roc[branchname].Draw("same")
-        leg2.AddEntry(roc[branchname],branchname,"l");
-        leg2.Draw()
+    leg2.AddEntry(roc[branchname],branchname,"l");
+    leg2.Draw()
 
 canv1.SaveAs(Algorithm + '-Tim2-VariablePlot.pdf')
 canv2.SaveAs(Algorithm + '-Tim2-ROCPlot.pdf')
