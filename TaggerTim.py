@@ -32,6 +32,11 @@ treename = 'physics'
 SetAtlasStyle()
 ROOT.gROOT.LoadMacro("MakeROCBen.C")
 ROOT.gROOT.LoadMacro("SignalPtWeight.C")
+ROOT.gROOT.LoadMacro("SignalPtWeight2.C")
+ROOT.gROOT.LoadMacro("NEvents.C")
+
+
+
 
 trees,files,weights,runs = ( {} for i in range(4) ) 
 
@@ -96,6 +101,7 @@ plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs]
 
 
 print "Reading in files"
+loadedweights = False
 for typename in ['sig','bkg']:
     if Algorithm.find('Mu67') != -1:
         filename = InputDir + Algorithm.replace('CamKt12LC','') +  "_1_inclusive_" + typename  + ".root"
@@ -103,7 +109,12 @@ for typename in ['sig','bkg']:
         filename = InputDir + Algorithm.replace('CamKt12LC','') +  "_2_inclusive_" + typename  + ".root"
     elif Algorithm.find('Trim') != -1:
         filename = InputDir + Algorithm.replace('AntiKt10LC','') + "_3_inclusive_" + typename  + ".root"
+        
+    if not loadedweights:
+        loadweights(filename[:filename.find("inclusive")+9]+".ptweights",20)
+        loadedweights = True
 
+    loadEvents(filename[:-5]+".nevents")
     files[typename] = TFile(filename)
     trees[typename] = files[typename].Get(treename)
     
@@ -124,7 +135,7 @@ for typename in ['sig','bkg']:
 hist = {}
 xbins = [100*1000,225*1000,250*1000,275*1000,300*1000,335*1000,350*1000,400*1000,450*1000,500*1000,600*1000,700*1000,800*1000,900*1000,1000*1000]
 
-varBinPt = True
+varBinPt = False
 
 if plotTruth:
     Algorithm = AlgorithmTruth
@@ -180,15 +191,15 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
         print "plotting " + datatype + branchname
         histname =  datatype + "_" + branchname
         varexp = 'jet_' + branchname + '[leadGroomedIndex] >>' + histname
-        cutstringandweight = cutstring +' * mc_event_weight '#* mc_channel_number'
+        cutstringandweight = cutstring +' * mc_event_weight * 1/NEvents(mc_channel_number) '
             # +  ' * mc_event_weight ' put back (SignalPtWeight(jet_CamKt12Truth_pt[leadTruthIndex]))
             # eed to put back the weights here fron runnumer
-        if datatype == 'bkg':
-            cutstringandweight+= '* k_factor * filter_eff * xs '
+        if datatype == 'bkg': # does nevents only get applied to bkg or bkg and signal?
+            cutstringandweight+= '* filter_eff * xs  '#* k_factor 
+        elif datatype == 'sig':
+            cutstringandweight+= '* filter_eff * SignalPtWeight2(jet_CamKt12Truth_pt) '
         trees[datatype].Draw(varexp,cutstringandweight)
         hist[histname].Sumw2(); hist[histname].Scale(1.0/hist[histname].Integral());
-        #hist[histname].Scale(weightmc)
-
             
         hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(3005); hist[histname].SetMarkerSize(0);
         hist[histname].SetXTitle(branchname.replace(Algorithm,""))
