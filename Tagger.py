@@ -4,8 +4,11 @@ from functions import setweights
 #import root_numpy
 from AtlasStyle import *
 
-InputDir = "/Users/wbhimji/Data/BosonTaggingMVA_ForJoeGregory/Data/v4/"
-treename = 'NTupLepW'
+#InputDir = "/Users/wbhimji/Data/BosonTaggingMVA_ForJoeGregory/Data/v4/"
+InputDir = "/home/tim/boosted_samples/BoostedBosonMerging/TopoTrimmedPtFrac5SmallR30trimmed_8TeV/"
+InputDir = "/home/tim/boosted_samples/BoostedBosonMerging/TopoSplitFilteredMu67SmallR0YCut9filtered_8TeV/"
+#treename = 'NTupLepW'
+treename = 'physics'
 SetAtlasStyle()
 ROOT.gROOT.LoadMacro("MakeROCBen.C")
 ROOT.gROOT.LoadMacro("SignalPtWeight.C")
