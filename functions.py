@@ -140,3 +140,97 @@ def getFileIDNumber(inputdir):
         return '3'
     else:
         return ''
+
+
+plotbranches = {}
+branches = []
+pt_high = 3500000
+pt_low = 0
+algorithm = ''
+truth = False
+bins = []
+signal_file = ''
+background_file = ''
+ptweights_file = ''
+fileid = ''
+
+def getPlotBranches():
+    return plotbranches
+def getBranches():
+    return branches
+def getPtRange():
+    return [pt_low, pt_high]
+def getAlgorithm():
+    return algorithm
+def getTruth():
+    return truth
+def getBins():
+    return bins
+def getSignalFile():
+    return signal_file
+def getBackgroundFile():
+    return background_file
+def getPtWeightsFile():
+    return ptweights_file
+def getFileID():
+    return fileid
+
+def readXML(configfile):
+    """Read in the variable names and histogram limits froms the config xml file."""
+    
+    import xml.etree.ElementTree as ET
+    xmlTree = ET.parse(configfile)
+    root = xmlTree.getroot()
+
+    varName = ''
+    global plotbranches
+    global branches
+    for child in root.findall('varName'):
+        varName = child.get('name')
+        stub = child.find('stub').text
+        branches.append(stub)
+        if child.find('plot').text == "True":
+            maxV = float(child.find('maxValue').text)
+            minV = float(child.find('minValue').text)
+            plotbranches[varName] = [stub,minV,maxV]
+
+    global pt_high
+    global pt_low
+    for cstring in root.findall('cutstring'):
+        for x in list(cstring):
+            if x.tag == 'pt_high':
+                pt_high = float(x.get('name'))
+            elif x.tag == 'pt_low':
+                pt_low = float(x.get('name'))
+    
+    global algorithm 
+    for algo in root.findall('Algorithm'):
+        algorithm = algo.get('name')
+
+    global truth
+    for tr in root.findall('plotTruth'):
+        if tr.get('name') == 'True':
+            truth = True
+        
+        
+    global bins
+    for ptw in root.findall('ptBins'):
+        for val in list(ptw):
+            if val.tag == 'bin':
+                bins.append(float(val.get('name')))
+            
+    global signal_file
+    for folder in root.findall('signal'):
+        signal = folder.get('name')
+
+    global bkg_file
+    for folder in root.findall('background'):
+        bkg_file = folder.get('name')
+
+    global ptweights_file
+    for folder in root.findall('ptweights'):
+        ptweights_file = folder.get('name')
+
+    global fileid
+    for f in root.findall('fileid'):
+        fileid = f.get('name')

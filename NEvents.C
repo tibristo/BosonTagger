@@ -20,7 +20,6 @@ void loadEvents(std::string filename)
       getline(ss,run,',');
       std::string ev;
       getline(ss,ev,',');
-      std::cout << ev << std::endl;
       nevents[atol(run.c_str())] = atof(ev.c_str());
     }
   f.close();
