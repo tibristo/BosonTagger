@@ -216,8 +216,12 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
     leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
     hist['sig_' + branchname].Rebin(10)
     hist['bkg_' + branchname].Rebin(10)
-    hist['sig_' + branchname].Draw("e")
-    hist['bkg_' + branchname].Draw("esame")
+    if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
+        hist['sig_' + branchname].Draw("e")
+        hist['bkg_' + branchname].Draw("esame")
+    else:
+        hist['bkg_' + branchname].Draw("e")
+        hist['sig_' + branchname].Draw("esame")
     leg1.Draw()
     #if branchname.find('pt') != -1:
     #    fn.pTReweight(hist['sig_'+branchname], hist['bkg_'+branchname], Algorithm+fileid, varBinPt, xbins)
