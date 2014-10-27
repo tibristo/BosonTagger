@@ -4,7 +4,7 @@
     <pt_high name = "350000"></pt_high>
     <pt_low name = "200000"></pt_low>
   </cutstring>
-  <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut4">
+  <Algorithm name = "AntiKt10LCTopoTrimmedPtFrac5SmallR30">
   </Algorithm>
   <plotTruth name = "False">
   </plotTruth>

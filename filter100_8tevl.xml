@@ -77,13 +77,13 @@
   </varName>
   <varName name="Mass Drop">
   <stub>_massdrop</stub>
-  <plot>True</plot>
+  <plot>False</plot>
     <maxValue>1.0</maxValue>
     <minValue>0.1</minValue>
   </varName>
   <varName name="Momentum Balance">
   <stub>_yt</stub>
-  <plot>True</plot>
+  <plot>False</plot>
     <maxValue>1.0</maxValue>
     <minValue>0.2</minValue>
   </varName>

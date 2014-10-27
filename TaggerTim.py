@@ -18,6 +18,8 @@ parser.add_argument('config', help = 'required config file')
 parser.add_argument('-i','--inputfile',help = 'the input file')
 parser.add_argument('-a', '--algorithm',help='The algorithm: filter100, filter67 or trimmed')
 parser.add_argument('-f','--fileid', help = 'An optional fileid to append to the name of the output file')
+parser.add_argument('--pthigh', help = 'Optional high pT cut in GeV')
+parser.add_argument('--ptlow', help = 'Optional low pT cut in GeV')
 
 args = parser.parse_args()
 
@@ -62,9 +64,6 @@ else:
     plotTruth = False
 
 
-fileid = ''
-if args.fileid:
-    fileid = args.fileid
 
 config_f = ''
 if args.config:
@@ -79,10 +78,17 @@ if Algorithm == '':
 if Algorithm == '':
     print "No algorithm given in command line or config file!"
     sys.exit(0)
-if fileid == '':
+
+fileid = ''
+if args.fileid:
+    fileid = args.fileid
+else:
     fileid = fn.getFileID()
 
-ptrange = fn.getPtRange()
+if args.pthigh and args.ptlow:
+    ptrange = [float(args.ptlow)*1000., float(args.pthigh)*1000.]
+else:
+    ptrange = fn.getPtRange()
 # default
 cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2)"
 
@@ -202,7 +208,8 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
             cutstringandweight += '* filter_eff * SignalPtWeight2(jet_CamKt12Truth_pt) '
         hist[histname].Sumw2();
         trees[datatype].Draw(varexp,cutstringandweight)
-        hist[histname].Scale(1.0/hist[histname].Integral());
+        if hist[histname].Integral() > 0.0:
+            hist[histname].Scale(1.0/hist[histname].Integral());
             
         hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(3005); hist[histname].SetMarkerSize(0);
         hist[histname].SetXTitle(branchname.replace(Algorithm,""))
@@ -237,14 +244,14 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
     leg2.AddEntry(roc[branchname],branchname,"l");
     leg2.Draw()
 
-canv1.SaveAs(Algorithm + fileid + '-Tim2-VariablePlot.pdf')
+canv1.SaveAs('plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf')
 # this gives much higher quality .pngs than if you do canv.SaveAs(xyz.png)
-cmd = 'convert -verbose -density 150 -trim ' + Algorithm + fileid + '-Tim2-VariablePlot.pdf -quality 100 -sharpen 0x1.0 '+ Algorithm + fileid +'-Tim2-VariablePlot.png'
+cmd = 'convert -verbose -density 150 -trim plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf -quality 100 -sharpen 0x1.0 plots/'+ Algorithm + fileid +'-Tim2-VariablePlot.png'
 p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 p.wait()
 
-canv2.SaveAs(Algorithm + fileid + '-Tim2-ROCPlot.pdf')
-cmd = 'convert -verbose -density 150 -trim ' + Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 '+ Algorithm + fileid +'-Tim2-ROCPlot.png'
+canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.pdf')
+cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
 p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 p.wait()
 
