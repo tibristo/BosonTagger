@@ -1,0 +1,22 @@
+Tagger.py
+Makes plots (using ROOT) of single variables and their performance as taggers
+
+WriteCSV.py
+Just writes the data (with some cuts) (using root_numpy) into csv [This stage should not exist (integrated with above or use rootpy in the below)
+
+TaggerMVA.py
+This runs an MVA in scikit
+
+
+TaggerTim.py
+Similar to Tagger.py, but takes in extra parameters and has more functionality.  Run as follows:
+python TaggerTim.py configfile.xml [-i inputFolder] [-a algorithm (full name or filtermu100, filtermu67, trimmed)] [-f output file id] [--pthigh=x] [--ptlow=y]
+
+Most of these are optional but should be defined here or in the config file.  If they are defined here they will overide those in the config file.
+Note that pt high/ low defined in the config file must be in MeV, but in the command line in GeV - this is stupid and I should fix it!
+There is a method in functions.py that reads in the xml settings, so you can check this for further information.
+
+The pT weighting is done using a file read in with the extension .ptweights.  It contains 3 entries per line -> low edge of that pT range, the background entry and the signal entry.  These can be combined to create reweighting histograms in the range 0-3.5 TeV with up to 200 bins.
+
+An example of how one would run this code:
+python TaggerTim.py filter100_14tev.xml -i /home/tim/boosted_samples/BoostedBosonMerging/weights_v3/TopoSplitFilteredMu100SmallR30YCut4ca12_14tev_weighted_v2/ -a filtermu100 -f 14tev_250_500 --pthigh=500 --ptlow=250
