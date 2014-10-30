@@ -5,6 +5,9 @@
     <pt_low name = "200000"></pt_low>
   </cutstring>
   <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut4">
+    <AlgorithmString>C/A R=1.2, split-filtered jets</AlgorithmString>
+    <AlgorithmSettings>#mu=1.0, R_{sub}=0.3, y_{cut}=0.04</AlgorithmSettings>
+    <Energy>14</Energy>
   </Algorithm>
   <plotTruth name = "False">
   </plotTruth>

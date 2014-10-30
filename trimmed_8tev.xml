@@ -5,6 +5,9 @@
     <pt_low name = "200000"></pt_low>
   </cutstring>
   <Algorithm name = "AntiKt10LCTopoTrimmedPtFrac5SmallR30">
+    <AlgorithmString>AntiKt R=1.0, trimmed jets</AlgorithmString>
+    <AlgorithmSettings>p_{T} fraction 5\%, R_{sub}=0.3</AlgorithmSettings>
+    <Energy>8</Energy>
   </Algorithm>
   <plotTruth name = "False">
   </plotTruth>

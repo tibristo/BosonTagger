@@ -1,3 +1,4 @@
+import ROOT
 def setweights(weights):
     # right now we are not applying the k-factors, the first set of xs weights are in pb
     weights['signal'] = 1.0 * 1.000000 * (1.0/1.0) # * 1.00 
@@ -153,7 +154,9 @@ signal_file = ''
 background_file = ''
 ptweights_file = ''
 fileid = ''
-
+algorithmString = ''
+algorithmSettings = ''
+energy = ''
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -162,6 +165,10 @@ def getPtRange():
     return [pt_low, pt_high]
 def getAlgorithm():
     return algorithm
+def getAlgorithmString():
+    return algorithmString
+def getAlgorithmSettings():
+    return algorithmSettings
 def getTruth():
     return truth
 def getBins():
@@ -174,6 +181,8 @@ def getPtWeightsFile():
     return ptweights_file
 def getFileID():
     return fileid
+def getE():
+    return energy
 
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
@@ -204,8 +213,22 @@ def readXML(configfile):
                 pt_low = float(x.get('name'))
     
     global algorithm 
+    global algorithmString
+    global algorithmSettings
+    global energy
     for algo in root.findall('Algorithm'):
         algorithm = algo.get('name')
+        aset = algo.find('AlgorithmSettings')
+        astr = algo.find('AlgorithmString')
+        aE = algo.find('Energy')
+        if not astr is None:
+            algorithmString = algo.find('AlgorithmString').text
+        if not aset is None:
+            algorithmSettings = algo.find('AlgorithmSettings').text
+        if not aE is None:
+            energy = algo.find('Energy').text
+        else:
+            energy = '14'
 
     global truth
     for tr in root.findall('plotTruth'):
@@ -234,3 +257,54 @@ def readXML(configfile):
     global fileid
     for f in root.findall('fileid'):
         fileid = f.get('name')
+
+
+def addLatex(algo, algosettings, ptrange, E):
+    from ROOT import TLatex 
+    texw = TLatex();
+    texw.SetNDC();
+    texw.SetTextSize(0.045);
+    texw.SetTextFont(72);
+    texw.DrawLatex(0.6,0.88,"ATLAS");
+    
+    p = TLatex();
+    p.SetNDC();
+    p.SetTextFont(42);
+    p.SetTextSize(0.045);
+    p.SetTextColor(ROOT.kBlack);
+    p.DrawLatex(0.71,0.88,"Internal Simulation");
+
+    p = TLatex();
+    p.SetNDC();
+    p.SetTextFont(42);
+    p.SetTextSize(0.035);
+    p.SetTextColor(ROOT.kBlack);
+    p.DrawLatex(0.65,0.64,"#sqrt{s} = "+str(E)+" TeV");
+    
+    p2 = TLatex();
+    p2.SetNDC();
+    p2.SetTextFont(42);
+    p2.SetTextSize(0.035);
+    p2.SetTextColor(ROOT.kBlack);
+    p2.DrawLatex(0.65,0.82,algo);
+    
+    p2 = TLatex();
+    p2.SetNDC();
+    p2.SetTextFont(42);
+    p2.SetTextSize(0.035);
+    p2.SetTextColor(ROOT.kBlack);
+    p2.DrawLatex(0.65,0.76,algosettings);
+    
+    p3 = TLatex();
+    p3.SetNDC();
+    p3.SetTextFont(42);
+    p3.SetTextSize(0.035);
+    p3.SetTextColor(ROOT.kBlack);
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000));
+
+def drawHists(hist1, hist2):
+    hist1.SetMaximum(hist1.GetMaximum()*1.2)
+    hist1.Draw("e")
+    hist1.Draw("hist same")
+    hist2.Draw("e same")
+    hist2.Draw("hist same")
