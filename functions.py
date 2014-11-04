@@ -157,6 +157,8 @@ fileid = ''
 algorithmString = ''
 algorithmSettings = ''
 energy = ''
+nvtx = 999
+nvtxlow = 0
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -183,6 +185,11 @@ def getFileID():
     return fileid
 def getE():
     return energy
+def getNvtx():
+    return nvtx
+def getNvtxLow():
+    return nvtxlow
+
 
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
@@ -258,8 +265,16 @@ def readXML(configfile):
     for f in root.findall('fileid'):
         fileid = f.get('name')
 
+    global nvtx
+    global nvtxlow
+    for vxp in root.findall('nvtx'):
+        for v in list(vxp):
+            if v.tag == 'high':
+                nvtx = int(v.text)
+            elif v.tag == 'low':
+                nvtxlow = int(v.text)
 
-def addLatex(algo, algosettings, ptrange, E):
+def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
@@ -300,7 +315,7 @@ def addLatex(algo, algosettings, ptrange, E):
     p3.SetTextFont(42);
     p3.SetTextSize(0.035);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000));
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000) + ', '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
 def drawHists(hist1, hist2):
     hist1.SetMaximum(hist1.GetMaximum()*1.2)

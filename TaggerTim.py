@@ -9,7 +9,10 @@ import subprocess
 import os
 from array import array
 
+
+
 from AtlasStyle import *
+gROOT.SetBatch(True)
 STUB = 0
 MINX = 1
 MAXX = 2
@@ -21,6 +24,8 @@ parser.add_argument('-a', '--algorithm',help='The algorithm: filter100, filter67
 parser.add_argument('-f','--fileid', help = 'An optional fileid to append to the name of the output file')
 parser.add_argument('--pthigh', help = 'Optional high pT cut in GeV')
 parser.add_argument('--ptlow', help = 'Optional low pT cut in GeV')
+parser.add_argument('--nvtx', help = 'Upper cut on number of primary vertices')
+parser.add_argument('--nvtxlow', help = 'Lower cut on number of primary vertices')
 
 args = parser.parse_args()
 
@@ -94,12 +99,27 @@ varpath += fileid +'/'
 if not os.path.exists(varpath):
     os.makedirs(varpath)
 
+# define cuts on the pt
 if args.pthigh and args.ptlow:
     ptrange = [float(args.ptlow)*1000., float(args.pthigh)*1000.]
 else:
     ptrange = fn.getPtRange()
+
+# set cut on the number of primary vertices
+nvtx = 999 # default is no cut, also set to 999 in functions.py as default
+if args.nvtx:
+    nvtx = int(args.nvtx)
+else:
+    nvtx = int(fn.getNvtx())
+nvtxlow = 0
+if args.nvtxlow:
+    nvtxlow = int(args.nvtxlow)
+else:
+    nvtxlow = int(fn.getNvtxLow())
+
+print 'nvtx: ' + str(nvtx)
 # default
-cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2)"
+cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) * (vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+")"
 
 # default
 branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']
@@ -150,7 +170,6 @@ sigtmp = ''
 for f in fileslist:
     if signalFile == '' and f.endswith("sig.root"):
         signalFile = InputDir+'/'+f
-        print f
     elif backgroundFile == '' and f.endswith("bkg.root"):
         backgroundFile = InputDir+'/'+f
     if f.endswith("sig.nevents"):
@@ -253,7 +272,7 @@ for index, branchname in enumerate(Algorithm + branch for branch in plotbranchst
     leg1.Draw()
     #if branchname.find('pt') != -1:
     #    fn.pTReweight(hist['sig_'+branchname], hist['bkg_'+branchname], Algorithm+fileid, varBinPt, xbins)
-    fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),ptrange, fn.getE())
+    fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),ptrange, fn.getE(), [nvtxlow, nvtx])
     p = canv1.cd(index+1).Clone()
     tc = TCanvas(branchname)
     p.SetPad(0,0,1,1) # resize
