@@ -1,8 +1,8 @@
 from ROOT import * 
 import functions as fn
 #from numpy import *
-#import root_numpy
-#import pandas as pd
+import root_numpy
+import pandas as pd
 import sys
 import argparse
 import subprocess
@@ -56,7 +56,7 @@ fn.setrunnumbers(runs)
 # read in config file
 fn.readXML(config_f)
 
-writecsv= False
+writecsv= True
 Algorithm = ''
 setTruth = False
 plotTruth = False
