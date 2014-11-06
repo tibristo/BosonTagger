@@ -10,6 +10,7 @@ import time
 from sklearn.metrics import roc_curve, auc
 import itertools
 
+<<<<<<< HEAD
 print 'Loading training data ...'
 
 Algorithm = 'CamKt12LCTopoSplitFilteredMu67SmallR0YCut9'
@@ -21,6 +22,16 @@ r =np.random.rand(data_train.shape[0])
 
 plt.figure(1)
   #  Y_train = data_train['label'][r<0.9]
+=======
+def main():
+    print 'Loading training data ...'
+    data_train = pd.read_csv('csv/CamKt12LCTopoSplitFilteredMu100SmallR30YCut414tev_350_500_vxp_0_99-merged.csv')
+    r =np.random.rand(data_train.shape[0])
+        	#Algorithm = 'AKT10LCTRIM530'
+    
+    plt.figure(1)
+    Y_train = data_train['label'][r<0.9]
+>>>>>>> 544644bcb21df47f0b0a4534534531ef152d0a91
 #    W_train = data_train['weight'][r<0.9]
    # Y_valid = data_train['label'][r>=0.9]
 #    W_valid = data_train['weight'][r>=0.9]
