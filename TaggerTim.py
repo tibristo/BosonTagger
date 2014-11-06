@@ -1,6 +1,6 @@
 from ROOT import * 
 import functions as fn
-#from numpy import *
+from numpy import *
 import root_numpy
 import pandas as pd
 import sys
@@ -191,13 +191,18 @@ for typename in ['sig','bkg']:
     
     #ROOT numpy not working with The Rest for some reason
     if writecsv == True:
-        numpydata = root_numpy.root2array(filename,treename,branches,cutstring)
+        numpydata = root_numpy.root2array(filename,'physics',branches,cutstring)
         numpydata = pd.DataFrame(numpydata)
+
+        numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
         if typename == 'sig': 
             numpydata['label']=1 
+            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
+
         else: 
             numpydata['label']=0 
-        numpydata.to_csv(typename+'.csv')
+            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
+        #numpydata.hist(bins=20,grid=False,histtype='step',label=typename)
 
 loadEvents(eventsFileSig)
 loadEvents(eventsFileBkg)

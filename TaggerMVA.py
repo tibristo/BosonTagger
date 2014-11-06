@@ -12,7 +12,7 @@ import itertools
 
 def main():
     print 'Loading training data ...'
-    data_train = pd.read_csv('merged.csv')
+    data_train = pd.read_csv('csv/CamKt12LCTopoSplitFilteredMu100SmallR30YCut414tev_350_500_vxp_0_99-merged.csv')
     r =np.random.rand(data_train.shape[0])
         	#Algorithm = 'AKT10LCTRIM530'
     
