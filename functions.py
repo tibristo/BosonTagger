@@ -323,3 +323,48 @@ def drawHists(hist1, hist2):
     hist1.Draw("hist same")
     hist2.Draw("e same")
     hist2.Draw("hist same")
+
+
+
+
+def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
+    # adapted from here: http://www.desy.de/~hperrey/root/GraphRoutines.h.html
+    import ROOT
+    import copy
+    # finds the Y value in a graph corresponding to a given X value as closely as possible
+    # returns negative point number, if the point is not within a certain percentage of x
+    # (percentage determined by Epsilon parameter)
+    # uses the Eval() method of the tgraph to interpolate (linearly) between data points
+    # (after the existance of data points in the region has been veryfied)
+    PointNumber =0
+    x = ROOT.Double()
+    y = ROOT.Double()
+    pGraph.GetPoint(0,x,y);
+    delta = ROOT.TMath.Abs(pX-x);
+    for i in range (0,pGraph.GetN()):
+        # loop over points
+        x1 = ROOT.Double()
+        y1 = ROOT.Double()
+        pGraph.GetPoint(i,x1,y1);
+        # check if this points is closer to the x value we are looking for
+        if (ROOT.TMath.Abs(pX-x1)<delta):
+            # remember point
+            delta = ROOT.TMath.Abs(pX-x1)
+            x = x1;y=y1;PointNumber=i
+    # warn if delta exceeds a certain percentage of x
+    if ((ROOT.TMath.Abs(pX * Epsilon)) < ROOT.TMath.Abs(delta)):
+            if (pWarn):
+                print " Warning: Requested Y Value for point " +str(pX)
+                print "          but only found point at " + str(x)
+                print " (difference of " + str( ROOT.TMath.Abs(delta/ pX)) + "%)"
+            PointNumber = -1 * PointNumber;
+   # ok, we have data points in the region of interest (or warned the user otherwise), now interpolate
+    if (pInterpolate):
+            # we need to sort the graph in order to use the Eval() method.
+            # better use a copy before messing around with the graph...
+            Copy = copy.deepcopy(pGraph)#.Clone();
+            Copy.Sort();
+            y = Copy.Eval(pX);
+            Copy.Delete()
+    pY = copy.deepcopy(y)
+    return PointNumber, pY

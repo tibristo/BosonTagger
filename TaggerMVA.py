@@ -11,10 +11,11 @@ from sklearn.metrics import roc_curve, auc
 import itertools
 
 def main():
-    Algorithm = 'CamKt12LCTopoSplitFilteredMu67SmallR0YCut9'
+    #Algorithm = 'CamKt12LCTopoSplitFilteredMu67SmallR0YCut9'
+    Algorithm = 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut414tev_350_500_vxp_0_99'
     print 'Loading training data ...'
 
-    data_train = pd.read_csv(Algorithm+'merged.csv')   
+    data_train = pd.read_csv('csv/'+Algorithm+'-merged.csv')   
     r =np.random.rand(data_train.shape[0])
     
     #Set label and weight vectors - and drop any unwanted tranining one
