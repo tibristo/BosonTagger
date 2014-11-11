@@ -1,0 +1,168 @@
+******************
+Algorithm: pruned_CaRcutFactor50Zcut10_14tev.xml
+Rejection: 0.933010746559
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut10_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut10_Lily.xml
+Rejection: 0.996901128231
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut10_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut10_nc29.xml
+Rejection: 0.992796067097
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut10_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut10_Note.xml
+Rejection: 0.96210319418
+Variable: AntiKt10LCTopoPrunedCaRcutFactor50Zcut10_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut15_14tev.xml
+Rejection: 0.931283038466
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut15_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut15_Lily.xml
+Rejection: 0.996631753477
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut15_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: pruned_CaRcutFactor50Zcut15_nc29.xml
+Rejection: 0.992369680015
+Variable: CamKt12LCTopoPrunedCaRcutFactor50Zcut15_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut0_14tev.xml
+Rejection: 0.88434157234
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut0_Tau21
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut0_Lily.xml
+Rejection: 0.996871061925
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut0_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut0_nc29.xml
+Rejection: 0.993322938558
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut0_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut12_14tev.xml
+Rejection: 0.938915073614
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut12_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut12_Lily.xml
+Rejection: 0.9957457438
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut12_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut12_nc29.xml
+Rejection: 0.991337205676
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut12_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut15_14tev.xml
+Rejection: 0.945151577986
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut15_Lily.xml
+Rejection: 0.995578598563
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut15_nc29.xml
+Rejection: 0.990393662177
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut4_14tev.xml
+Rejection: 0.884313955249
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_Tau21
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut4_Lily.xml
+Rejection: 0.996149680024
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut4_nc29.xml
+Rejection: 0.992330946075
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut4_Note.xml
+Rejection: 0.914566608304
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut9_14tev.xml
+Rejection: 0.918620576396
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut9_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut9_Lily.xml
+Rejection: 0.995850666464
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut9_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu100_cut9_nc29.xml
+Rejection: 0.991387136505
+Variable: CamKt12LCTopoSplitFilteredMu100SmallR30YCut9_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: filter_mu67_cut9_Note.xml
+Rejection: 0.959129284171
+Variable: CamKt12LCTopoSplitFilteredMu67SmallR0YCut9_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: trimmed_PtFrac5SmallR20_14tev.xml
+Rejection: 0.928952324935
+Variable: CamKt12LCTopoTrimmedPtFrac5SmallR20_m
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: trimmed_PtFrac5SmallR30_Lily.xml
+Rejection: 0.996344084412
+Variable: AntiKt10LCTopoTrimmedPtFrac5SmallR30_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: trimmed_PtFrac5SmallR30_nc29.xml
+Rejection: 0.993186732704
+Variable: AntiKt10LCTopoTrimmedPtFrac5SmallR30_pt
+Mass min: 0.0
+Mass max: 1000000.0
+******************
+Algorithm: trimmed_PtFrac5SmallR30_Note.xml
+Rejection: 0.940849223445
+Variable: AntiKt10LCTopoTrimmedPtFrac5SmallR30_m
+Mass min: 0.0
+Mass max: 1000000.0
