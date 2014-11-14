@@ -142,9 +142,9 @@ def getFileIDNumber(inputdir):
     else:
         return ''
 
-
+tree = ''
 plotbranches = {}
-branches = []
+branches = {}
 pt_high = 3500000
 pt_low = 0
 algorithm = ''
@@ -159,6 +159,7 @@ algorithmSettings = ''
 energy = ''
 nvtx = 999
 nvtxlow = 0
+ptreweightflag = True
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -189,7 +190,10 @@ def getNvtx():
     return nvtx
 def getNvtxLow():
     return nvtxlow
-
+def getTree():
+    return tree
+def getPtReweightFlag():
+    return ptreweightflag
 
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
@@ -204,11 +208,16 @@ def readXML(configfile):
     for child in root.findall('varName'):
         varName = child.get('name')
         stub = child.find('stub').text
-        branches.append(stub)
+        jetVariable = True
+        if child.find('jetVariable') is not None:
+            if child.find('jetVariable').text == "False":
+                jetVariable = False
+                print varName
+        branches[varName] = [stub, jetVariable]
         if child.find('plot').text == "True":
             maxV = float(child.find('maxValue').text)
             minV = float(child.find('minValue').text)
-            plotbranches[varName] = [stub,minV,maxV]
+            plotbranches[varName] = [stub,jetVariable,minV,maxV]
 
     global pt_high
     global pt_low
@@ -273,6 +282,9 @@ def readXML(configfile):
                 nvtx = int(v.text)
             elif v.tag == 'low':
                 nvtxlow = int(v.text)
+    global tree
+    for t in root.findall('treename'):
+        tree = t.get('name')
 
 def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     from ROOT import TLatex 
