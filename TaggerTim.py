@@ -17,14 +17,15 @@ STUB = 0
 MINX = 2
 MAXX = 3
 
-def writePlots(Algorithm, fileid, canv1, canv2):
+def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     '''
-    Write plots to file - png/ pdf
+    Write plots of variables and ROCs to file - png/ pdf
     Keyword args:
     Algorithm -- name of algorithm being used.
     fileid -- file identifier from config file
     canv1 -- TCanvas of variables to be saved
     canv2 -- TCanvas of ROC curve
+    writeROC -- Flag indicating if ROC plots should be drawn in addition to variable plots
     '''
 
     canv1.SaveAs('plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf')
@@ -32,12 +33,29 @@ def writePlots(Algorithm, fileid, canv1, canv2):
     cmd = 'convert -verbose -density 150 -trim plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf -quality 100 -sharpen 0x1.0 plots/'+ Algorithm + fileid +'-Tim2-VariablePlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
-
+    
+    if not writeROC:
+        return
+    
     canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.pdf')
     cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
 
+
+def writePlotsToROOT(Algorithm, fileid, hist):
+    '''
+    Write plots to a ROOT file instead of png/pdf
+    Keyword args:
+    Algorithm -- Algorithm name
+    fileid -- Identifier for output file
+    hist -- dictionary of histograms
+    '''
+    fo = TFile.Open('plots/'+Algorithm+fileid+'.root','RECREATE')
+    for h in hist.keys():
+        if hist[h].Integral() != 0:
+            hist[h].Write()
+    fo.Close()
 
 def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = ""):
     '''
@@ -66,7 +84,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
     for h in hist.keys():
         hist[h].Reset()
     
+    # dict containing all of the ROC curves
     roc={}
+    # bool that is set to false if no ROC curves are drawn - this will happen if any 
+    # hist added to the roc is empty
+    writeROC = False
     maxrej = 0
     maxrejvar = ''
     #set up the cutstring/ selection to cut on the correct jet masses
@@ -115,8 +137,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
                 hist[histname].SetXTitle(plotreverselookup[branchname])
             hist[histname].SetYTitle("Normalised Entries")
 
-        #Make ROC Curves before rebinning 
-        MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname])
+        #Make ROC Curves before rebinning, but only if neither of the samples are zero
+        if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
+            MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname])
+            writeROC = True
 
 
 
@@ -143,8 +167,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
-        #hist['sig_' + branchname].Rebin(10)
-        #hist['bkg_' + branchname].Rebin(10)
+        hist['sig_' + branchname].Rebin(10)
+        hist['bkg_' + branchname].Rebin(10)
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -163,11 +187,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
             tc.SaveAs(varpath+branchname+".png")
         # plot the ROC curves
         canv2.cd()
-        if index==0:
+        if index==0 and roc[branchname].Integral() != 0:# and hist[branchname].Integral()>0:
             roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
             roc[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
             roc[branchname].Draw("al")        
-        else:
+        elif roc[branchname].Integral() != 0:
             roc[branchname].SetLineColor(index+2)
             roc[branchname].Draw("same")
         # legend for the roc curve
@@ -175,8 +199,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         leg2.Draw()
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
-        writePlots(Algorithm, fileid, canv1, canv2)
-
+        writePlots(Algorithm, fileid, canv1, canv2, writeROC)
+        writePlotsToROOT(Algorithm, fileid, hist)
     # return the variable with the maximum background rejection
     return maxrej, maxrejvar
 
@@ -196,6 +220,7 @@ def main(args):
     parser.add_argument('--ptreweighting', help = 'Apply pT reweighting')
     parser.add_argument('--saveplots', help = 'Apply pT reweighting')
     parser.add_argument('--tree', help = 'Name of tree in input file')
+    parser.add_argument('--channelnumber', help = 'RunNumber/ mc_channel_number to use for selection')
 
     args = parser.parse_args()
 
@@ -315,8 +340,13 @@ def main(args):
         if args.saveplots == 'false' or args.saveplots == 'False' or args.saveplots == 'off':
             saveplots = False
 
+    # this is if we are making selection on only one channel number
+    if not args.channelnumber:
+        channelcut = ''
+    else:
+        channelcut = ' * (mc_channel_number == '+str(args.channelnumber)+')'
     # default selection string
-    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) * (vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+")"
+    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) * (vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
 
 
     # configuration for each variable to plot - axis ranges, titles
@@ -462,7 +492,7 @@ def main(args):
   
     # canvas for histogram plots
     canv1 = TCanvas("canv1")
-    canv1.Divide(3,3)
+    canv1.Divide(3,4)
     # canvas for ROC curves
     canv2 = TCanvas("canv2")
     canv2.cd()
