@@ -160,6 +160,8 @@ energy = ''
 nvtx = 999
 nvtxlow = 0
 ptreweightflag = True
+lumi = 1.0
+
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -194,10 +196,13 @@ def getTree():
     return tree
 def getPtReweightFlag():
     return ptreweightflag
+def getLumi():
+    return lumi
 
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
-    
+    # TODO: add try catch statements incase values are not well defined (for example floats being ill-defined as a string)
+ 
     import xml.etree.ElementTree as ET
     xmlTree = ET.parse(configfile)
     root = xmlTree.getroot()
@@ -285,6 +290,10 @@ def readXML(configfile):
     global tree
     for t in root.findall('treename'):
         tree = t.get('name')
+
+    global lumi
+    for l in root.findall('lumi'):
+        lumi = float(l.get('name'))
 
 def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     from ROOT import TLatex 

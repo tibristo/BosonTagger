@@ -57,7 +57,7 @@ def writePlotsToROOT(Algorithm, fileid, hist):
             hist[h].Write()
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = ""):
+def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -75,6 +75,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
     saveplots -- whether or not to write out plots to file
     mass_min -- Mass window minimum
     mass_max -- Mass window maximum
+    scaleLumi -- luminosity scale factor
 
     Returns:
     Background rejection at 50% signal efficiency using the ROC curve and variable used to achieve maximum rejection.
@@ -127,7 +128,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
             trees[datatype].Draw(varexp,cutstringandweight)
             # if the histogram is not empty then normalise it 
             if hist[histname].Integral() > 0.0:
+                if scaleLumi != 1:
+                    hist[histname].Scale(scaleLumi);
                 hist[histname].Scale(1.0/hist[histname].Integral());
+
+                    
             
             # set up the axes titles and colours/ styles
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
@@ -221,6 +226,7 @@ def main(args):
     parser.add_argument('--saveplots', help = 'Apply pT reweighting')
     parser.add_argument('--tree', help = 'Name of tree in input file')
     parser.add_argument('--channelnumber', help = 'RunNumber/ mc_channel_number to use for selection')
+    parser.add_argument('--lumi', help = 'Luminosity scale factor')
 
     args = parser.parse_args()
 
@@ -345,6 +351,10 @@ def main(args):
         channelcut = ''
     else:
         channelcut = ' * (mc_channel_number == '+str(args.channelnumber)+')'
+    
+    lumi = 1.0
+    if not args.lumi:
+        lumi = fn.getLumi()
     # default selection string
     cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) * (vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
 
@@ -518,7 +528,7 @@ def main(args):
         m_max = m[1]
         # run the analysis for mass range
         rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max))
-        records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
+        records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n', lumi)
         if rej > max_rej:
             max_rej = rej
             maxrejvar = rejvar
