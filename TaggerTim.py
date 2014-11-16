@@ -8,6 +8,7 @@ import argparse
 import subprocess
 import os
 from array import array
+from cpickle import pickle
 
 
 
@@ -130,7 +131,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
                     hist[histname].Scale(scaleLumi);
-                hist[histname].Scale(1.0/hist[histname].Integral());
+                else:
+                    hist[histname].Scale(1.0/hist[histname].Integral());
 
                     
             
@@ -523,18 +525,22 @@ def main(args):
     maxrejvar = ''
     maxrejm_min = 0
     maxrejm_max = 0
+    totalrejection = []
     for m in masses:
         m_min = m[0]
         m_max = m[1]
         # run the analysis for mass range
         rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
+        totalrejection.append([rej, rejvar])
         if rej > max_rej:
             max_rej = rej
             maxrejvar = rejvar
             maxrejm_min = m_min
             maxrejm_max = m_max
     records.close()
+    # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
+    pickle.dump(totalrejection, open("tot_rej.p","wb"))
     return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
 if __name__ == '__main__':
