@@ -527,8 +527,8 @@ def main(args):
         m_min = m[0]
         m_max = m[1]
         # run the analysis for mass range
-        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max))
-        records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n', lumi)
+        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
+        records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
         if rej > max_rej:
             max_rej = rej
             maxrejvar = rejvar
