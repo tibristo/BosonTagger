@@ -1,10 +1,28 @@
 import TaggerTim
-from cpickle import pickle
+import cPickle as pickle
 import ROOT
-paths = []
-configs = []
-fileids = []
+import sys
+import subprocess
 
+base_dir = '/home/tim/boosted_samples/BoostedBosonMerging/optimisation_v1/'
+paths = []
+pathsf = open('files.txt','r')
+for l in pathsf:
+    l = l.strip()
+    paths.append(base_dir+l)
+
+configs = []
+configsf = open('configs.txt','r')
+for l in configsf:
+    l = l.strip()
+    configs.append(l)
+
+fileids = []
+for c in configs:
+    l = c[7:-4]
+    
+    #l = c.replace('config/','').replace('.xml','')
+    fileids.append(l)
 
 maxrej = 0
 maxrejvar = ''
@@ -15,21 +33,34 @@ maxalg = ''
 rejectionmatrix = {}
 
 for p,c,f in zip(paths,configs,fileids):
-    rej, var, m_min, m_max=TaggerTim.main([c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0'])
+    #try:
+    args = ['python','TaggerTim.py',c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics']
+    #print sys.argv
+    #rej, var, m_min, m_max=#TaggerTim.main([c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics','lumi=1'])
+    p = subprocess.Popen(args,stdout=subprocess.PIPE)
+    output = p.communicate()[0]
+    #print output
+    #print output.find("MAXREJSTART:")
+    rejout= output[output.find("MAXREJSTART:")+12:output.find("MAXREJEND")]
+    rejoutsplit = rejout.split(",")
+    
     print 'Algorithm: ' + c
-    print 'Rejection: ' + str(rej)
-    print 'Variable: ' + var
-    print 'Mass min: ' + str(m_min)
-    print 'Mass max: ' + str(m_max)
-    if rej > maxrej:
-        maxrej = rej
-        maxrejvar = var
-        maxrejm_min = m_min
-        maxrejm_max = m_max
+    print 'Rejection: ' + str(rejoutsplit[0])
+    print 'Variable: ' + rejoutsplit[1]
+    print 'Mass min: ' + str(rejoutsplit[2])
+    print 'Mass max: ' + str(rejoutsplit[3])
+    if float(rejoutsplit[0]) > maxrej:
+        maxrej = float(rejoutsplit[0])
+        maxrejvar = rejoutsplit[1]
+        maxrejm_min = float(rejoutsplit[2])
+        maxrejm_max = float(rejoutsplit[3])
         maxalg = c
     # load total background rejection matrix from pickle file
     totalrejection = pickle.load(open("tot_rej.p","rb"))
-    rejectionmatrix[fileids] = totalrejection
+    rejectionmatrix[f] = totalrejection
+    #except e:
+     #   print 'Failed to analyse: ' + f
+      #  print e
 
 print '----------------------------------'
 print 'Algorithm: ' + maxalg
@@ -38,40 +69,11 @@ print 'Variable: ' + maxrejvar
 print 'Mass min: ' + str(maxrejm_min)
 print 'Mass max: ' + str(maxrejm_max)
 
-tc = TCanvas()
 
-maxlistvars = []
-maxlistcounter = 0
-# check that there is a common list of variables
-# if one has more, add these to other rows
-# this is not foolproof because the order could be incorrect... need to sort
-for r in rejectionmatrix:
-    if maxlistcounter > len (r):
-        maxlistcounter = len(r)
-        # set the variable name, which is from r[rej,var]
-        maxlistvar = [x[1] for x in r]
-# append extra rows
-for r in rejectionmatrix:
-    if len(r) < maxlistcounter:
-        for l in range(len(r),maxlistcounter):
-            r.append([maxlistvar[l], 0])
+# pickle output in case of crash
+with open("rejectionmatrix.p","wb") as f:
+    pickle.dump(rejectionmatrix, f)
 
-
-matrix = ROOT.TH2F("Correlation matrix","Correlation matrix",len(maxlistvar),1, len(maxlistvar), len(rejectionmatrix), 1, len(rejectionmatrix))
-
-# fill the th2 with all of the values
-for i, r in enumerate(rejectionmatrix.items()):
-    # r will have [key, [rejection, variable name]]
-    for x in range(1, len(r[1])):
-        # add teh variables
-        h.GetXaxis().SetBinLabel(x,r[1][1])
-        # fill the values
-        h.Fill(i, r[1][0])
-    h.GetYaxis().SetBinLabel(i,r[0])
-
-# turn on the colours
-ROOT.gStyle.SetPalette(1)
-matrix.Draw("COLZ")
-
-matrix.SaveAs("matrix.pdf")
+import plotCorrelationMatrix as pm
+pm.plotMatrix()
 

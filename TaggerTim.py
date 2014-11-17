@@ -8,7 +8,7 @@ import argparse
 import subprocess
 import os
 from array import array
-from cpickle import pickle
+import cPickle as pickle
 
 
 
@@ -17,6 +17,7 @@ gROOT.SetBatch(True)
 STUB = 0
 MINX = 2
 MAXX = 3
+totalrejection = []
 
 def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     '''
@@ -86,6 +87,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
     for h in hist.keys():
         hist[h].Reset()
     
+    global totalrejection
     # dict containing all of the ROC curves
     roc={}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
@@ -163,6 +165,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         else:
             # Get the point in the ROC
             eff_sig_point = roc[branchname].GetPoint(eff_sig_bin, sigeff, bkgrej)
+
+        # store a record of all background rejection values
+        totalrejection.append([float(bkgrej), branchname])
 
         if bkgrej > maxrej:
             maxrej = bkgrej
@@ -313,7 +318,7 @@ def main(args):
     if not args.ptreweighting:
         ptreweight = fn.getPtReweightFlag()
     else:
-        if args.ptreweighting == 'false' or args.reweighting == 'False':
+        if args.ptreweighting == 'false' or args.ptreweighting == 'False':
             ptreweight = False
     # output path for storing individual variable plots - there are a lot of these so it is 
     # useful to be able to store these in a separate folder
@@ -525,14 +530,14 @@ def main(args):
     maxrejvar = ''
     maxrejm_min = 0
     maxrejm_max = 0
-    totalrejection = []
+
     for m in masses:
         m_min = m[0]
         m_max = m[1]
         # run the analysis for mass range
         rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
-        totalrejection.append([rej, rejvar])
+
         if rej > max_rej:
             max_rej = rej
             maxrejvar = rejvar
@@ -540,11 +545,15 @@ def main(args):
             maxrejm_max = m_max
     records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
-    pickle.dump(totalrejection, open("tot_rej.p","wb"))
-    return max_rej, maxrejvar, maxrejm_min, maxrejm_max
+    print totalrejection
+    with open("tot_rej.p","wb") as f:
+        pickle.dump(totalrejection, f)
+    print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
+    #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
 if __name__ == '__main__':
-    max_rej, maxrejvar, maxrejm_min, maxrejm_max=main(sys.argv)
+    #max_rej, maxrejvar, maxrejm_min, maxrejm_max=main(sys.argv)
+    main(sys.argv)
     sys.exit()
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
