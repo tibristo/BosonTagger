@@ -4,7 +4,7 @@ import ROOT
 import sys
 import subprocess
 
-base_dir = '/home/tim/boosted_samples/BoostedBosonMerging/optimisation_v1/'
+base_dir = '/media/win/BoostedBosonMerging/'
 paths = []
 pathsf = open('files.txt','r')
 for l in pathsf:
@@ -34,7 +34,7 @@ rejectionmatrix = {}
 
 for p,c,f in zip(paths,configs,fileids):
     #try:
-    args = ['python','TaggerTim.py',c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics']
+    args = ['python','TaggerTim.py',c,'-i',p,'-f', f, '--pthigh=350','--ptlow=200','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics']
     #print sys.argv
     #rej, var, m_min, m_max=#TaggerTim.main([c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics','lumi=1'])
     p = subprocess.Popen(args,stdout=subprocess.PIPE)
@@ -56,7 +56,7 @@ for p,c,f in zip(paths,configs,fileids):
         maxrejm_max = float(rejoutsplit[3])
         maxalg = c
     # load total background rejection matrix from pickle file
-    totalrejection = pickle.load(open("tot_rej.p","rb"))
+    totalrejection = pickle.load(open("tot_rej_70_110_v3.p","rb"))
     rejectionmatrix[f] = totalrejection
     #except e:
      #   print 'Failed to analyse: ' + f
@@ -71,7 +71,7 @@ print 'Mass max: ' + str(maxrejm_max)
 
 
 # pickle output in case of crash
-with open("rejectionmatrix.p","wb") as f:
+with open("rejectionmatrix_70_110_v3.p","wb") as f:
     pickle.dump(rejectionmatrix, f)
 
 import plotCorrelationMatrix as pm

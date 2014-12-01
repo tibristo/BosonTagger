@@ -17,7 +17,38 @@ gROOT.SetBatch(True)
 STUB = 0
 MINX = 2
 MAXX = 3
+# store all of the rejection results
 totalrejection = []
+
+# these are used for the maximum rejection results
+max_rej = 0
+maxrejvar = ''
+maxrejm_min = 0
+maxrejm_max = 0
+
+
+def getMassWindow(massfile):
+    '''
+    Get the mass window limits from the input file. Input file will have the lines 'top edge: MAX' and 'bottom edge: MIN' in it somewhere.
+    Keyword args:
+    massfile -- input file
+    
+    returns:
+    max_mass, min_mass
+    '''
+    f = open(massfile)
+    m_max = 0.0
+    m_min = 0.0
+    for l in f:
+        # find the correct lines
+        if l.startswith('top edge'):
+            # convert the last element after splitting to a float.
+            m_max = float(l.strip().split()[-1])
+        elif l.startswith('bottom edge'):
+            # convert the last element after splitting to a float.
+            m_min = float(l.strip().split()[-1])
+    f.close()
+    return m_max, m_min
 
 def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     '''
@@ -167,7 +198,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
             eff_sig_point = roc[branchname].GetPoint(eff_sig_bin, sigeff, bkgrej)
 
         # store a record of all background rejection values
-        totalrejection.append([float(bkgrej), branchname])
+        # want to store only the variable name, not the algorithm name, so string manipulation
+        totalrejection.append([branchname[branchname.rfind("_")+1:], float(bkgrej)])
 
         if bkgrej > maxrej:
             maxrej = bkgrej
@@ -234,6 +266,7 @@ def main(args):
     parser.add_argument('--tree', help = 'Name of tree in input file')
     parser.add_argument('--channelnumber', help = 'RunNumber/ mc_channel_number to use for selection')
     parser.add_argument('--lumi', help = 'Luminosity scale factor')
+    parser.add_argument('--massWindowCut', help = 'Whether a mass window cut should be applied')
 
     args = parser.parse_args()
 
@@ -423,6 +456,7 @@ def main(args):
     ptweightBins = fn.getBins()
     eventsFileSig = ''
     eventsFileBkg = ''
+    massWinFile = ''
     numbins = 20 #default
 
     # if the number of pt bins is not variable just use the one entry
@@ -447,6 +481,10 @@ def main(args):
         # if pt reweight file hasn't been set find it in the input folder
         if ptweightFile == '' and f.endswith("ptweights"):
             ptweightFile = InputDir+'/'+f
+        # the mass windows have been calculated. saved as
+        # Algorithm_masswindow.out
+        if massWinFile = '' and f.endswith('masswindow.out'):
+            massWinFile = InputDir+'/'+f
 
     # read the signal and background files
     for typename in ['sig','bkg']:
@@ -518,14 +556,21 @@ def main(args):
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
     leg2 = TLegend(0.2,0.2,0.5,0.4);leg2.SetFillColor(kWhite)
 
-    # need to think of a clever way to define the masses... look for best signal efficiency window?
-    masses = [[0,1000*1000,]]
+    # set up the mass window cuts
+    mass_max = 300*1000.;
+    mass_min = 0.0;
+
+    if massWindowCut:
+        mass_max, mass_min = getMassWindow(massWinFile)
+
+    masses = [[mass_min,mass_max]]
     # make sure out optimisation folder exists
     if not os.path.exists('optimisation'):
         os.makedirs('optimisation')
     # log the output
     records = open('TaggerOpt'+Algorithm+'_'+fileid+'.out','w')
     # store teh maximum background rejection
+    global max_rej, maxrejvar, maxrejm_min, maxrejm_max
     max_rej = 0
     maxrejvar = ''
     maxrejm_min = 0
@@ -545,8 +590,10 @@ def main(args):
             maxrejm_max = m_max
     records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
+    # for new studies we are plotting the inverse of the background rejection
+    totalrejection[:] = [[a[0], 1./(1.-a[1])] if a[1] != 0 else [a[0],a[1]] for a in totalrejection]
     print totalrejection
-    with open("tot_rej.p","wb") as f:
+    with open("tot_rej_70_110_v3.p","wb") as f:
         pickle.dump(totalrejection, f)
     print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
@@ -557,3 +604,11 @@ if __name__ == '__main__':
     sys.exit()
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
+def runMain(args):
+    '''
+    Use a list for the arguments that would be used from command line.
+    '''
+    global max_rej, maxrejvar, maxrejm_min, maxrejm_max
+    sys.argv = args
+    main(args)
+    print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
