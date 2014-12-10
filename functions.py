@@ -142,6 +142,22 @@ def getFileIDNumber(inputdir):
     else:
         return ''
 
+def getFileBranches(inputfile, treename='physics'):
+    file_branches = []
+    file_branches_stubs = []
+    file_in = ROOT.TFile(inputfile)
+    physics = file_in.Get("physics")
+    ob = physics.GetListOfBranches()
+    for tb in ob:
+        name = tb.GetName()
+        file_branches.append(name)
+        # get the variable name
+        file_branches.append(name[name.rfind('_')+1:])
+    file_in.Close()
+    return file_branches
+
+
+
 tree = ''
 plotbranches = {}
 branches = {}
@@ -199,6 +215,29 @@ def getPtReweightFlag():
 def getLumi():
     return lumi
 
+def pruneBranches(file_branches):
+    global plotbranches
+    global branches
+    todelete = []
+    print file_branches
+    # loop through all of the variables in the branches dict
+    for k in branches.keys():
+        # if the stub value (take away the leading underscore) is not in the file
+        # mark it to be deleted
+        if not branches[k][0][1:] in file_branches:
+            todelete.append(k)
+
+    for d in todelete:
+        del branches[d]
+
+    todeleteplot = []
+    for k in plotbranches.keys():
+        if not plotbranches[k][0][1:] in file_branches:
+            todeleteplot.append(k)
+    for d in todeleteplot:
+        del plotbranches[d]
+
+
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
     # TODO: add try catch statements incase values are not well defined (for example floats being ill-defined as a string)
@@ -207,9 +246,16 @@ def readXML(configfile):
     xmlTree = ET.parse(configfile)
     root = xmlTree.getroot()
 
+
+    global tree
+    for t in root.findall('treename'):
+        tree = t.get('name')
+
     varName = ''
     global plotbranches
     global branches
+    global file_branches
+
     for child in root.findall('varName'):
         varName = child.get('name')
         stub = child.find('stub').text
@@ -218,6 +264,7 @@ def readXML(configfile):
             if child.find('jetVariable').text == "False":
                 jetVariable = False
                 print varName
+
         branches[varName] = [stub, jetVariable]
         if child.find('plot').text == "True":
             maxV = float(child.find('maxValue').text)
@@ -287,9 +334,6 @@ def readXML(configfile):
                 nvtx = int(v.text)
             elif v.tag == 'low':
                 nvtxlow = int(v.text)
-    global tree
-    for t in root.findall('treename'):
-        tree = t.get('name')
 
     global lumi
     for l in root.findall('lumi'):

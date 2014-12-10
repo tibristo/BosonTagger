@@ -37,6 +37,7 @@ def getMassWindow(massfile):
     max_mass, min_mass
     '''
     f = open(massfile)
+    print massfile
     m_max = 0.0
     m_min = 0.0
     for l in f:
@@ -90,7 +91,7 @@ def writePlotsToROOT(Algorithm, fileid, hist):
             hist[h].Write()
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
+def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -113,7 +114,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
     Returns:
     Background rejection at 50% signal efficiency using the ROC curve and variable used to achieve maximum rejection.
     '''
+    # canvas for histogram plots
+    canv1 = TCanvas("canv1")
+    canv1.Divide(4,5)
+    # canvas for ROC curves
+    canv2 = TCanvas("canv2")
 
+    tempCanv = TCanvas("temp")
     # reset hists
     for h in hist.keys():
         hist[h].Reset()
@@ -134,6 +141,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         roc[branchname] = TGraph()
         # new canvas
         canv1.cd(index+1)
+
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
             print "plotting " + datatype + branchname
@@ -150,15 +158,16 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
                 hist[histname].SetMarkerStyle(21)
             # filter efficiency for signal
             elif datatype == 'sig':
-                cutstringandweight += '* filter_eff '
+                #cutstringandweight += '* filter_eff '
                 # apply pt reweighting to the signal
                 if ptreweight:
                     cutstringandweight +=' * SignalPtWeight2(jet_CamKt12Truth_pt) '
                 # if we don't apply pt reweighting then we can reweight by cross section
-                else:
-                    cutstringandweight += ' * xs '
+                #else:
+                    #cutstringandweight += ' * xs '
             hist[histname].Sumw2();
             # apply the selection to the tree and store the output in the histogram
+            #print cutstringandweight
             trees[datatype].Draw(varexp,cutstringandweight)
             # if the histogram is not empty then normalise it 
             if hist[histname].Integral() > 0.0:
@@ -181,8 +190,6 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
             MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname])
             writeROC = True
-
-
 
         pX = Double(0.5)
         pY = Double(0.0)
@@ -224,12 +231,17 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
         # save individual plots
         if savePlots:
-            p = canv1.cd(index+1).Clone()
-            tc = TCanvas(branchname)
+            p = canv1.cd(index+1).Clone() 
+            tempCanv.cd()
             p.SetPad(0,0,1,1) # resize
             p.Draw()
-            tc.SaveAs(varpath+branchname+".png")
+            print canv2
+            tempCanv.SaveAs(varpath+branchname+".png")
+            del p
+
         # plot the ROC curves
+        print "changing to canvas 2"
+        print canv2
         canv2.cd()
         if index==0 and roc[branchname].Integral() != 0:# and hist[branchname].Integral()>0:
             roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
@@ -241,6 +253,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cut
         # legend for the roc curve
         leg2.AddEntry(roc[branchname],branchname,"l");
         leg2.Draw()
+
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
@@ -267,6 +280,7 @@ def main(args):
     parser.add_argument('--channelnumber', help = 'RunNumber/ mc_channel_number to use for selection')
     parser.add_argument('--lumi', help = 'Luminosity scale factor')
     parser.add_argument('--massWindowCut', help = 'Whether a mass window cut should be applied')
+    parser.add_argument('-v','--version',help = 'Version number')
 
     args = parser.parse_args()
 
@@ -309,7 +323,7 @@ def main(args):
         sys.exit()
 
     # flag to write out trees int csv format
-    writecsv= True
+    writecsv= False
     # string for algorithm
     Algorithm = ''
     # flags for plotting truth variables
@@ -396,8 +410,90 @@ def main(args):
     if not args.lumi:
         lumi = fn.getLumi()
     # default selection string
-    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) * (vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
+    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) " + channelcut
+    #(vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
 
+
+
+    # set up the input signal file
+    signalFile = fn.getSignalFile()
+    # set up background file
+    backgroundFile = fn.getBackgroundFile()
+    # file to use for pt reweighting inputs
+    ptweightFile = fn.getPtWeightsFile()
+    # get the number of bins to use for pt reweighting from config file
+    ptweightBins = fn.getBins()
+    eventsFileSig = ''
+    eventsFileBkg = ''
+    massWinFile = ''
+    numbins = 20 #default
+
+    # if the number of pt bins is not variable just use the one entry
+    if len(ptweightBins) == 1:
+        numbins = int(ptweightBins[0])
+
+    # get list of all files in the input directory and filter out different input files
+    fileslist = os.listdir(InputDir)
+    sigtmp = ''
+
+    for f in fileslist:
+        # if teh signal file and background file were not specified in the config file find them in the input directory
+        if signalFile == '' and f.endswith("sig.root"):
+            signalFile = InputDir+'/'+f
+        elif backgroundFile == '' and f.endswith("bkg.root"):
+            backgroundFile = InputDir+'/'+f
+        # files for event reweighting
+        if f.endswith("sig.nevents"):
+            eventsFileSig = InputDir+'/'+f
+        if f.endswith("bkg.nevents"):
+            eventsFileBkg = InputDir+'/'+f
+        # if pt reweight file hasn't been set find it in the input folder
+        if ptweightFile == '' and f.endswith("ptweights"):
+            ptweightFile = InputDir+'/'+f
+        # the mass windows have been calculated. saved as
+        # Algorithm_masswindow.out
+        if massWinFile == '' and f.endswith('masswindow.out'):
+            massWinFile = InputDir+'/'+f
+
+    # read the signal and background files
+    for typename in ['sig','bkg']:
+        if typename == 'sig':
+            filename = signalFile
+        else:
+            filename = backgroundFile
+
+        files[typename] = TFile(filename)
+        # read in the trees
+        trees[typename] = files[typename].Get(treename)
+    
+        # write the tree out in csv format to use again later
+        if writecsv == True:
+            numpydata = root_numpy.root2array(filename,treename,branches,cutstring)
+            numpydata = pd.DataFrame(numpydata)
+
+            numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
+            if typename == 'sig': 
+                numpydata['label']=1 
+                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
+
+            else: 
+                numpydata['label']=0 
+                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
+                #numpydata.hist(bins=20,grid=False,histtype='step',label=typename)
+
+    # load all of the event weights from the event weighting file
+    loadEvents(eventsFileSig)
+    loadEvents(eventsFileBkg)
+       
+    # load all of the pt reweighting from the pt reweighting file
+    if len(ptweightBins) <= 1:
+        loadweights(ptweightFile,numbins)
+    else:
+        loadweights(ptweightFile,ptweightBins)
+
+    # remove any branches that are not in the actual file
+    file_branches = fn.getFileBranches(signalFile, fn.getTree())
+    fn.pruneBranches(file_branches)
 
     # configuration for each variable to plot - axis ranges, titles
     plotconfig = fn.getPlotBranches()
@@ -446,81 +542,6 @@ def main(args):
     plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs if plotjetlookup[branch] == True]
     plotbranches += [branch for branch in plotbranchstubs if plotjetlookup[branch] == False]
 
-    # set up the input signal file
-    signalFile = fn.getSignalFile()
-    # set up background file
-    backgroundFile = fn.getBackgroundFile()
-    # file to use for pt reweighting inputs
-    ptweightFile = fn.getPtWeightsFile()
-    # get the number of bins to use for pt reweighting from config file
-    ptweightBins = fn.getBins()
-    eventsFileSig = ''
-    eventsFileBkg = ''
-    massWinFile = ''
-    numbins = 20 #default
-
-    # if the number of pt bins is not variable just use the one entry
-    if len(ptweightBins) == 1:
-        numbins = int(ptweightBins[0])
-
-    # get list of all files in the input directory and filter out different input files
-    fileslist = os.listdir(InputDir)
-    sigtmp = ''
-
-    for f in fileslist:
-        # if teh signal file and background file were not specified in the config file find them in the input directory
-        if signalFile == '' and f.endswith("sig.root"):
-            signalFile = InputDir+'/'+f
-        elif backgroundFile == '' and f.endswith("bkg.root"):
-            backgroundFile = InputDir+'/'+f
-        # files for event reweighting
-        if f.endswith("sig.nevents"):
-            eventsFileSig = InputDir+'/'+f
-        if f.endswith("bkg.nevents"):
-            eventsFileBkg = InputDir+'/'+f
-        # if pt reweight file hasn't been set find it in the input folder
-        if ptweightFile == '' and f.endswith("ptweights"):
-            ptweightFile = InputDir+'/'+f
-        # the mass windows have been calculated. saved as
-        # Algorithm_masswindow.out
-        if massWinFile = '' and f.endswith('masswindow.out'):
-            massWinFile = InputDir+'/'+f
-
-    # read the signal and background files
-    for typename in ['sig','bkg']:
-        if typename == 'sig':
-            filename = signalFile
-        else:
-            filename = backgroundFile
-
-        files[typename] = TFile(filename)
-        # read in the trees
-        trees[typename] = files[typename].Get(treename)
-    
-        # write the tree out in csv format to use again later
-        if writecsv == True:
-            numpydata = root_numpy.root2array(filename,treename,branches,cutstring)
-            numpydata = pd.DataFrame(numpydata)
-
-            numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
-            if typename == 'sig': 
-                numpydata['label']=1 
-                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
-
-            else: 
-                numpydata['label']=0 
-                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
-                #numpydata.hist(bins=20,grid=False,histtype='step',label=typename)
-
-    # load all of the event weights from the event weighting file
-    loadEvents(eventsFileSig)
-    loadEvents(eventsFileBkg)
-       
-    # load all of the pt reweighting from the pt reweighting file
-    if len(ptweightBins) <= 1:
-        loadweights(ptweightFile,numbins)
-    else:
-        loadweights(ptweightFile,ptweightBins)
 
     # dictionary to hold all histograms
     hist = {}
@@ -546,11 +567,11 @@ def main(args):
             hist[histname] = TH1D(histname, hist_title, 200, plotconfig[br][MINX], plotconfig[br][MAXX])
   
     # canvas for histogram plots
-    canv1 = TCanvas("canv1")
-    canv1.Divide(3,4)
+    #canv1 = TCanvas("canv1")
+    #canv1.Divide(3,4)
     # canvas for ROC curves
-    canv2 = TCanvas("canv2")
-    canv2.cd()
+    #canv2 = TCanvas("canv2")
+    #canv2.cd()
 
     # legends for histograms and roc curves
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
@@ -560,8 +581,9 @@ def main(args):
     mass_max = 300*1000.;
     mass_min = 0.0;
 
-    if massWindowCut:
+    if args.massWindowCut:
         mass_max, mass_min = getMassWindow(massWinFile)
+        print 'calc mass window'
 
     masses = [[mass_min,mass_max]]
     # make sure out optimisation folder exists
@@ -580,7 +602,7 @@ def main(args):
         m_min = m[0]
         m_max = m[1]
         # run the analysis for mass range
-        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, canv1, canv2, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
+        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
         if rej > max_rej:
@@ -591,9 +613,14 @@ def main(args):
     records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
     # for new studies we are plotting the inverse of the background rejection
-    totalrejection[:] = [[a[0], 1./(1.-a[1])] if a[1] != 0 else [a[0],a[1]] for a in totalrejection]
-    print totalrejection
-    with open("tot_rej_70_110_v3.p","wb") as f:
+    #print totalrejection
+    #totalrejection[:] = [[a[0], 1./(1.-a[1])] if a[1] != 1 else [a[0],a[1]] for a in totalrejection]
+    #print totalrejection
+    if not args.version:
+        version = 'v1'
+    else:
+        version = args.version
+    with open("tot_rej_"+version+".p","wb") as f:
         pickle.dump(totalrejection, f)
     print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max

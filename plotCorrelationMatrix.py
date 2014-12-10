@@ -1,12 +1,13 @@
 import ROOT
 import cPickle as pickle
 import operator
+import sys
 
-def plotMatrix():
+def plotMatrix(version):
 
     # read input
 
-    rejectionmatrix = pickle.load(open("rejectionmatrix_70_110_v3.p", "rb"))
+    rejectionmatrix = pickle.load(open("rejectionmatrix_"+version+".p", "rb"))
 
 
     tc = ROOT.TCanvas()
@@ -63,8 +64,8 @@ def plotMatrix():
     matrix.Draw("COLZ")
     
     print rejectionmatrix
-    tc.SaveAs("matrixinv_70_110_v2.pdf")
+    tc.SaveAs("matrixinv_"+version+".pdf")
 
 
 if __name__=='__main__':
-    plotMatrix()
+    plotMatrix(sys.argv[1])
