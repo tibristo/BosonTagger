@@ -116,7 +116,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     '''
     # canvas for histogram plots
     canv1 = TCanvas("canv1")
-    canv1.Divide(4,5)
+    canv1.Divide(5,5)
     # canvas for ROC curves
     canv2 = TCanvas("canv2")
 
@@ -128,19 +128,30 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     global totalrejection
     # dict containing all of the ROC curves
     roc={}
+    # dict containing the bkgRejPower curves
+    bkgRejROC = {}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
     # hist added to the roc is empty
     writeROC = False
+
     maxrej = 0
     maxrejvar = ''
     #set up the cutstring/ selection to cut on the correct jet masses
     cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
     # loop through the indices and branchnames
     for index, branchname in enumerate(plotbranches):
-        # set up ROC dictionary entry
+        # add ROC dictionary entry
         roc[branchname] = TGraph()
+        # add bkg rej power dictionary entry
+        bkgRejROC[branchname] = TGraph()
         # new canvas
         canv1.cd(index+1)
+
+        # keep the integral when not applying mass window cuts, this
+        # allows us to calculate the efficiency of the mass window cut
+        signal_eff = 1.0
+        bkg_eff = 1.0
+
 
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
@@ -149,35 +160,59 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # set up the tree.Draw() variable expression for the histogram
             #varexp = 'jet_' + branchname + ' >>' + histname
             varexp = branchname + ' >>' + histname
+            minxaxis = hist[histname].GetXaxis().GetXmin()
+            maxxaxis = hist[histname].GetXaxis().GetXmax()
             # add the mc_weight and weighted number of events to the selection string
-            cutstringandweight = cutstring_mass +' * mc_event_weight * 1/NEvents(mc_channel_number) '
+            # also make sure that the variable being plotted is within the bounds specified 
+            # in the config file (the limits on the histogram)
+            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)*('+ branchname +'>'+str(minxaxis)+')*('+ branchname +'<'+str(maxxaxis)+')' 
 
             # add the cross section and filter efficiency for the background
+            
             if datatype == 'bkg': 
-                cutstringandweight += '* filter_eff * xs  '#* k_factor 
+                cutstringandweight += '*filter_eff*xs*k_factor'
                 hist[histname].SetMarkerStyle(21)
             # filter efficiency for signal
             elif datatype == 'sig':
-                #cutstringandweight += '* filter_eff '
+                cutstringandweight += '*filter_eff'
                 # apply pt reweighting to the signal
                 if ptreweight:
-                    cutstringandweight +=' * SignalPtWeight2(jet_CamKt12Truth_pt) '
+                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
                 # if we don't apply pt reweighting then we can reweight by cross section
-                #else:
-                    #cutstringandweight += ' * xs '
+                else:
+                    cutstringandweight += '*xs'
+            
             hist[histname].Sumw2();
             # apply the selection to the tree and store the output in the histogram
             #print cutstringandweight
-            trees[datatype].Draw(varexp,cutstringandweight)
+            trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
             # if the histogram is not empty then normalise it 
+            orig_int = hist[histname].Integral()
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
                     hist[histname].Scale(scaleLumi);
                 else:
                     hist[histname].Scale(1.0/hist[histname].Integral());
 
-                    
-            
+            #now get the same plot for no mass window cut to get the eff
+            hist_full = hist[histname].Clone()
+            hist_full.Reset()
+            hist_full.SetName(histname+'_full')
+            # need to store the variable in this histogram
+            varexpfull = branchname + ' >>' +histname+'_full'
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight)
+            # get the integral and normalise
+            full_int = hist_full.Integral()
+            if full_int > 0.0:
+                if scaleLumi != 1:
+                    hist_full.Scale(scaleLumi)
+                else:
+                    hist_full.Scale(1.0/full_int)
+            if datatype == 'sig':
+                signal_eff = orig_int/full_int
+            else:
+                bkg_eff = orig_int/full_int
+
             # set up the axes titles and colours/ styles
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
             if (branchname.find('jet_')!=-1):
@@ -188,21 +223,26 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
-            MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname])
+            MakeROCBen(2, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff)
+            print signal_eff
+            print bkg_eff
             writeROC = True
 
         pX = Double(0.5)
         pY = Double(0.0)
 
-        # find the corresponding bkg rejection for the 50% signal efficiency point from ROC curve
-        eff_sig_bin,pY = fn.findYValue(roc[branchname], pX, pY)
-        sigeff = Double(0.5)
-        bkgrej = Double(0.0)
-        if (eff_sig_bin < 0):
-            bkgrej = pY
-        else:
+        # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
+        bkgrej = bkgRejROC[branchname].Eval(0.5)
+
+        #eff_sig_bin = 0
+        #eff_sig_bin,pY = fn.findYValue(bkgRejROC[branchname], pX, pY)
+        #sigeff = Double(0.5)
+        #bkgrej = Double(0.0)
+        #if (eff_sig_bin < 0):
+            #bkgrej = pY
+        #else:
             # Get the point in the ROC
-            eff_sig_point = roc[branchname].GetPoint(eff_sig_bin, sigeff, bkgrej)
+            #eff_sig_point = bkgRejROC[branchname].GetPoint(eff_sig_bin, sigeff, bkgrej)
 
         # store a record of all background rejection values
         # want to store only the variable name, not the algorithm name, so string manipulation
@@ -235,13 +275,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             tempCanv.cd()
             p.SetPad(0,0,1,1) # resize
             p.Draw()
-            print canv2
             tempCanv.SaveAs(varpath+branchname+".png")
             del p
 
         # plot the ROC curves
-        print "changing to canvas 2"
-        print canv2
         canv2.cd()
         if index==0 and roc[branchname].Integral() != 0:# and hist[branchname].Integral()>0:
             roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
@@ -318,6 +355,7 @@ def main(args):
         treename = fn.getTree()
     else:
         treename = args.tree
+        fn.tree = treename
     if treename == '':
         print "specify a tree name in command line args or config file"
         sys.exit()
@@ -613,8 +651,12 @@ def main(args):
     records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
     # for new studies we are plotting the inverse of the background rejection
-    #print totalrejection
-    #totalrejection[:] = [[a[0], 1./(1.-a[1])] if a[1] != 1 else [a[0],a[1]] for a in totalrejection]
+    print totalrejection
+    # rej = 1/(1-eff) ->>> eff = 1-(1/rej)
+    # 1/eff = 
+    totalrejectionpower = totalrejection
+    #totalrejectionpower = [[a[0], 1/a[1]] if a[1] != 0 else [a[0],a[1]] for a in totalrejection]
+    #totalrejection[:] = [[a[0], 1/(1-1./a[1])] if a[1] != 0 and a[1] != 1.0 else [a[0],a[1]] for a in totalrejection]
     #print totalrejection
     if not args.version:
         version = 'v1'
@@ -623,6 +665,9 @@ def main(args):
     with open("tot_rej_"+version+".p","wb") as f:
         pickle.dump(totalrejection, f)
     print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
+    output = "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
+    with open("temp.p","wb") as f:
+        pickle.dump(output,f)
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
 if __name__ == '__main__':
@@ -638,4 +683,6 @@ def runMain(args):
     global max_rej, maxrejvar, maxrejm_min, maxrejm_max
     sys.argv = args
     main(args)
-    print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
+
+
+    

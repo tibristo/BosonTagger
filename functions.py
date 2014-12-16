@@ -146,13 +146,21 @@ def getFileBranches(inputfile, treename='physics'):
     file_branches = []
     file_branches_stubs = []
     file_in = ROOT.TFile(inputfile)
-    physics = file_in.Get("physics")
+    print inputfile
+    print treename
+    physics = file_in.Get(treename)
     ob = physics.GetListOfBranches()
     for tb in ob:
         name = tb.GetName()
-        file_branches.append(name)
+        namespl = name.split('_')
+        # normally it will be jet_ALGORITHM_variable, so 3 parts
+        if len(namespl) == 3:
+        #file_branches.append(name)
         # get the variable name
-        file_branches.append(name[name.rfind('_')+1:])
+            file_branches.append(namespl[2])#name[name.rfind('_')+1:])
+        # sometimes it is jet_ALGORITHM_VAR_IABLE
+        elif len(namespl) > 3:
+            file_branches.append(namespl[2]+'_'+namespl[3])
     file_in.Close()
     return file_branches
 
@@ -402,27 +410,32 @@ def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
     # uses the Eval() method of the tgraph to interpolate (linearly) between data points
     # (after the existance of data points in the region has been veryfied)
     PointNumber =0
-    x = ROOT.Double()
-    y = ROOT.Double()
+    x = ROOT.Double(0)
+    y = ROOT.Double(0)
     pGraph.GetPoint(0,x,y);
     delta = ROOT.TMath.Abs(pX-x);
-    for i in range (0,pGraph.GetN()):
+    for i in range (1,pGraph.GetN()):
         # loop over points
         x1 = ROOT.Double()
         y1 = ROOT.Double()
         pGraph.GetPoint(i,x1,y1);
+        #print 'entry: ' + str(i)
+        #print x1
+        #print y1
         # check if this points is closer to the x value we are looking for
         if (ROOT.TMath.Abs(pX-x1)<delta):
             # remember point
             delta = ROOT.TMath.Abs(pX-x1)
-            x = x1;y=y1;PointNumber=i
+            x = copy.deepcopy(x1);y=copy.deepcopy(y1);PointNumber=copy.deepcopy(i)
     # warn if delta exceeds a certain percentage of x
-    if ((ROOT.TMath.Abs(pX * Epsilon)) < ROOT.TMath.Abs(delta)):
+    if ((ROOT.TMath.Abs(pX - Epsilon)) < ROOT.TMath.Abs(delta)):
             if (pWarn):
                 print " Warning: Requested Y Value for point " +str(pX)
                 print "          but only found point at " + str(x)
                 print " (difference of " + str( ROOT.TMath.Abs(delta/ pX)) + "%)"
+            
             PointNumber = -1 * PointNumber;
+            #Py = 0.0
    # ok, we have data points in the region of interest (or warned the user otherwise), now interpolate
     if (pInterpolate):
             # we need to sort the graph in order to use the Eval() method.

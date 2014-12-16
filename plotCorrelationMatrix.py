@@ -3,6 +3,59 @@ import cPickle as pickle
 import operator
 import sys
 
+def abbreviate(in_str):
+    '''
+    Method to abbreviate an algorithm into something easier to fit on a plot.
+    in_str is the full Algorithm string -> CamKt12LCTopoPrunedXYZ for example.
+    '''
+    out_str = ''
+    rad_idx = 0
+    # check for AntiKt or CamKt
+    if in_str.find('AntiKt') != -1:
+        out_str += 'AK'
+        rad_idx = 6
+    elif in_str.find('CamKt') != -1:
+        out_str += 'CA'
+        rad_idx = 5
+    # add radius to the output string
+    rad = in_str[rad_idx:in_str.find('LC')]
+    if len(rad) == 1:
+        rad = '0'+rad
+    out_str+=rad
+    out_str+='LC'
+
+    # add abbrev for the type of grooming
+    if in_str.find('SplitFilt') != -1:
+        out_str+='BDRS'
+        # example: CamKt6LCTopoSplitFilteredMu100SmallR30YCut0
+        # want: CA6LCBDRSM100R30Y0
+        out_str+='M'
+        out_str+=in_str[in_str.find('Mu')+2:in_str.find('Small')]
+        out_str+='R'
+        out_str+=in_str[in_str.find('SmallR')+6:in_str.find('YCut')]
+        out_str+='Y'
+        out_str+=in_str[in_str.find('YCut')+4:]
+
+    elif in_str.find('Trim') != -1:
+        # example: PtFrac5SmallR20
+        # want: TRIMF5R20
+        out_str+='TRIM'
+        out_str+='F'
+        out_str+=in_str[in_str.find('Frac')+4:in_str.find('SmallR')]
+        out_str+='R'
+        out_str+=in_str[in_str.find('SmallR')+6:]
+
+    elif in_str.find('Prun') != -1:
+        out_str+='PRUN'
+        # example: CamKt12LCTopoPrunedCaRcutFactor50Zcut10
+        # want: CA12LCPRUNR50Z10
+        out_str+='R'
+        out_str+=in_str[in_str.find('Factor')+6:in_str.find('Zcut')]      
+        out_str+='Z'
+        out_str+=in_str[in_str.find('Zcut')+4:]
+
+    return out_str
+
 def plotMatrix(version):
 
     # read input
@@ -53,7 +106,7 @@ def plotMatrix(version):
             print v
             matrix.GetXaxis().SetBinLabel(x+1,v[0])
             matrix.SetBinContent(x+1,i+1, rej[v[0]])
-        matrix.GetYaxis().SetBinLabel(i+1,r)
+        matrix.GetYaxis().SetBinLabel(i+1,abbreviate(r))
 
     # turn on the colours
     ROOT.gStyle.SetPalette(1)
@@ -61,7 +114,7 @@ def plotMatrix(version):
     ROOT.gPad.SetBottomMargin(0.10)
     ROOT.gPad.SetLeftMargin(0.2)
     matrix.SetStats(0)
-    matrix.Draw("COLZ")
+    matrix.Draw("TEXTCOLZ")
     
     print rejectionmatrix
     tc.SaveAs("matrixinv_"+version+".pdf")
