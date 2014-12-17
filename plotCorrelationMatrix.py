@@ -3,6 +3,8 @@ import cPickle as pickle
 import operator
 import sys
 
+ROOT.gStyle.SetPaintTextFormat("4.1f")
+
 def abbreviate(in_str):
     '''
     Method to abbreviate an algorithm into something easier to fit on a plot.
@@ -92,7 +94,7 @@ def plotMatrix(version):
     
 
 
-    matrix = ROOT.TH2F("Correlation matrix","Correlation matrix",len(sortedvars),1, len(sortedvars), len(rejectionmatrix), 1, len(rejectionmatrix))
+    matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars), len(rejectionmatrix), 1, len(rejectionmatrix))
 
     # fill the th2 with all of the values
     for i, r in enumerate(rejectionmatrix):
@@ -114,6 +116,7 @@ def plotMatrix(version):
     ROOT.gPad.SetBottomMargin(0.10)
     ROOT.gPad.SetLeftMargin(0.2)
     matrix.SetStats(0)
+    matrix.SetMarkerSize(1)
     matrix.Draw("TEXTCOLZ")
     
     print rejectionmatrix

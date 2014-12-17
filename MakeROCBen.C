@@ -117,7 +117,8 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
             if(myB==0)
                 gr_pow.SetPoint(i, myS*sigeff, 100000);
             else{
-                gr_pow.SetPoint(i, myS*sigeff, 1/(myB*bkgeff));
+	      //gr_pow.SetPoint(i, myS*sigeff, 1/(myB*bkgeff));
+	      gr_pow.SetPoint(i, myS*sigeff, 1/(1-myB*bkgeff));
             }
         }
     }

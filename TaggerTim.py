@@ -155,11 +155,15 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
-            print "plotting " + datatype + branchname
             histname =  datatype + "_" + branchname
+
+            print "plotting " + datatype + branchname
+
             # set up the tree.Draw() variable expression for the histogram
-            #varexp = 'jet_' + branchname + ' >>' + histname
-            varexp = branchname + ' >>' + histname
+            if branchname.find('YFilt') != -1:
+                varexp = 'sqrt('+branchname+') >> '+histname
+            else:
+                varexp = branchname + ' >>' + histname
             minxaxis = hist[histname].GetXaxis().GetXmin()
             maxxaxis = hist[histname].GetXaxis().GetXmax()
             # add the mc_weight and weighted number of events to the selection string
@@ -199,17 +203,21 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             hist_full.Reset()
             hist_full.SetName(histname+'_full')
             # need to store the variable in this histogram
-            varexpfull = branchname + ' >>' +histname+'_full'
+            if branchname.find('YFilt') != -1:
+                varexpfull = 'sqrt('+branchname+') >> '+histname+'_full'
+            else:
+                varexpfull = branchname + ' >>' + histname+'_full'
+
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight)
             # get the integral and normalise
             full_int = hist_full.Integral()
-            if full_int > 0.0:
-                if scaleLumi != 1:
-                    hist_full.Scale(scaleLumi)
-                else:
-                    hist_full.Scale(1.0/full_int)
+            #if full_int > 0.0:
+            #    if scaleLumi != 1:
+            #        hist_full.Scale(scaleLumi)
+            #    else:
+            #        hist_full.Scale(1.0/full_int)
             if datatype == 'sig':
-                signal_eff = orig_int/full_int
+                signal_eff = 0.68#orig_int/full_int
             else:
                 bkg_eff = orig_int/full_int
 
@@ -258,8 +266,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
-        hist['sig_' + branchname].Rebin(10)
-        hist['bkg_' + branchname].Rebin(10)
+        hist['sig_' + branchname].Rebin(5)
+        hist['bkg_' + branchname].Rebin(5)
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -448,7 +456,7 @@ def main(args):
     if not args.lumi:
         lumi = fn.getLumi()
     # default selection string
-    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) " + channelcut
+    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta >= -1.2) * (jet_CamKt12Truth_eta <= 1.2) " + channelcut
     #(vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
 
 

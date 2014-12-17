@@ -16,7 +16,7 @@ def setupHistogram(fname, algorithm, treename):
     # set up a struct so that the SetBranchAddress method can be used.
     # normally one would use tree.variable to access the variable, but since
     # this variable name changes for each algorithm this is a better way to do it.
-    gROOT.ProcessLine("struct jet_t { Float_t mass;} ")
+    gROOT.ProcessLine("struct jet_t { Float_t mass; Float_t pt; Float_t eta;} ")
     # create an object of this struct
     jet = jet_t()
     
@@ -26,8 +26,10 @@ def setupHistogram(fname, algorithm, treename):
     
     # set branch address for the groomed jet mass
     tree.SetBranchAddress("jet_"+algorithm+"_m", AddressOf(jet,'mass'))
-    # histogram with 300 bins and 0 - 3 TeV range
-    hist = TH1F("mass","mass",300,0,300*1000)    
+    tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
+    tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
+    # histogram with 300 bins and 0 - 0.3 TeV range
+    hist = TH1F("mass","mass",100,0,200*1000)    
     # maximum number of entries in the tree
     entries = tree.GetEntries()
 
@@ -35,12 +37,15 @@ def setupHistogram(fname, algorithm, treename):
     for e in xrange(entries):
         tree.GetEntry(e)
         # fill the hist
-        hist.Fill(jet.mass)
+        # check eta
+        if abs(jet.eta) <= 1.2:
+            if jet.pt < 1000*1000 and jet.pt > 500*1000 and jet.mass < 200*1000 and jet.mass > 0:
+                hist.Fill(jet.mass)
     
     return hist
 
     
-def Qw(histo, frac=0.68):
+def Qw(histo, frac=0.67):
     '''
     Method for calculating the mass window from a histogram of masses.
     Keyword args:
@@ -48,11 +53,12 @@ def Qw(histo, frac=0.68):
     frac --- the mass window fraction. Normally use 68%
     '''
     # set up the variables that store the best found window
-    minWidth = 100000.0;
+    minWidth = 1000000.0;
     topEdge = 0.0;
     botEdge = 0.0
     maxidx = 99
     minidx = 0
+    maxfrac = 0
 
     # info on histogram - number of bins and the integral
     Nbins = histo.GetNbinsX()
@@ -81,8 +87,9 @@ def Qw(histo, frac=0.68):
             botEdge = histo.GetBinCenter(i)
             minidx = copy.deepcopy(i)
             maxidx = copy.deepcopy(imax)
+            maxfrac = copy.deepcopy(tempFrac)
 
-    return minWidth, topEdge, botEdge, minidx, maxidx
+    return minWidth, topEdge, botEdge, minidx, maxidx#, maxfrac
 
 
 def run(fname, algorithm,treename):
