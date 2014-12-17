@@ -14,23 +14,40 @@ def main(args):
     parser.add_argument('-v', '--version', help = 'Version to use in pickle file')
     parser.add_argument('-t', '--treename', help = 'Treename in input root files')
     parser.add_argument('-m', '--masswindow', help = 'Apply mass window cuts')
+    parser.add_argument('--ptlow', help = 'pt low in GeV')
+    parser.add_argument('--pthigh', help = 'pt high in GeV')
 
     args = parser.parse_args()
 
+    # initial pt values
+    pt_low = 500
+    pt_high = 1000
+
+    # try to check the arguments for new pt range
+    if args.ptlow:
+        pt_low = args.ptlow
+
+    if args.pthigh:
+        pt_high = args.pthigh
+
+    # set base directory
     base_dir = args.basedir
     print 'base_dir: ' + base_dir
+    # read in all of the algorithm paths in the base directory
     paths = []
     pathsf = open(args.files,'r')
     for l in pathsf:
         l = l.strip()
         paths.append(base_dir+l)
 
+    # read in the config files for plotting
     configs = []
     configsf = open(args.configs,'r')
     for l in configsf:
         l = l.strip()    
         configs.append(l)
 
+    # get the file identifiers that are the suffix for the algorithm name
     fileids = []
     for c in configs:
         # take as a string the part after the final / and remove .xml from the end
@@ -38,17 +55,21 @@ def main(args):
 
         fileids.append(c[sl_idx:-4])
 
+    # store the maximum rejection
     maxrej = 0
     maxrejvar = ''
     maxrejm_min = 0
     maxrejm_max = 0
     maxalg = ''
 
+    # keep all of the rejection values in here
     rejectionmatrix = {}
 
+    # loop through all of the algorithms
     for p,c,f in zip(paths,configs,fileids):
         #try:
-        args_tag = ['python','TaggerTim.py',c,'-i',p,'-f', f+'_'+args.version, '--pthigh=1000','--ptlow=500','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',args.version] 
+        # used to have -f f+'_'+args.version
+        args_tag = ['python','TaggerTim.py',c,'-i',p,'-f', '_'+args.version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',args.version] 
         if args.treename:
             args_tag.append('--tree='+args.treename)
         else:

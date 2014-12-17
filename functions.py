@@ -160,7 +160,13 @@ def getFileBranches(inputfile, treename='physics'):
             file_branches.append(namespl[2])#name[name.rfind('_')+1:])
         # sometimes it is jet_ALGORITHM_VAR_IABLE
         elif len(namespl) > 3:
-            file_branches.append(namespl[2]+'_'+namespl[3])
+            app_str = ''
+            # add almost all
+            for i in range(2,len(namespl)-1):
+                app_str+=namespl[i]+'_'
+            # last one doesn't have _ at the end
+            app_str+=namespl[len(namespl)-1]
+            file_branches.append(app_str)
     file_in.Close()
     return file_branches
 
@@ -268,16 +274,20 @@ def readXML(configfile):
         varName = child.get('name')
         stub = child.find('stub').text
         jetVariable = True
+        function = ''
         if child.find('jetVariable') is not None:
             if child.find('jetVariable').text == "False":
                 jetVariable = False
                 print varName
-
-        branches[varName] = [stub, jetVariable]
+        if child.find('function') is not None:
+            function = child.find('function').text
+        #if function!='':
+        #    varName = function+'('+varName+')'
+        branches[varName] = [stub, jetVariable, function]
         if child.find('plot').text == "True":
             maxV = float(child.find('maxValue').text)
             minV = float(child.find('minValue').text)
-            plotbranches[varName] = [stub,jetVariable,minV,maxV]
+            plotbranches[varName] = [stub,jetVariable,minV,maxV,function]
 
     global pt_high
     global pt_low
@@ -388,7 +398,7 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     p3.SetTextFont(42);
     p3.SetTextSize(0.035);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000) + ', '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000) + ' GeV')#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
 def drawHists(hist1, hist2):
     hist1.SetMaximum(hist1.GetMaximum()*1.2)

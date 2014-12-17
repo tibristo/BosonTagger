@@ -15,7 +15,6 @@ def ptWeight(pt):
 def setupPtWeight(filename):
     global ptweights
     f = open(filename);
-    std::string line;
     step_size = 3500/numbins;
     counter = 1;
     std::string edge, bkg, sig;
@@ -26,8 +25,8 @@ def setupPtWeight(filename):
     float * binsarr;
 
     next_edge = step_size;
-    // normally 200 bins would be for 0 - 3500.  Now we are going
-    // to say 3500/numbins instead.
+    # normally 200 bins would be for 0 - 3500.  Now we are going
+    # to say 3500/numbins instead.
 
     next_edge = current_edge+step_size;
 
@@ -64,6 +63,8 @@ def setupHistogram(fname, algorithm, treename):
     gROOT.ProcessLine("struct jet_t { Float_t mass; Float_t pt; Float_t eta;} ")
     # create an object of this struct
     jet = jet_t()
+
+    setupPtWeight()
     
     # open file and ttree
     f = TFile.Open(fname,"READ")
@@ -77,11 +78,11 @@ def setupHistogram(fname, algorithm, treename):
     hist = TH1F("mass","mass",100,0,200*1000)    
     # maximum number of entries in the tree
     entries = tree.GetEntries()
-
+    
     # loop through
     for e in xrange(entries):
         tree.GetEntry(e)
-        weight = 1*tree.mc_event_weight
+        weight = 1*tree.mc_event_weight*ptweight(jet.pt)
         
         # fill the hist
         # check eta

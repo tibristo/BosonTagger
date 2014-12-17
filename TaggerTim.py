@@ -17,6 +17,7 @@ gROOT.SetBatch(True)
 STUB = 0
 MINX = 2
 MAXX = 3
+FN = 4
 # store all of the rejection results
 totalrejection = []
 
@@ -160,16 +161,16 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             print "plotting " + datatype + branchname
 
             # set up the tree.Draw() variable expression for the histogram
-            if branchname.find('YFilt') != -1:
-                varexp = 'sqrt('+branchname+') >> '+histname
+            if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
+                varexp = 'sqrt('+branchname+')>>'+histname
             else:
-                varexp = branchname + ' >>' + histname
+                varexp = branchname + '>>' + histname
             minxaxis = hist[histname].GetXaxis().GetXmin()
             maxxaxis = hist[histname].GetXaxis().GetXmax()
             # add the mc_weight and weighted number of events to the selection string
             # also make sure that the variable being plotted is within the bounds specified 
             # in the config file (the limits on the histogram)
-            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)*('+ branchname +'>'+str(minxaxis)+')*('+ branchname +'<'+str(maxxaxis)+')' 
+            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
 
             # add the cross section and filter efficiency for the background
             
@@ -187,11 +188,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
                     cutstringandweight += '*xs'
             
             hist[histname].Sumw2();
+
             # apply the selection to the tree and store the output in the histogram
             #print cutstringandweight
             trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
             # if the histogram is not empty then normalise it 
-            orig_int = hist[histname].Integral()
+            mw_int = hist[histname].Integral()
+
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
                     hist[histname].Scale(scaleLumi);
@@ -203,23 +206,18 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             hist_full.Reset()
             hist_full.SetName(histname+'_full')
             # need to store the variable in this histogram
-            if branchname.find('YFilt') != -1:
+            if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
                 varexpfull = 'sqrt('+branchname+') >> '+histname+'_full'
             else:
                 varexpfull = branchname + ' >>' + histname+'_full'
 
-            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight)
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 200*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
-            #if full_int > 0.0:
-            #    if scaleLumi != 1:
-            #        hist_full.Scale(scaleLumi)
-            #    else:
-            #        hist_full.Scale(1.0/full_int)
             if datatype == 'sig':
-                signal_eff = orig_int/full_int
+                signal_eff = mw_int/full_int
             else:
-                bkg_eff = orig_int/full_int
+                bkg_eff = mw_int/full_int
 
             # set up the axes titles and colours/ styles
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
@@ -242,19 +240,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
         bkgrej = bkgRejROC[branchname].Eval(0.5)
 
-        #eff_sig_bin = 0
-        #eff_sig_bin,pY = fn.findYValue(bkgRejROC[branchname], pX, pY)
-        #sigeff = Double(0.5)
-        #bkgrej = Double(0.0)
-        #if (eff_sig_bin < 0):
-            #bkgrej = pY
-        #else:
-            # Get the point in the ROC
-            #eff_sig_point = bkgRejROC[branchname].GetPoint(eff_sig_bin, sigeff, bkgrej)
-
         # store a record of all background rejection values
-        # want to store only the variable name, not the algorithm name, so string manipulation
-        totalrejection.append([branchname[branchname.rfind("_")+1:], float(bkgrej)])
+        # want to store only the variable name, not the algorithm name, so string manipulation.  here it is stored as sig_jet_ALGO_variable.
+        groups = branchname.split('_')
+        j = '_'.join(groups[:2]), '_'.join(groups[2:])
+        #totalrejection.append([branchname[branchname.rfind("_")+1:], float(bkgrej)])
+        if not j[1] == 'pt':
+            totalrejection.append([j[1], float(bkgrej)])
 
         if bkgrej > maxrej:
             maxrej = bkgrej
@@ -339,7 +331,7 @@ def main(args):
     # get the input file
     InputDir = ''
     if args.inputfile:
-        InputDir = args.inputfile #"/home/tim/boosted_samples/BoostedBosonMerging/TopoTrimmedPtFrac5SmallR30trimmed_8TeV/"
+        InputDir = args.inputfile 
 
     # load ROOT macros for pt reweighting and event weighting
     SetAtlasStyle()
@@ -440,7 +432,8 @@ def main(args):
     else:
         nvtxlow = int(fn.getNvtxLow())
     fn.nvtxlow = nvtxlow
-    # set the saveplots option
+
+    # set the saveplots option - whether we want to save individual plots for each var
     saveplots = True
     if args.saveplots:
         if args.saveplots == 'false' or args.saveplots == 'False' or args.saveplots == 'off':
@@ -451,15 +444,14 @@ def main(args):
         channelcut = ''
     else:
         channelcut = ' * (mc_channel_number == '+str(args.channelnumber)+')'
-    
+
+    # lumi scaling
     lumi = 1.0
     if not args.lumi:
         lumi = fn.getLumi()
+
     # default selection string
     cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta >= -1.2) * (jet_CamKt12Truth_eta <= 1.2) " + channelcut
-    #(vxp_n < " +str(nvtx)+ ") * (vxp_n > "+str(nvtxlow)+") " + channelcut
-
-
 
     # set up the input signal file
     signalFile = fn.getSignalFile()
@@ -499,7 +491,18 @@ def main(args):
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
         if massWinFile == '' and f.endswith('masswindow.out'):
-            massWinFile = InputDir+'/'+f
+            if f.find('pt') == -1:
+                continue
+            # check that the pt range for this mass window is correct
+            pt_rng = f[f.find('pt')+3:-len('masswindow.out')-1]
+            spl = pt_rng.split('_')
+            print spl
+            pt_l = float(spl[0])
+            pt_h = float(spl[1])
+            print ptrange
+            if pt_l*1000 == float(ptrange[0]) and pt_h*1000 == float(ptrange[1]):
+                print 'mass window file: ' +f 
+                massWinFile = InputDir+'/'+f
 
     # read the signal and background files
     for typename in ['sig','bkg']:
@@ -539,6 +542,9 @@ def main(args):
 
     # remove any branches that are not in the actual file
     file_branches = fn.getFileBranches(signalFile, fn.getTree())
+    print signalFile
+    print 'file_branches: '
+    print file_branches
     fn.pruneBranches(file_branches)
 
     # configuration for each variable to plot - axis ranges, titles
@@ -573,21 +579,9 @@ def main(args):
         branches.extend(['jet_' + AlgorithmTruth + vals[0] for branch, vals in AlgBranchStubs.items() if AlgBranchStubs[branch][1] == True]) 
 
 
-    # remove variables that will not be present for truth
-    if plotTruth:
-        if '_massdrop' in plotbranchstubs:
-            plotbranchstubs.remove('_massdrop')
-        if '_yt' in plotbranchstubs:
-            plotbranchstubs.remove('_yt')#, '_Angularity']
-        if '_TauWTA2TauWTA1' in plotbranchstubs:
-            plotbranchstubs.remove('_TauWTA2TauWTA1')
-        if '_ZCUT12' in plotbranchstubs:
-            plotbranchstubs.remove('_ZCUT12')
-
     # add algorithm names to branches
     plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs if plotjetlookup[branch] == True]
     plotbranches += [branch for branch in plotbranchstubs if plotjetlookup[branch] == False]
-
 
     # dictionary to hold all histograms
     hist = {}
@@ -605,20 +599,17 @@ def main(args):
         for br in plotconfig.keys():
             #print br
             if plotconfig[br][1] == True: # if it is a jet variable
-                histname = histnamestub+plotconfig[br][STUB]
+                if plotconfig[br][FN]!='':
+                    histname = typename+'_'+plotconfig[br][FN]+'(jet_'+Algorithm+plotconfig[br][STUB]+')'
+                    
+                else:
+                    histname = histnamestub+plotconfig[br][STUB]
                 print histname
             else:
                 histname = typename+"_"+plotconfig[br][STUB]
             hist_title = br
-            hist[histname] = TH1D(histname, hist_title, 200, plotconfig[br][MINX], plotconfig[br][MAXX])
+            hist[histname] = TH1D(histname, hist_title, 100, plotconfig[br][MINX], plotconfig[br][MAXX])
   
-    # canvas for histogram plots
-    #canv1 = TCanvas("canv1")
-    #canv1.Divide(3,4)
-    # canvas for ROC curves
-    #canv2 = TCanvas("canv2")
-    #canv2.cd()
-
     # legends for histograms and roc curves
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
     leg2 = TLegend(0.2,0.2,0.5,0.4);leg2.SetFillColor(kWhite)
@@ -658,14 +649,8 @@ def main(args):
             maxrejm_max = m_max
     records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
-    # for new studies we are plotting the inverse of the background rejection
     print totalrejection
-    # rej = 1/(1-eff) ->>> eff = 1-(1/rej)
-    # 1/eff = 
-    totalrejectionpower = totalrejection
-    #totalrejectionpower = [[a[0], 1/a[1]] if a[1] != 0 else [a[0],a[1]] for a in totalrejection]
-    #totalrejection[:] = [[a[0], 1/(1-1./a[1])] if a[1] != 0 and a[1] != 1.0 else [a[0],a[1]] for a in totalrejection]
-    #print totalrejection
+
     if not args.version:
         version = 'v1'
     else:

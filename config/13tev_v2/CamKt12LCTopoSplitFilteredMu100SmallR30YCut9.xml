@@ -7,7 +7,7 @@
   <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut9">
     <AlgorithmString>C/A R=1.2, split-filtered jets</AlgorithmString>
     <AlgorithmSettings>#mu=1.0, R_{sub}=0.3, y_{cut}=0.09</AlgorithmSettings>
-    <Energy>8</Energy>
+    <Energy>13</Energy>
   </Algorithm>
   <plotTruth name = "False">
   </plotTruth>
@@ -95,25 +95,25 @@
 
 
 
-  <varName name="EEC C1">
+  <varName name="EEC C2beta2beta1">
   <stub>_EEC_C2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="EEC C2">
+  <varName name="EEC C2beta2">
   <stub>_EEC_C2_2</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="EEC D1">
+  <varName name="EEC D2beta2beta1">
   <stub>_EEC_D2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>50.0</maxValue>
   </varName>
-  <varName name="EEC D2">
+  <varName name="EEC D2beta2">
   <stub>_EEC_D2_2</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
