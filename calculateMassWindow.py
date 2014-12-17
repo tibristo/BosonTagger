@@ -5,6 +5,51 @@ import copy
 import numpy as n
 
 
+ptweights = TH1F("ptreweight","ptreweight",200,0,3500);
+
+def ptWeight(pt):
+    global ptweights
+    return ptweights.GetBinContent(ptweights.GetXaxis().FindBin(pt/1000));
+
+
+def setupPtWeight(filename):
+    global ptweights
+    f = open(filename);
+    std::string line;
+    step_size = 3500/numbins;
+    counter = 1;
+    std::string edge, bkg, sig;
+    running_bkg = 0
+    running_sig = 0
+    current_edge = 0
+    next_edge = 0;
+    float * binsarr;
+
+    next_edge = step_size;
+    // normally 200 bins would be for 0 - 3500.  Now we are going
+    // to say 3500/numbins instead.
+
+    next_edge = current_edge+step_size;
+
+    for line in f:
+      getline(ss, edge, ',');
+      getline(ss, bkg, ',');
+      getline(ss, sig, ',');
+
+      running_bkg += float(bkg);
+      running_sig += float(sig);
+      
+      if (float(edge) >= next_edge):
+          next_edge += step_size;
+          if (running_sig == 0):
+              ptweights.SetBinContent( counter, 0 );
+          else:
+              ptweights.SetBinContent( counter, running_bkg/running_sig );
+	  running_bkg = 0;
+	  running_sig = 0;
+	  counter+=1;
+    f.close();
+
 def setupHistogram(fname, algorithm, treename):
     '''
     Read in the jet mass from the input file and fill it into a histogram.  The histogram gets used to calculate the mass window.
@@ -36,6 +81,8 @@ def setupHistogram(fname, algorithm, treename):
     # loop through
     for e in xrange(entries):
         tree.GetEntry(e)
+        weight = 1*tree.mc_event_weight
+        
         # fill the hist
         # check eta
         if abs(jet.eta) <= 1.2:

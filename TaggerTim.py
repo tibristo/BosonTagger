@@ -217,7 +217,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             #    else:
             #        hist_full.Scale(1.0/full_int)
             if datatype == 'sig':
-                signal_eff = 0.68#orig_int/full_int
+                signal_eff = orig_int/full_int
             else:
                 bkg_eff = orig_int/full_int
 
