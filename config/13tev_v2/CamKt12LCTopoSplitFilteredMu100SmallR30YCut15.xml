@@ -44,18 +44,18 @@
   <stub>_Tau1</stub>
   <plot>False</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
   </varName>
   <varName name="Tau2">
   <stub>_Tau2</stub>
   <plot>False</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
   </varName>
   <varName name="Tau21">
   <stub>_Tau21</stub>
   <plot>True</plot>
-    <maxValue>1.5</maxValue>
+    <maxValue>1</maxValue>
     <minValue>0.0</minValue>
   </varName>
   <varName name="Width">
@@ -65,13 +65,13 @@
   <varName name="Split12">
   <stub>_SPLIT12</stub>
   <plot>True</plot>
-    <maxValue>100000.0</maxValue>
+    <maxValue>1000.0</maxValue>
     <minValue>0.0</minValue>
   </varName>
   <varName name="PlanarFlow">
   <stub>_PlanarFlow</stub>
   <plot>True</plot>
-    <maxValue>1.2</maxValue>
+    <maxValue>1</maxValue>
     <minValue>0.0</minValue>
   </varName>
   <varName name="Angularity">
@@ -90,14 +90,14 @@
   <stub>_YFilt</stub>
   <plot>True</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.2</minValue>
+    <minValue>0</minValue>
   </varName>
 
 
 
   <varName name="EEC C2beta2beta1">
   <stub>_EEC_C2_1</stub>
-  <plot>True</plot>
+  <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
@@ -122,8 +122,8 @@
   <varName name="FoxWolfram20">
   <stub>_FoxWolfram20</stub>
   <plot>True</plot>
-    <minValue>-0.2</minValue>
-    <maxValue>0.6</maxValue>
+    <minValue>0</minValue>
+    <maxValue>1</maxValue>
   </varName>
   <varName name="Soft Drop Fraction">
   <stub>_SoftDrop</stub>
@@ -134,13 +134,13 @@
   <varName name="Sphericity">
   <stub>_Sphericity</stub>
   <plot>True</plot>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Aplanarity">
   <stub>_Aplanarity</stub>
   <plot>True</plot>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Thrust Maj">
@@ -158,13 +158,13 @@
   <varName name="TauWTA1">
   <stub>_TauWTA1</stub>
   <plot>False</plot>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
     <maxValue>1.2</maxValue>
   </varName>
   <varName name="TauWTA2">
   <stub>_TauWTA2</stub>
   <plot>False</plot>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="ZCUT12">

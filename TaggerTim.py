@@ -170,7 +170,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # add the mc_weight and weighted number of events to the selection string
             # also make sure that the variable being plotted is within the bounds specified 
             # in the config file (the limits on the histogram)
-            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
+            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
 
             # add the cross section and filter efficiency for the background
             
@@ -258,8 +258,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
-        hist['sig_' + branchname].Rebin(5)
-        hist['bkg_' + branchname].Rebin(5)
+        hist['sig_' + branchname].Rebin(2)
+        hist['bkg_' + branchname].Rebin(2)
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -464,12 +464,12 @@ def main(args):
     eventsFileSig = ''
     eventsFileBkg = ''
     massWinFile = ''
-    numbins = 20 #default
+    numbins = 50 #default
 
     # if the number of pt bins is not variable just use the one entry
-    if len(ptweightBins) == 1:
-        numbins = int(ptweightBins[0])
-
+    #if len(ptweightBins) == 1:
+    #    numbins = int(ptweightBins[0])
+    #znumbins = 100
     # get list of all files in the input directory and filter out different input files
     fileslist = os.listdir(InputDir)
     sigtmp = ''
@@ -486,7 +486,7 @@ def main(args):
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
         # if pt reweight file hasn't been set find it in the input folder
-        if ptweightFile == '' and f.endswith("ptweights"):
+        if ptweightFile == '' and f.endswith("ptweightsv2"):
             ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
