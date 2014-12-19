@@ -15,7 +15,7 @@ void loadweights(std::string filename = "", int numbins = 200, std::vector<float
   //  return;
   ifstream f(filename.c_str());
   std::string line;
-  float step_size = 3500/numbins;
+  float step_size = 3000/numbins;
   int counter = 1;
   std::string edge, bkg, sig;
   float running_bkg, running_sig;
@@ -23,7 +23,7 @@ void loadweights(std::string filename = "", int numbins = 200, std::vector<float
   float * binsarr;
   if (bins.empty())
     {
-      ptweights = new TH1F("ptreweight","ptreweight",numbins,0,3500);
+      ptweights = new TH1F("ptreweight","ptreweight",numbins,0,3000);
       next_edge = step_size;
     }
   else

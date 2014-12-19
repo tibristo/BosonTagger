@@ -78,18 +78,24 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     p.wait()
 
 
-def writePlotsToROOT(Algorithm, fileid, hist):
+def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
     '''
     Write plots to a ROOT file instead of png/pdf
     Keyword args:
     Algorithm -- Algorithm name
     fileid -- Identifier for output file
     hist -- dictionary of histograms
+    rocs -- dictionary of ROCs
+    rocs_rejpow -- dictionary of ROCs rejection power
     '''
     fo = TFile.Open('plots/'+Algorithm+fileid+'.root','RECREATE')
     for h in hist.keys():
         if hist[h].Integral() != 0:
             hist[h].Write()
+    for r in rocs.keys():
+        rocs[r].Write()
+    for r in rocs_rejpow.keys():
+        rocs_rejpow[r].Write()
     fo.Close()
 
 def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
@@ -163,6 +169,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # set up the tree.Draw() variable expression for the histogram
             if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
                 varexp = 'sqrt('+branchname+')>>'+histname
+                # the yfilt variable isn't filled for anything except split/filtered.  So to fix this
+                # we draw split12/jet mass instead
+                if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
+                    new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
+                    varexp = 'sqrt('+new_branch+')>>'+histname
             else:
                 varexp = branchname + '>>' + histname
             minxaxis = hist[histname].GetXaxis().GetXmin()
@@ -208,6 +219,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # need to store the variable in this histogram
             if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
                 varexpfull = 'sqrt('+branchname+') >> '+histname+'_full'
+                if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
+                    new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
+                    varexpfull = 'sqrt('+new_branch+')>>'+histname+'_full'
             else:
                 varexpfull = branchname + ' >>' + histname+'_full'
 
@@ -258,8 +272,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
-        hist['sig_' + branchname].Rebin(2)
-        hist['bkg_' + branchname].Rebin(2)
+        hist['sig_' + branchname].Rebin(4)
+        hist['bkg_' + branchname].Rebin(4)
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -294,7 +308,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
-        writePlotsToROOT(Algorithm, fileid, hist)
+        writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
     # return the variable with the maximum background rejection
     return maxrej, maxrejvar
 
@@ -608,7 +622,7 @@ def main(args):
             else:
                 histname = typename+"_"+plotconfig[br][STUB]
             hist_title = br
-            hist[histname] = TH1D(histname, hist_title, 100, plotconfig[br][MINX], plotconfig[br][MAXX])
+            hist[histname] = TH1D(histname, hist_title, 200, plotconfig[br][MINX], plotconfig[br][MAXX])
   
     # legends for histograms and roc curves
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)

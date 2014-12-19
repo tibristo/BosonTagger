@@ -65,6 +65,7 @@ def plotMatrix(version):
     rejectionmatrix = pickle.load(open("rejectionmatrix_"+version+".p", "rb"))
 
 
+
     tc = ROOT.TCanvas()
 
     maxlistvars = []
@@ -81,9 +82,26 @@ def plotMatrix(version):
             else:
                 varsdict[v[0]] = 1
 
-    # sort all of the variables. sortedvars is a tuple sorted by value of varsdict
-    sortedvars = sorted(varsdict.items(), key=operator.itemgetter(0))
-    
+    # sort all of the variables. sortedvars is a tuple sorted by value of varsdict. order contains the desired order if these variables are present
+    order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']    
+    #sortedvars = sorted(varsdict.items(), key=operator.itemgetter(0))
+    sortedvars = []
+    # variables that are not in the "order" list
+    toadd = []
+    # check which variables are not in the order list
+    for v in varsdict.items():
+        if v[0] not in order:
+            toadd.append(v)
+    # add variables in the "order" list to the sorteredvars list
+    for o in order:
+        for v in varsdict.items():
+            if o == v[0] and not (o == 'EEC_C2_1' or o == 'EEC_C2_2' or o == 'Dip12' or o == 'Angularity'):
+                sortedvars.append(v)
+    # add the remaining variables to the sortedvars list
+    for x in toadd:
+        if not (x[0] == 'EEC_C2_1' or x[0] == 'EEC_C2_2' or x[0] == 'Dip12' or x[0] == 'Angularity'):
+            sortedvars.append(x)
+
     # if there is a missing variable we append this to the end of the row
     for r in rejectionmatrix:
         rejvars = [x[0] for x in rejectionmatrix[r]]
@@ -95,7 +113,7 @@ def plotMatrix(version):
 
 
     matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars), len(rejectionmatrix), 1, len(rejectionmatrix))
-
+    matrix.GetZaxis().SetRangeUser(0.0,35.0)
     # fill the th2 with all of the values
     for i, r in enumerate(rejectionmatrix):
         # r will have [key, [rejection, variable name]]
@@ -105,7 +123,7 @@ def plotMatrix(version):
         for x, v in enumerate(sortedvars):
             # add teh variables
             # Just want to plot the variable name, not the rest of the name
-            print v
+            #print v
             matrix.GetXaxis().SetBinLabel(x+1,v[0])
             matrix.SetBinContent(x+1,i+1, rej[v[0]])
         matrix.GetYaxis().SetBinLabel(i+1,abbreviate(r))
@@ -119,7 +137,7 @@ def plotMatrix(version):
     matrix.SetMarkerSize(1)
     matrix.Draw("TEXTCOLZ")
     
-    print rejectionmatrix
+    #print rejectionmatrix
     tc.SaveAs("matrixinv_"+version+".pdf")
 
 

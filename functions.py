@@ -234,11 +234,16 @@ def pruneBranches(file_branches):
     global branches
     todelete = []
     print file_branches
+    # if we have split12 and jet mass we can calculate YFilt
+    # so look for these two variables (mass is always there), and if they are there, YFilt can be added
+    if 'SPLIT12' in file_branches:
+        file_branches.append('YFilt')
     # loop through all of the variables in the branches dict
     for k in branches.keys():
         # if the stub value (take away the leading underscore) is not in the file
         # mark it to be deleted
         if not branches[k][0][1:] in file_branches:
+
             todelete.append(k)
 
     for d in todelete:
