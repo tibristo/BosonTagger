@@ -3,9 +3,11 @@ import sys
 import os
 import copy
 import numpy as n
+from array import array
 
-
-ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
+ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
+#ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
+ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
 
 
 
@@ -49,8 +51,9 @@ def setupPtWeight(filename):
     next_edge = step_size;
     # normally 200 bins would be for 0 - 3500.  Now we are going
     # to say 3500/numbins instead.
-
-    next_edge = current_edge+step_size;
+    current_edge = 200;#ptweights.GetXaxis().GetBinUpEdge(1)
+    next_edge = ptweights.GetXaxis().GetBinUpEdge(1)
+    #next_edge = current_edge+step_size;
 
     for line in f:
         spl = line.strip().split(',')
@@ -58,12 +61,16 @@ def setupPtWeight(filename):
         edge = spl[0]
         bkg = spl[1]
         sig = spl[2]
-      
+        if float(current_edge) < 200:
+            continue
+
         running_bkg += float(bkg);
         running_sig += float(sig);
       
         if (float(edge) >= next_edge):
-            next_edge += step_size;
+            #next_edge += step_size;
+            current_edge = copy.deepcopy(next_edge)
+            next_edge = ptweights.GetXaxis().GetBinUpEdge(counter+1);
             if (running_sig == 0):
                 ptweights.SetBinContent( counter, 0 );
             else:
@@ -111,7 +118,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     # histogram with 300 bins and 0 - 0.3 TeV range
     hist = TH1F("pt","pt",100,200*1000,3000*1000)    
     hist_rw = TH1F("ptrw","ptrw",100,200*1000,3000*1000)    
-    pthist = TH1F("ptreweight","ptreweight",100,0,3000);
+    pthist = TH1F("ptreweight","ptreweight",56,200,3000); # gives 50 gev per bin
     # maximum number of entries in the tree
     entries = tree.GetEntries()
     
@@ -178,7 +185,7 @@ def run(fname, algorithm, treename, ptfile):
     folder = fname[:fname.rfind('/')+1]
 
     if createptfile:
-        ptfile_out = open(folder+algorithm+'.ptweightsv2','w')
+        ptfile_out = open(folder+algorithm+'.ptweightsv3','w')
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
@@ -227,7 +234,7 @@ def runAll(input_file, file_id, treename):
             # found the signal file!
             if fil.endswith("sig.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweightsv2"):
+            if fil.endswith("ptweightsv3"):
                 ptfile = folder+fil
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier

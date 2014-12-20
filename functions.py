@@ -292,7 +292,10 @@ def readXML(configfile):
         if child.find('plot').text == "True":
             maxV = float(child.find('maxValue').text)
             minV = float(child.find('minValue').text)
-            plotbranches[varName] = [stub,jetVariable,minV,maxV,function]
+            nbins = 100
+            if child.find('bins') is not None:
+                nbins = int(child.find('bins').text)
+            plotbranches[varName] = [stub,jetVariable,minV,maxV,nbins,function]
 
     global pt_high
     global pt_low
@@ -319,7 +322,7 @@ def readXML(configfile):
         if not aE is None:
             energy = algo.find('Energy').text
         else:
-            energy = '14'
+            energy = '13'
 
     global truth
     for tr in root.findall('plotTruth'):

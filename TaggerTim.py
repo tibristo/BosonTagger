@@ -17,7 +17,8 @@ gROOT.SetBatch(True)
 STUB = 0
 MINX = 2
 MAXX = 3
-FN = 4
+BINS = 4
+FN = 5
 # store all of the rejection results
 totalrejection = []
 
@@ -225,7 +226,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             else:
                 varexpfull = branchname + ' >>' + histname+'_full'
 
-            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 200*1000)" + " * (jet_" +Algorithm + "_m > 0)")
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
             if datatype == 'sig':
@@ -272,8 +273,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
-        hist['sig_' + branchname].Rebin(4)
-        hist['bkg_' + branchname].Rebin(4)
+        #hist['sig_' + branchname].Rebin(4)
+        #hist['bkg_' + branchname].Rebin(4)
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -475,6 +476,7 @@ def main(args):
     ptweightFile = fn.getPtWeightsFile()
     # get the number of bins to use for pt reweighting from config file
     ptweightBins = fn.getBins()
+    ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
     eventsFileSig = ''
     eventsFileBkg = ''
     massWinFile = ''
@@ -500,7 +502,7 @@ def main(args):
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
         # if pt reweight file hasn't been set find it in the input folder
-        if ptweightFile == '' and f.endswith("ptweightsv2"):
+        if ptweightFile == '' and f.endswith("ptweightsv3"):
             ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
@@ -552,7 +554,7 @@ def main(args):
     if len(ptweightBins) <= 1:
         loadweights(ptweightFile,numbins)
     else:
-        loadweights(ptweightFile,ptweightBins)
+        loadweights(ptweightFile,-1,array('f',ptweightBins))
 
     # remove any branches that are not in the actual file
     file_branches = fn.getFileBranches(signalFile, fn.getTree())
@@ -622,7 +624,7 @@ def main(args):
             else:
                 histname = typename+"_"+plotconfig[br][STUB]
             hist_title = br
-            hist[histname] = TH1D(histname, hist_title, 200, plotconfig[br][MINX], plotconfig[br][MAXX])
+            hist[histname] = TH1D(histname, hist_title, plotconfig[br][BINS], plotconfig[br][MINX], plotconfig[br][MAXX])
   
     # legends for histograms and roc curves
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
