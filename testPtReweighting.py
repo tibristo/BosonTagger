@@ -13,7 +13,16 @@ ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweigh
 
 nevents = {}
 
+
 def NEvents(runNumber):
+    '''
+    Method for getting the number of events given a specific RunNumber.
+    args 
+    runNumber --- string or long of run number
+
+    returns number of events, or 1 if not found
+    '''
+    # load global dictionary which is set in loadEvents()
     global nevents
     if long(runNumber) in nevents.keys():
         return nevents[runNumber];
@@ -21,9 +30,15 @@ def NEvents(runNumber):
         return 1;
 
 def loadEvents(filename):
+    '''
+    Method for reading in a text file that contains the number of events per Run Number, comma separated (runnumber,events).  It stores these
+    in a global dictionary called nevents.
+    filename --- input text file.
+    '''
     global nevents
     f = open(filename);
     for line in f:
+        # comma separated file
         spl = line.strip().split(',')
         run = spl[0]
         ev = spl[1]
@@ -33,14 +48,29 @@ def loadEvents(filename):
 
 
 def ptWeight(pt):
+    '''
+    Method to return the weight for a given pT.
+    pt --- pT in MeV.
+    
+    returns scale factor/ weight.
+    '''
+    # load global pt weights histogram
     global ptweights
     return ptweights.GetBinContent(ptweights.GetXaxis().FindBin(pt/1000));
 
 
 def setupPtWeight(filename):
+    '''
+    Method to read in a text file that contains the pt weighting information.  It is a csv that has: lower edge, bkg events, signal events.
+    The number of events per bin entry for background and signal are taken as a ratio for weighting signal events.
+    filename --- Input csv.
+    '''
+    # load the global pt weights histogram
     global ptweights
     print 'ptfile: '+filename
+    # open file and set up parameters for running through the file.
     f = open(filename);
+    # step size of 30
     numbins = 100
     step_size = 3000/numbins;
     counter = 1;
@@ -49,35 +79,44 @@ def setupPtWeight(filename):
     current_edge = 0
     next_edge = 0;
     next_edge = step_size;
-    # normally 200 bins would be for 0 - 3500.  Now we are going
-    # to say 3500/numbins instead.
-    current_edge = 200;#ptweights.GetXaxis().GetBinUpEdge(1)
+    # start at 200, don't care about anything below this.
+    current_edge = 200;
+    # the end of the bin, so now have the initial bin up and low edges
     next_edge = ptweights.GetXaxis().GetBinUpEdge(1)
     #next_edge = current_edge+step_size;
 
+    # loop through the input file
     for line in f:
         spl = line.strip().split(',')
         print line
         edge = spl[0]
         bkg = spl[1]
         sig = spl[2]
+        # don't care about anything less than 200
         if float(current_edge) < 200:
             continue
 
-        running_bkg += float(bkg);
-        running_sig += float(sig);
       
+        # if we are now into the next bin.
         if (float(edge) >= next_edge):
-            #next_edge += step_size;
+            # we now have the low edge as the old up edge
             current_edge = copy.deepcopy(next_edge)
+            # get the new up edge
             next_edge = ptweights.GetXaxis().GetBinUpEdge(counter+1);
+            # fill in the pt weights
             if (running_sig == 0):
                 ptweights.SetBinContent( counter, 0 );
             else:
                 ptweights.SetBinContent( counter, running_bkg/running_sig );
+            # reset the running totals and increment the bin counter
             running_bkg = 0;
             running_sig = 0;
             counter+=1;
+            
+        # keep track of the total bkg and signal in this bin.
+        running_bkg += float(bkg);
+        running_sig += float(sig);
+
     tc = TCanvas()
     tc.cd()
     ptweights.Draw()
@@ -134,7 +173,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         # check eta
         #if abs(jet.eta) <= 1.2:
         #    if jet.pt < 1000*1000 and jet.pt > 500*1000 and jet.mass < 200*1000 and jet.mass > 0:
-        if jet.pt < 200*1000 and not createptfile:
+        if jet.pt < 200*1000 or abs(jet.eta) >= 1.2 and not createptfile:
             continue
 
 
@@ -185,7 +224,7 @@ def run(fname, algorithm, treename, ptfile):
     folder = fname[:fname.rfind('/')+1]
 
     if createptfile:
-        ptfile_out = open(folder+algorithm+'.ptweightsv3','w')
+        ptfile_out = open(folder+algorithm+'.ptweightsv5','w')
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
@@ -234,7 +273,7 @@ def runAll(input_file, file_id, treename):
             # found the signal file!
             if fil.endswith("sig.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweightsv3"):
+            if fil.endswith("ptweightsv5"):
                 ptfile = folder+fil
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier

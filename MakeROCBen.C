@@ -11,6 +11,10 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
     //TGraph &bkgRejPower holds the bkg rejection power - set by type =1/2/3
     //ROC(S,B,curve);
 
+  if(S->Integral()!=0) S->Scale(1.0/S->Integral());
+  if(B->Integral()!=0) B->Scale(1.0/B->Integral());
+
+
     const int n = S->GetNbinsX();
     vector<double> s;
     vector<double> b;
@@ -106,20 +110,20 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
             gr_do.SetPoint(i, myS-mySerr, (1-(myB+myBerr)));
         }
         else if(type==2){
-            if(myB==1)
-                gr_pow.SetPoint(i, myS*sigeff, 100000);
+            if(myB==0)
+	      gr_pow.SetPoint(i, myS*sigeff, 10000);//100000);
             else{
 	      //gr_pow.SetPoint(i, myS*sigeff, 1/((1-myB)*(1-bkgeff)) );
 	      gr_pow.SetPoint(i, myS*sigeff, 1/(1-(1-myB*bkgeff)) );
             }
         }
 	else if(type==3){
-            if(myB==0)
-                gr_pow.SetPoint(i, myS*sigeff, 100000);
-            else{
+	  if(myB==1)
+	      gr_pow.SetPoint(i, myS*sigeff, 100000);
+	  else{
 	      //gr_pow.SetPoint(i, myS*sigeff, 1/(myB*bkgeff));
 	      gr_pow.SetPoint(i, myS*sigeff, 1/(1-myB*bkgeff));
-            }
+	      }
         }
     }
 

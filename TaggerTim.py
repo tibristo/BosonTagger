@@ -229,6 +229,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
+            #print 'DEBUG mw_int: ' +str(mw_int)
+            #print 'DEBUG full_int: ' +str(full_int)
+
             if datatype == 'sig':
                 signal_eff = mw_int/full_int
             else:
@@ -251,9 +254,15 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         pX = Double(0.5)
         pY = Double(0.0)
-
+        #tmpY = Double(0.0)
+        #idx, tmpY = fn.findYValue(bkgRejROC[branchname],pX,pY,0.05,True)
+        
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
-        bkgrej = bkgRejROC[branchname].Eval(0.5)
+        bkgrej = 1/(1-roc[branchname].Eval(0.5))#Double(0.0)
+        #bkgRejROC[branchname].GetPoint(idx,pX,bkgrej)#bkgRejROC[branchname].Eval(0.5)
+        #bkgrej = bkgRejROC[branchname].Eval(0.5,0,"S")
+        #print 'DEBUG 1-bkgeff: '+ str(bkgrej)
+        #print 'DEBUG roc bkg: ' + str(1/(1-roc[branchname].Eval(0.5)))
 
         # store a record of all background rejection values
         # want to store only the variable name, not the algorithm name, so string manipulation.  here it is stored as sig_jet_ALGO_variable.
@@ -502,7 +511,7 @@ def main(args):
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
         # if pt reweight file hasn't been set find it in the input folder
-        if ptweightFile == '' and f.endswith("ptweightsv3"):
+        if ptweightFile == '' and f.endswith("ptweightsv5"):
             ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out

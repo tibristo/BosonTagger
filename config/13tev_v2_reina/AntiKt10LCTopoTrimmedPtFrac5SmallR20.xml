@@ -191,8 +191,8 @@
   <varName name="Dip12">
   <stub>_Dip12</stub>
   <plot>True</plot>
-  <bins>50</bins>
+  <bins>500</bins>
     <minValue>0</minValue>
-    <maxValue>0.2</maxValue>
+    <maxValue>0.08</maxValue>
   </varName>
 </settings>
