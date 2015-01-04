@@ -61,6 +61,9 @@ def main(args):
         sl_idx = c.rfind('/')+1
 
         fileids.append(c[sl_idx:-4])
+    version = 'v1' # default version number
+    if args.version:
+        version = args.version
 
     # store the maximum rejection
     maxrej = 0
@@ -79,11 +82,21 @@ def main(args):
     # async
     lview.block = False
 
+    # lists for keeping track of all running jobs, their names and config info
+    proclist = [[],[],[]]
+    # define some variables for indexing in proclist
+    PROCESS = 0
+    VERSION = 1
+    CONFIG = 2
+
+    # counter to give each job a unique name
+    counter = 0
     # loop through all of the algorithms
     for p,c,f in zip(paths,configs,fileids):
+        counter+=1
         #try:
         # used to have -f f+'_'+args.version
-        args_tag = ['python','TaggerTim.py',c,'-i',p,'-f', '_'+args.version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',args.version] 
+        args_tag = ['python','TaggerTim.py',c,'-i',p,'-f', '_'+version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',version+'_idx_'+str(counter)] 
         if args.treename:
             args_tag.append('--tree='+args.treename)
         else:
@@ -92,20 +105,26 @@ def main(args):
             if args.masswindow == 'true' or args.masswindow == 'True':
                 args_tag.append('--massWindowCut=True')
         print args_tag
-        #raw_input()
-        #print sys.argv
-        #rej, var, m_min, m_max=#TaggerTim.main([c,'-i',p,'-f', f, '--pthigh=2000','--ptlow=350','--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true','--tree=physics','lumi=1'])
-        p = subprocess.Popen(args_tag,stdout=subprocess.PIPE)
-        p.wait()
-        #output = p.communicate()[0]
+        # add this process to the ipython engine
+        proclist[PROCESS].append(lview.apply_async(runTag, args_tag))
+        # keep track of the version number/ process name
+        proclist[VERSION].append(version+'_idx_'+str(counter))
+        # keep track of the configuration of this - config file, path, file name
+        proclist[CONFIG].append([p,c,f])
+        #p = subprocess.Popen(args_tag,stdout=subprocess.PIPE)
+        #p.wait()
+
+    # now wait until all jobs are done
+    lview.wait(proclist)
+    for idx,p in enumerate(proclist[PROCESS]):
+        proc_output = p.get()
+        v = proclist[VERSION][idx]
         # check output pickle exists - if not, raise error, set all values to 0
         rej = '0'
         var = ''
         mass_min = '0'
         mass_max = '10000'
-        v = 'v1' # default version number
-        if args.version:
-            v = args.version
+
         if os.path.isfile("TaggerOutput_"+v+".p"):
             output = pickle.load(open("TaggerOutput_"+v+".p","rb"))
             #print output
@@ -119,7 +138,7 @@ def main(args):
         else:
             var = 'ERROR'
     
-        print 'Algorithm: ' + c
+        print 'Algorithm: ' + proclist[CONFIG][idx][2]# index of c, or config file
         print 'Rejection: ' + rej
         print 'Variable: ' + var
         print 'Mass min: ' + mass_min
@@ -129,9 +148,9 @@ def main(args):
             maxrejvar = var
             maxrejm_min = float(mass_min)
             maxrejm_max = float(mass_max)
-            maxalg = c
+            maxalg = proclist[CONFIG][idx][2] # index of c
         # load total background rejection matrix from pickle file
-        totalrejection = pickle.load(open("tot_rej_"+args.version+".p","rb"))
+        totalrejection = pickle.load(open("tot_rej_"+version+".p","rb"))
         rejectionmatrix[f] = totalrejection
         #except e:
         #   print 'Failed to analyse: ' + f
@@ -146,11 +165,11 @@ def main(args):
 
     
     # pickle output in case of crash
-    with open("rejectionmatrix_"+args.version+".p","wb") as f:
+    with open("rejectionmatrix_"+version+".p","wb") as f:
         pickle.dump(rejectionmatrix, f)
 
     import plotCorrelationMatrix as pm
-    pm.plotMatrix(args.version)
+    pm.plotMatrix(version)
 
 if __name__ == '__main__':
     main(sys.argv)
