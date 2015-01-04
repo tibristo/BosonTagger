@@ -511,7 +511,7 @@ def main(args):
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
         # if pt reweight file hasn't been set find it in the input folder
-        if ptweightFile == '' and f.endswith("ptweightsv5"):
+        if ptweightFile == '' and f.endswith("ptweightsv6"):
             ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
@@ -684,7 +684,7 @@ def main(args):
         pickle.dump(totalrejection, f)
     print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
     output = "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
-    with open("temp.p","wb") as f:
+    with open("TaggerOutput_"+version+".p","wb") as f:
         pickle.dump(output,f)
     #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 

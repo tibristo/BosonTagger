@@ -98,7 +98,7 @@ def setupPtWeight(filename):
 
       
         # if we are now into the next bin.
-        if (float(edge) >= next_edge):
+        if (float(edge) > next_edge):
             # we now have the low edge as the old up edge
             current_edge = copy.deepcopy(next_edge)
             # get the new up edge
@@ -169,11 +169,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
         weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
 
-        # fill the hist
-        # check eta
-        #if abs(jet.eta) <= 1.2:
-        #    if jet.pt < 1000*1000 and jet.pt > 500*1000 and jet.mass < 200*1000 and jet.mass > 0:
-        if jet.pt < 200*1000 or abs(jet.eta) >= 1.2 and not createptfile:
+        if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2 or jet.mass > 300*1000.0):# and not createptfile:
             continue
 
 
@@ -224,7 +220,7 @@ def run(fname, algorithm, treename, ptfile):
     folder = fname[:fname.rfind('/')+1]
 
     if createptfile:
-        ptfile_out = open(folder+algorithm+'.ptweightsv5','w')
+        ptfile_out = open(folder+algorithm+'.ptweightsv6','w')
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
@@ -273,7 +269,7 @@ def runAll(input_file, file_id, treename):
             # found the signal file!
             if fil.endswith("sig.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweightsv5"):
+            if fil.endswith("ptweightsv6"):
                 ptfile = folder+fil
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier

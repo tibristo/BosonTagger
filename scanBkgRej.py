@@ -6,6 +6,13 @@ import subprocess
 import argparse
 import os.path
 
+
+from IPython import parallel as p
+from IPython.display import clear_output
+
+
+
+
 def main(args):
     parser = argparse.ArgumentParser(description='scan bkg rejection')
     parser.add_argument('-b', '--basedir', help = 'The base directory of the input files')
@@ -65,6 +72,13 @@ def main(args):
     # keep all of the rejection values in here
     rejectionmatrix = {}
 
+
+    # set up IPython engines
+    rc=p.Client()
+    lview = rc.load_balanced_view()
+    # async
+    lview.block = False
+
     # loop through all of the algorithms
     for p,c,f in zip(paths,configs,fileids):
         #try:
@@ -89,9 +103,11 @@ def main(args):
         var = ''
         mass_min = '0'
         mass_max = '10000'
-
-        if os.path.isfile("temp.p"):
-            output = pickle.load(open("temp.p","rb"))
+        v = 'v1' # default version number
+        if args.version:
+            v = args.version
+        if os.path.isfile("TaggerOutput_"+v+".p"):
+            output = pickle.load(open("TaggerOutput_"+v+".p","rb"))
             #print output
             #print output.find("MAXREJSTART:")
             rejout= output[output.find("MAXREJSTART:")+12:output.find("MAXREJEND")]

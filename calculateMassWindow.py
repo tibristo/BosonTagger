@@ -235,7 +235,7 @@ def runAll(input_file, file_id, ptlow, pthigh, treename):
             # found the signal file!
             if fil.endswith("sig.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweightsv2"):
+            elif fil.endswith("ptweightsv5"):
                 ptfile = folder+fil
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier
