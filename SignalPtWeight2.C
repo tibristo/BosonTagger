@@ -26,7 +26,7 @@ double SignalPtWeight2(double pt = 0)
  * numbins --- Number of bins to use for the pt weighting histogram.
  * bins --- An array containing the bin edges so we can use variable bin sizes.
  */
-void loadweights(std::string filename = "", int numbins = 200, Float_t * bins = 0)
+void loadweights(std::string filename = "", int numbins = 100, Float_t * bins = 0)
 {
   // input file
   ifstream f(filename.c_str());

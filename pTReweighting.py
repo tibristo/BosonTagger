@@ -9,11 +9,9 @@ ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,
 #ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
 ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
 
-filename = ''
-success = False
-
 nevents = {}
-
+success = False
+filename = ''
 
 def NEvents(runNumber):
     '''
@@ -156,8 +154,13 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
     tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
     # histogram with 300 bins and 0 - 0.3 TeV range
-    hist = TH1F("pt","pt",100,200*1000,3000*1000)    
+    # histogram storing pt without being reweighted
+    hist_pt = TH1F("pt","pt",100,200*1000,3000*1000)    
+    # jet mass
+    hist_m = TH1F("mass","mass",100,,300*1000)    
+    # pt 
     hist_rw = TH1F("ptrw","ptrw",100,200*1000,3000*1000)    
+    # pt only if creating pt rw file
     pthist = TH1F("ptreweight","ptreweight",56,200,3000); # gives 50 gev per bin
     # maximum number of entries in the tree
     entries = tree.GetEntries()
@@ -170,16 +173,22 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
         weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
 
-        if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2 or jet.mass > 300*1000.0):# and not createptfile:
-            continue
-
+        # apply basic selection criteria - slightly different for pt and mass window
+        if createptfile:
+            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2 or jet.mass > 300*1000.0):# and not createptfile:
+                continue
+        else:
+            if abs(jet.eta) > 1.2 or jet.pt > pthigh*1000 or jet.pt < ptlow*1000 or jet.mass >= 300*1000 or jet.mass <= 0:
+                continue
 
         if signal and not createptfile:
             weight*=ptWeight(jet.pt)
         elif not signal:
             weight*=tree.xs
             weight2*=tree.xs
-        hist.Fill(jet.pt,weight2)
+        
+        hist_m.Fill(jet.mass,weight)
+        hist_pt.Fill(jet.pt,weight2)
 
         if createptfile:
             pthist.Fill(jet.pt/1000,weight)
@@ -193,10 +202,53 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             print 'nevents: ' + str(NEvents(tree.mc_channel_number))
             print 'ptweight: ' + str(ptWeight(jet.pt))
         hist_rw.Fill(jet.pt,weight)
-
     
-    return hist, hist_rw, pthist
+    return hist_m, hist_pt, hist_rw, pthist
 
+def Qw(histo, frac=0.68):
+    '''
+    Method for calculating the mass window from a histogram of masses.
+    Keyword args:
+    histo --- input TH1F histogram of masses
+    frac --- the mass window fraction. Normally use 68%
+    '''
+    # set up the variables that store the best found window
+    minWidth = 1000000.0;
+    topEdge = 0.0;
+    botEdge = 0.0
+    maxidx = 99
+    minidx = 0
+    maxfrac = 0
+
+    # info on histogram - number of bins and the integral
+    Nbins = histo.GetNbinsX()
+    integral = histo.Integral();
+
+    # loop through each bin of the histogram
+    for i in xrange(0,Nbins):
+
+        tempFrac = 0.0
+        # want to make sure we don't change i when changing imax
+        imax = copy.deepcopy(i)
+
+        # loop through until the tempFrac is above the frac (68%) criteria,
+        # but making sure not to go out of range.                                                                                                                                             
+        while(tempFrac<frac and imax != Nbins):
+            tempFrac+=histo.GetBinContent(imax)/integral;
+            imax+=1;
+
+        width = histo.GetBinCenter(imax) - histo.GetBinCenter(i);
+        # by applying this we say that the window we have just calculate MUST have at least 68%.
+        if tempFrac >= frac and width<minWidth:
+            # set up the best found mass window variables
+            minWidth = width;
+            topEdge = histo.GetBinCenter(imax);
+            botEdge = histo.GetBinCenter(i)
+            minidx = copy.deepcopy(i)
+            maxidx = copy.deepcopy(imax)
+            maxfrac = copy.deepcopy(tempFrac)
+
+    return minWidth, topEdge, botEdge, minidx, maxidx#, maxfrac
 
 
 def run(fname, algorithm, treename, ptfile, version='v6'):
@@ -217,13 +269,14 @@ def run(fname, algorithm, treename, ptfile, version='v6'):
     createptfile = False
     if ptfile == '':
         createptfile = True
-    hist_sig,hist_rw,pthist_sig = setupHistogram(fname, algorithm, treename, True, ptfile, createptfile)
+    hist_sig_m, hist_sig_pt,hist_rw,pthist_sig = setupHistogram(fname, algorithm, treename, True, ptfile, createptfile)
     bkg_fname = fname.replace('sig','bkg')
-    hist_bkg,tmp,pthist_bkg = setupHistogram(bkg_fname, algorithm, treename, False, '', createptfile)
+    hist_bkg_m,hist_bkg_pt,tmp,pthist_bkg = setupHistogram(bkg_fname, algorithm, treename, False, '', createptfile)
 
     # folder where input file is
     folder = fname[:fname.rfind('/')+1]
 
+    # if we are creating a new pt rw file, save all of the info
     if createptfile:
         filename = folder+algorithm+'.ptweights'+version
         ptfile_out = open(filename,'w')
@@ -235,20 +288,37 @@ def run(fname, algorithm, treename, ptfile, version='v6'):
         ptfile_out.close()
         success = True
 
-    # write this information out as a plot
-    canv = TCanvas()
-    canv.cd()
-    canv.SetLogy()
-    hist_sig.Scale(1/hist_sig.Integral())
-    hist_bkg.Scale(1/hist_bkg.Integral())
-    hist_rw.Scale(1/hist_rw.Integral())
-    hist_sig.Draw()
-    hist_bkg.SetLineColor(ROOT.kRed)
-    hist_bkg.Draw("same")
-    canv.SaveAs(folder+"pt_truth.png")
-    hist_rw.Draw()
-    hist_bkg.Draw("same")
-    canv.SaveAs(folder+"pt_rw.png")
+        # write this information out as a plot
+        # this is used to compare the pt before and after rw
+        canv = TCanvas()
+        canv.cd()
+        canv.SetLogy()
+        hist_sig_pt.Scale(1/hist_sig_pt.Integral())
+        hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
+        hist_rw.Scale(1/hist_rw.Integral())
+        hist_sig_pt.Draw()
+        hist_bkg_pt.SetLineColor(ROOT.kRed)
+        hist_bkg_pt.Draw("same")
+        canv.SaveAs(folder+"pt_truth.png")
+        hist_rw.Draw()
+        hist_bkg_pt.Draw("same")
+        canv.SaveAs(folder+"pt_rw.png")
+    else: # if we are just doing the mass windows
+        # calculate the width, top and bottom edges and the indices for the 68% mass window
+        wid, topedge, botedge, minidx, maxidx = Qw(hist, 0.68)
+        # folder where input file is
+        folder = fname[:fname.rfind('/')+1]
+        # write this information out to a text file
+        filename = folder+algorithm+"_pt_"+ptlow+"_"+pthigh+"_masswindow.out"
+        fout = open(filename,'w')
+        fout.write("width: "+ str(wid)+'\n')
+        fout.write("top edge: "+ str(topedge)+'\n')
+        fout.write("bottom edge: "+ str(botedge)+'\n')
+        fout.write("minidx: "+ str(minidx)+'\n')
+        fout.write("maxidx: "+ str(maxidx)+'\n')
+        fout.close()
+        success = True
+
 
 def runAll(input_file, file_id, treename, version='v6'):
     '''

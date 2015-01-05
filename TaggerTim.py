@@ -9,8 +9,7 @@ import subprocess
 import os
 from array import array
 import cPickle as pickle
-import calculateMassWindow
-import pTReweighting
+import massPtFunctions
 
 
 from AtlasStyle import *
@@ -545,32 +544,22 @@ def main(args):
 
 
     if ptreweight and ptweightFile == '':
-        #def run(fname, algorithm, treename, ptfile, version='v6'):
-        '''
-        Method for running over a single algorithm and calculating the mass window.
-        Keyword args:
-        fname --- the input file name
-        algorithm --- the name of the algorithm
-        treename --- Name of tree in input root files
-        ptfile --- pt reweighting file
-        version --- version of pt file
-        '''
         print 'calculating pt reweighting since no existing file present'
-        pTReweighting.run(signalFile, Algorithm, treename, '', 'v6')
-        if pTReweighting.success:
-            ptweightFile = pTReweighting.filename
+        #def run(fname, algorithm, treename, ptfile, version='v6'):
+        massPtFunctions.run(signalFile, Algorithm, treename, '', 200, 3000, 'v6')
+        if pTReweighting.success_pt:
+            ptweightFile = massPtFunctions.filename_pt
         else:
             print 'pt rweighting file creation failed'
             sys.exit()
 
 
     if massWindowCut and massWinFile == '':
-        #def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
-        '''                                                                                          Method for running over a single algorithm and calculating the mass window.                  Keyword args:                                                                                fname --- the input file name                                                                algorithm --- the name of the algorithm                                                      ptlow/high --- pt range                                                                      treename --- Name of tree in input root files                                                ptfile --- pt reweighting file                                                               '''
         print 'calculating mass window since no existing file present'
-        calculateMassWindow.run(signalFile, Algorithm, ptrange[0],ptrange[1],treename,ptweightFile)
-        if calculateMassWindow.success:
-            massWinFile = calculateMassWindow.filename
+        #def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
+        massPtFunctions.run(signalFile, Algorithm, treename, ptweightFile, float(ptrange[0])/1000.,float(ptrange[1])/1000.)
+        if calculateMassWindow.success_m:
+            massWinFile = massPtFunctions.filename_m
         else:
             print 'mass window calculation was a failure'
             sys.exit()
