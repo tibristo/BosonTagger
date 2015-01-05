@@ -1,3 +1,12 @@
+Requirements
+------------
+IPython (www.ipython.org)
+numpy ()
+pyROOT ()
+pandas ()
+sci-kit learn ()
+matplotlib ()
+
 Tagger.py
 Makes plots (using ROOT) of single variables and their performance as taggers
 
