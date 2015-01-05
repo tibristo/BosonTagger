@@ -8,6 +8,8 @@ import numpy as n
 ptweights = TH1F("ptreweight","ptreweight",50,0,3000);
 
 nevents = {}
+success = False
+filename = ''
 
 def NEvents(runNumber):
     global nevents
@@ -190,7 +192,10 @@ def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
     treename --- Name of tree in input root files
     ptfile --- pt reweighting file
     '''
-
+    global success
+    success = False
+    global filename
+    filename = ''
     # setup the histogram - read in the mass entries from the input file and put them into a histogram
     hist = setupHistogram(fname, algorithm, treename, float(ptlow), float(pthigh), True, ptfile)
     # calculate the width, top and bottom edges and the indices for the 68% mass window
@@ -199,13 +204,15 @@ def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
     # folder where input file is
     folder = fname[:fname.rfind('/')+1]
     # write this information out to a text file
-    fout = open(folder+algorithm+"_pt_"+ptlow+"_"+pthigh+"_masswindow.out",'w')
+    filename = folder+algorithm+"_pt_"+ptlow+"_"+pthigh+"_masswindow.out"
+    fout = open(filename,'w')
     fout.write("width: "+ str(wid)+'\n')
     fout.write("top edge: "+ str(topedge)+'\n')
     fout.write("bottom edge: "+ str(botedge)+'\n')
     fout.write("minidx: "+ str(minidx)+'\n')
     fout.write("maxidx: "+ str(maxidx)+'\n')
     fout.close()
+    success = True
 
 
 def runAll(input_file, file_id, ptlow, pthigh, treename):

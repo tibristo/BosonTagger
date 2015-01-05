@@ -9,7 +9,8 @@ import subprocess
 import os
 from array import array
 import cPickle as pickle
-
+import calculateMassWindow
+import pTReweighting
 
 
 from AtlasStyle import *
@@ -325,6 +326,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
 
 def main(args):
+    '''
+    Main method which takes in all of the parameters for the tagger and sets up the
+    configuration.  All of the histograms are set up here, ready to be filled.
+    Main method launches "analyse" which runs over a tagger configuration.
+    '''
     # read in and parse all of the command line arguments
     parser = argparse.ArgumentParser(description='Plot some variables.')
     parser.add_argument('config', help = 'required config file')
@@ -429,6 +435,11 @@ def main(args):
     else:
         if args.ptreweighting == 'false' or args.ptreweighting == 'False':
             ptreweight = False
+
+    massWindowCut = False
+    if args.massWindowCut.lower() == 'true':
+        massWindowCut = True
+
     # output path for storing individual variable plots - there are a lot of these so it is 
     # useful to be able to store these in a separate folder
     varpath += fileid +'/'
@@ -511,23 +522,59 @@ def main(args):
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
         # if pt reweight file hasn't been set find it in the input folder
+        # if there is no pt weights file... we need to create it!
         if ptweightFile == '' and f.endswith("ptweightsv6"):
             ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
         if massWinFile == '' and f.endswith('masswindow.out'):
             if f.find('pt') == -1:
+                # rather than continue, should rather just run the calculation!!
                 continue
             # check that the pt range for this mass window is correct
             pt_rng = f[f.find('pt')+3:-len('masswindow.out')-1]
+            # the pt range is always split by an underscore
             spl = pt_rng.split('_')
-            print spl
             pt_l = float(spl[0])
             pt_h = float(spl[1])
-            print ptrange
+            # make sure we have the correct pt range mass window file
             if pt_l*1000 == float(ptrange[0]) and pt_h*1000 == float(ptrange[1]):
                 print 'mass window file: ' +f 
                 massWinFile = InputDir+'/'+f
+
+
+
+    if ptreweight and ptweightFile == '':
+        #def run(fname, algorithm, treename, ptfile, version='v6'):
+        '''
+        Method for running over a single algorithm and calculating the mass window.
+        Keyword args:
+        fname --- the input file name
+        algorithm --- the name of the algorithm
+        treename --- Name of tree in input root files
+        ptfile --- pt reweighting file
+        version --- version of pt file
+        '''
+        print 'calculating pt reweighting since no existing file present'
+        pTReweighting.run(signalFile, Algorithm, treename, '', 'v6')
+        if pTReweighting.success:
+            ptweightFile = pTReweighting.filename
+        else:
+            print 'pt rweighting file creation failed'
+            sys.exit()
+
+
+    if massWindowCut and massWinFile == '':
+        #def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
+        '''                                                                                          Method for running over a single algorithm and calculating the mass window.                  Keyword args:                                                                                fname --- the input file name                                                                algorithm --- the name of the algorithm                                                      ptlow/high --- pt range                                                                      treename --- Name of tree in input root files                                                ptfile --- pt reweighting file                                                               '''
+        print 'calculating mass window since no existing file present'
+        calculateMassWindow.run(signalFile, Algorithm, ptrange[0],ptrange[1],treename,ptweightFile)
+        if calculateMassWindow.success:
+            massWinFile = calculateMassWindow.filename
+        else:
+            print 'mass window calculation was a failure'
+            sys.exit()
+
 
     # read the signal and background files
     for typename in ['sig','bkg']:
@@ -535,7 +582,7 @@ def main(args):
             filename = signalFile
         else:
             filename = backgroundFile
-
+        # open the files
         files[typename] = TFile(filename)
         # read in the trees
         trees[typename] = files[typename].Get(treename)
@@ -643,7 +690,7 @@ def main(args):
     mass_max = 300*1000.;
     mass_min = 0.0;
 
-    if args.massWindowCut:
+    if massWindowCut:
         mass_max, mass_min = getMassWindow(massWinFile)
         print 'calc mass window'
 
@@ -682,23 +729,25 @@ def main(args):
         version = args.version
     with open("tot_rej_"+version+".p","wb") as f:
         pickle.dump(totalrejection, f)
+    # print out all of the info, which is read from stdout by the scanner script.
+    # this is not really needed anymore as it was a hack to get around ROOT's annoying
+    # global memory management.  This is fixed now by using pickle files.  However,
+    # this hasn't been fully implemented everywhere yet, so it will take a little while to remove it.
     print "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
     output = "MAXREJSTART:" +str(max_rej)+","+maxrejvar+","+str(maxrejm_min)+","+str(maxrejm_max)+ "MAXREJEND"
+    # dump the output to a pickle file
     with open("TaggerOutput_"+version+".p","wb") as f:
         pickle.dump(output,f)
-    #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
 if __name__ == '__main__':
     #max_rej, maxrejvar, maxrejm_min, maxrejm_max=main(sys.argv)
     main(sys.argv)
     sys.exit()
-    #return max_rej, maxrejvar, maxrejm_min, maxrejm_max
 
 def runMain(args):
     '''
     Use a list for the arguments that would be used from command line.
     '''
-    global max_rej, maxrejvar, maxrejm_min, maxrejm_max
     sys.argv = args
     main(args)
 

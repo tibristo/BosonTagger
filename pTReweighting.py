@@ -9,7 +9,8 @@ ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,
 #ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
 ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
 
-
+filename = ''
+success = False
 
 nevents = {}
 
@@ -198,7 +199,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
 
 
 
-def run(fname, algorithm, treename, ptfile):
+def run(fname, algorithm, treename, ptfile, version='v6'):
     '''
     Method for running over a single algorithm and calculating the mass window.
     Keyword args:
@@ -206,8 +207,12 @@ def run(fname, algorithm, treename, ptfile):
     algorithm --- the name of the algorithm
     treename --- Name of tree in input root files
     ptfile --- pt reweighting file
+    version --- version of pt file
     '''
-
+    global filename
+    filename = ''
+    global success
+    success = False
     # setup the histogram - read in the mass entries from the input file and put them into a histogram
     createptfile = False
     if ptfile == '':
@@ -220,13 +225,15 @@ def run(fname, algorithm, treename, ptfile):
     folder = fname[:fname.rfind('/')+1]
 
     if createptfile:
-        ptfile_out = open(folder+algorithm+'.ptweightsv6','w')
+        filename = folder+algorithm+'.ptweights'+version
+        ptfile_out = open(filename,'w')
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
             edge = pthist_sig.GetXaxis().GetBinUpEdge(i)
             ptfile_out.write(str(edge)+','+str(bkg)+','+str(sig)+'\n')
         ptfile_out.close()
+        success = True
 
     # write this information out as a plot
     canv = TCanvas()
@@ -243,13 +250,14 @@ def run(fname, algorithm, treename, ptfile):
     hist_bkg.Draw("same")
     canv.SaveAs(folder+"pt_rw.png")
 
-def runAll(input_file, file_id, treename):
+def runAll(input_file, file_id, treename, version='v6'):
     '''
     Method for running over a collection of algorithms and checking truth pt
     The algorithms are stored in a text file which is read in.  Each line gives the input folder, with the folder of the form ALGORITHM_fileID/.
     input_file --- the text file with the folders
     file_id --- the folder suffix
     treename --- Name of tree in input root files
+    version --- version of pt reweighting file
     '''
     # open input file
     f = open(input_file,"read")
@@ -269,7 +277,7 @@ def runAll(input_file, file_id, treename):
             # found the signal file!
             if fil.endswith("sig.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweightsv6"):
+            if fil.endswith("ptweights"+version):
                 ptfile = folder+fil
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier
@@ -285,9 +293,9 @@ def runAll(input_file, file_id, treename):
 if __name__=="__main__":
     print len(sys.argv)
     if len(sys.argv) < 3:
-        print "usage: python ptreweighting.py text_file_with_folder_names folder_suffix(including leading underscore) [tree-name]"
+        print "usage: python ptreweighting.py text_file_with_folder_names folder_suffix(including leading underscore) tree-name [version]"
         sys.exit()
-    if len(sys.argv) == 3:
-        runAll(sys.argv[1],sys.argv[2], 'physics')
-    elif len(sys.argv) == 4:
+    if len(sys.argv) == 4:
         runAll(sys.argv[1],sys.argv[2],sys.argv[3])
+    elif len(sys.argv) == 5:
+        runAll(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])

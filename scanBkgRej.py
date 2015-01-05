@@ -1,6 +1,6 @@
-import TaggerTim
+
 import cPickle as pickle
-import ROOT
+
 import sys
 import subprocess
 import argparse
@@ -11,7 +11,16 @@ from IPython import parallel as p
 from IPython.display import clear_output
 
 
+def runTag(args):
+    '''
+    Driver for TaggerTim.py.  Importing this here rather than globally means that there are no issues with global ROOT variables when running this method multiple times.
 
+    Keyword args:
+    args --- list of all arguments to be given to TaggerTim.
+    '''
+    import TaggerTim
+    # TaggerTim has a method, runMain(args) which can be used to run the main method.
+    TaggerTim.runMain(args)
 
 def main(args):
     parser = argparse.ArgumentParser(description='scan bkg rejection')
