@@ -1,6 +1,6 @@
 #include <string>
 #include <iostream>
-
+#include "TROOT.h"
 // global histogram for the pt weights ratio (bkg/sig) and the signal and background pt spectrum
 TH1F * ptweights;
 TH1F * ptweights_sig;

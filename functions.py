@@ -1,4 +1,11 @@
-import ROOT
+from ROOT import *
+import os
+from numpy import *
+import root_numpy
+import pandas as pd
+#from AtlasStyle import *
+
+
 def setweights(weights):
     # right now we are not applying the k-factors, the first set of xs weights are in pb
     weights['signal'] = 1.0 * 1.000000 * (1.0/1.0) # * 1.00 
@@ -113,14 +120,14 @@ def setrunnumbers(runs):
     '''
 
 def pTReweight(hist_sig, hist_bkg, algorithm, varBinPt, xbins):
-    from ROOT import *
+    import ROOT
     from array import array
     bins = hist_bkg.GetNbinsX()
     name = 'ptreweight'+algorithm
     if not varBinPt:
-        hist_reweight = TH1D(name,name, bins, 0, hist_bkg.GetXaxis().GetBinUpEdge(bins))
+        hist_reweight = ROOT.TH1D(name,name, bins, 0, hist_bkg.GetXaxis().GetBinUpEdge(bins))
     else:
-        hist_reweight = TH1D(name,name, len(xbins)-1, array('d',xbins))
+        hist_reweight = ROOT.TH1D(name,name, len(xbins)-1, array('d',xbins))
     for x in range(1,bins):
         if hist_sig.GetBinContent(x) == 0:
             weight = -1
@@ -128,7 +135,7 @@ def pTReweight(hist_sig, hist_bkg, algorithm, varBinPt, xbins):
             weight = hist_bkg.GetBinContent(x)/hist_sig.GetBinContent(x)
         hist_reweight.SetBinContent(x,weight)
         print str(hist_sig.GetXaxis().GetBinLowEdge(x)/1000) + ' - ' + str(hist_sig.GetXaxis().GetBinUpEdge(x)/1000) + ' weight: ' + str(weight)
-    tc = TCanvas("ptr")
+    tc = ROOT.TCanvas("ptr")
     hist_reweight.Draw('e')
     tc.SaveAs('pt_reweight'+algorithm+'.png')
 
@@ -145,7 +152,7 @@ def getFileIDNumber(inputdir):
 def getFileBranches(inputfile, treename='physics'):
     file_branches = []
     file_branches_stubs = []
-    file_in = ROOT.TFile(inputfile)
+    file_in = TFile(inputfile)
     print inputfile
     print treename
     physics = file_in.Get(treename)
@@ -464,3 +471,122 @@ def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
             Copy.Delete()
     pY = copy.deepcopy(y)
     return PointNumber, pY
+
+
+def getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, ptrange):
+    '''
+    This method traverses the input directory searching for the signal and background files, the ptweight file, mass window file and the events files for signal and background.
+    If any of the variables have already been set before running this method they will not
+    be reset here again.
+    Keyword args:
+    InputDir --- The input directory of the algorithm being run.
+    signal/backgroundFile --- The input sig/bkg root files.
+    ptweightFile --- The file containing the pt weights.
+    massWinFile --- File with mass window cuts.
+    ptrange --- The low and high pt cuts.
+    '''
+    # get a list of the files in the input directory and search for the needed files
+    fileslist = os.listdir(InputDir)
+    sigtmp = ''
+    eventsFileSig = ''
+    eventsFileBkg = ''
+
+    for f in fileslist:
+        # if teh signal file and background file were not specified in the config file find them in the input directory
+        if signalFile == '' and f.endswith("sig.root"):
+            signalFile = InputDir+'/'+f
+        elif backgroundFile == '' and f.endswith("bkg.root"):
+            backgroundFile = InputDir+'/'+f
+        # files for event reweighting
+        if f.endswith("sig.nevents"):
+            eventsFileSig = InputDir+'/'+f
+        if f.endswith("bkg.nevents"):
+            eventsFileBkg = InputDir+'/'+f
+        # if pt reweight file hasn't been set find it in the input folder
+        # if there is no pt weights file... we need to create it!
+        if ptweightFile == '' and f.endswith("ptweightsv6"):
+            ptweightFile = InputDir+'/'+f
+        # the mass windows have been calculated. saved as
+        # Algorithm_masswindow.out
+        if massWinFile == '' and f.endswith('masswindow.out'):
+            if f.find('pt') == -1:
+                # rather than continue, should rather just run the calculation!!
+                continue
+            # check that the pt range for this mass window is correct
+            pt_rng = f[f.find('pt')+3:-len('masswindow.out')-1]
+            # the pt range is always split by an underscore
+            spl = pt_rng.split('_')
+            pt_l = float(spl[0])
+            pt_h = float(spl[1])
+            # make sure we have the correct pt range mass window file
+            if pt_l*1000 == float(ptrange[0]) and pt_h*1000 == float(ptrange[1]):
+                print 'mass window file: ' +f 
+                massWinFile = InputDir+'/'+f
+
+    return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, ptweightFile, massWinFile
+
+
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, eventsfiles, ptreweightfile, ptweightBins):
+    import copy    
+    from array import array
+    #SetAtlasStyle()
+    #gROOT.LoadMacro("MakeROCBen.C")
+    #gROOT.LoadMacro("SignalPtWeight2.C")
+    #gROOT.LoadMacro("NEvents.C")
+    #loadEvents(eventsfiles[0])
+    #loadEvents(eventsfiles[1])
+    #loadweights(ptreweightfile, -1, array('f',ptweightBins))
+
+    # flag to write out trees into csv format
+    writecsv= True
+
+    # for now remove yfilt and split12 - these will be updated soon!
+    branches_pruned = copy.deepcopy(branches)
+    for b in branches_pruned:
+        if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
+            branches_pruned.remove(b)
+    # add entries for weights
+    #branches_pruned.append('mc_event_weight')
+    branches_pruned.append('mc_channel_number')
+    branches_pruned.append('xs')
+    branches_pruned.append('filter_eff')
+    branches_pruned.append('k_factor')
+
+
+    # read the signal and background files
+    for typename in ['sig','bkg']:
+        if typename == 'sig':
+            filename = signalFile
+        else:
+            filename = backgroundFile
+        # open the files
+        file_in = TFile(filename)
+        # read in the trees
+        tree = file_in.Get(treename)
+    
+        # write the tree out in csv format to use again later
+        # need to add some entries to branches to store the event weights
+        numpydata = root_numpy.root2array(filename,treename,branches_pruned,cutstring)
+
+        # need to add single entry per event with full weight -> mc*pt*rest
+        # see https://stackoverflow.com/questions/12555323/adding-new-column-to-existing-dataframe-in-python-pandas
+        numpydata = pd.DataFrame(numpydata)
+        numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
+        print long(numpydata['mc_channel_number'][0])
+
+        if typename == 'bkg':
+            numpydata['weight'] = [numpydata['filter_eff'][i]*numpydata['xs'][i]*numpydata['k_factor'][i]*numpydata['mc_event_weight'][i]*(1./NEvents(long(numpydata['mc_channel_number'][i]))) for i in xrange(0,len(numpydata['xs']))]
+        else:
+            numpydata['weight'] = [numpydata['filter_eff'][i]*SignalPtWeight2(numpydata['jet_CamKt12Truth_pt'][i])*numpydata['mc_event_weight'][i]*(1./NEvents(long(numpydata['mc_channel_number'][i]))) for i in xrange(0,len(numpydata['xs']))]
+            #numpydata['weight'] = [numpydata['filter_eff'][i] for i in xrange(0,len(numpydata['xs']))]
+        print list(numpydata)
+        
+
+        if typename == 'sig': 
+            numpydata['label']=1 
+            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
+            
+        else: 
+            numpydata['label']=0 
+            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
+            

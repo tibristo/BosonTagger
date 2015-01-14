@@ -7,7 +7,7 @@ import argparse
 import os.path
 
 
-from IPython import parallel as p
+from IPython import parallel as par
 from IPython.display import clear_output
 
 
@@ -86,8 +86,15 @@ def main(args):
 
 
     # set up IPython engines
-    rc=p.Client()
+    rc=par.Client()
+
     lview = rc.load_balanced_view()
+    views = rc[:]
+    # import ROOT on all
+    views.execute('from ROOT import *',block=True)
+    views.execute('from AtlasStyle import *',block=True)
+    #views.execute('from AtlasStyle import *',block=True)
+
     # async
     lview.block = False
 
@@ -105,7 +112,7 @@ def main(args):
         counter+=1
         #try:
         # used to have -f f+'_'+args.version
-        args_tag = ['python','TaggerTim.py',c,'-i',p,'-f', '_'+version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',version+'_idx_'+str(counter)] 
+        args_tag = ['TaggerTim.py',c,'-i',p,'-f', '_'+version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',version+'_idx_'+str(counter)] 
         if args.treename:
             args_tag.append('--tree='+args.treename)
         else:
@@ -124,9 +131,9 @@ def main(args):
         #p.wait()
 
     # now wait until all jobs are done
-    lview.wait(proclist)
-    for idx,p in enumerate(proclist[PROCESS]):
-        proc_output = p.get()
+    lview.wait(proclist[PROCESS])
+    for idx,proc in enumerate(proclist[PROCESS]):
+        proc_output = proc.get()
         v = proclist[VERSION][idx]
         # check output pickle exists - if not, raise error, set all values to 0
         rej = '0'

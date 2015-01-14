@@ -159,7 +159,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     # histogram storing pt without being reweighted
     hist_pt = TH1F("pt","pt",100,200*1000,3000*1000)    
     # jet mass
-    hist_m = TH1F("mass","mass",100,,300*1000)    
+    hist_m = TH1F("mass","mass",100,0,300*1000)    
     # pt 
     hist_rw = TH1F("ptrw","ptrw",100,200*1000,3000*1000)    
     # pt only if creating pt rw file

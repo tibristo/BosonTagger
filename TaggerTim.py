@@ -63,16 +63,16 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     canv2 -- TCanvas of ROC curve
     writeROC -- Flag indicating if ROC plots should be drawn in addition to variable plots
     '''
-
+    # plot the variables
     canv1.SaveAs('plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf')
-    # this gives much higher quality .pngs than if you do canv.SaveAs(xyz.png)
+    # using linux tool 'convert' gives much higher quality .pngs than if you do canv.SaveAs(xyz.png)
     cmd = 'convert -verbose -density 150 -trim plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf -quality 100 -sharpen 0x1.0 plots/'+ Algorithm + fileid +'-Tim2-VariablePlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
     
     if not writeROC:
         return
-    
+    #plot the rocs
     canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.pdf')
     cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -94,9 +94,9 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
         if hist[h].Integral() != 0:
             hist[h].Write()
     for r in rocs.keys():
-        rocs[r].Write()
+        rocs[r].Write('roc_'+r)
     for r in rocs_rejpow.keys():
-        rocs_rejpow[r].Write()
+        rocs_rejpow[r].Write('bkgrejroc_'+r)
     fo.Close()
 
 def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
@@ -150,8 +150,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     for index, branchname in enumerate(plotbranches):
         # add ROC dictionary entry
         roc[branchname] = TGraph()
+        roc[branchname].SetTitle(branchname)
+        roc[branchname].SetName('roc_'+branchname)
         # add bkg rej power dictionary entry
         bkgRejROC[branchname] = TGraph()
+        bkgRejROC[branchname].SetTitle(branchname)
+        bkgRejROC[branchname].SetName('bkgrejroc_'+branchname)
         # new canvas
         canv1.cd(index+1)
 
@@ -204,6 +208,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # apply the selection to the tree and store the output in the histogram
             #print cutstringandweight
             trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
+
             # if the histogram is not empty then normalise it 
             mw_int = hist[histname].Integral()
 
@@ -252,15 +257,14 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             print bkg_eff
             writeROC = True
 
+
+
         pX = Double(0.5)
         pY = Double(0.0)
-        #tmpY = Double(0.0)
-        #idx, tmpY = fn.findYValue(bkgRejROC[branchname],pX,pY,0.05,True)
-        
+
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
         bkgrej = 1/(1-roc[branchname].Eval(0.5))#Double(0.0)
-        #bkgRejROC[branchname].GetPoint(idx,pX,bkgrej)#bkgRejROC[branchname].Eval(0.5)
-        #bkgrej = bkgRejROC[branchname].Eval(0.5,0,"S")
+
         #print 'DEBUG 1-bkgeff: '+ str(bkgrej)
         #print 'DEBUG roc bkg: ' + str(1/(1-roc[branchname].Eval(0.5)))
 
@@ -304,9 +308,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         # plot the ROC curves
         canv2.cd()
-        if index==0 and roc[branchname].Integral() != 0:# and hist[branchname].Integral()>0:
-            roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
-            roc[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
+        roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
+        roc[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
+
+        if index==0 and roc[branchname].Integral() != 0:
             roc[branchname].Draw("al")        
         elif roc[branchname].Integral() != 0:
             roc[branchname].SetLineColor(index+2)
@@ -362,10 +367,11 @@ def main(args):
     if args.inputfile:
         InputDir = args.inputfile 
 
-    # load ROOT macros for pt reweighting and event weighting
+    # load ROOT macros for pt reweighting and event weighting - would it make sense
+    # to do this in the functions file and then call everything with fn.?
     SetAtlasStyle()
     ROOT.gROOT.LoadMacro("MakeROCBen.C")
-    ROOT.gROOT.LoadMacro("SignalPtWeight.C")
+    #ROOT.gROOT.LoadMacro("SignalPtWeight.C")
     ROOT.gROOT.LoadMacro("SignalPtWeight2.C")
     ROOT.gROOT.LoadMacro("NEvents.C")
 
@@ -389,8 +395,6 @@ def main(args):
         print "specify a tree name in command line args or config file"
         sys.exit()
 
-    # flag to write out trees int csv format
-    writecsv= False
     # string for algorithm
     Algorithm = ''
     # flags for plotting truth variables
@@ -501,52 +505,20 @@ def main(args):
     massWinFile = ''
     numbins = 50 #default
 
+    # get all of the filenames. Note that signal and background file are not changed
+    # if they have been set already.
+    signalFile, backgroundFile, eventsFileSig, eventsFileBkg, ptweightFile, massWinFile = fn.getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, ptrange)
+
     # if the number of pt bins is not variable just use the one entry
     #if len(ptweightBins) == 1:
     #    numbins = int(ptweightBins[0])
     #znumbins = 100
-    # get list of all files in the input directory and filter out different input files
-    fileslist = os.listdir(InputDir)
-    sigtmp = ''
-
-    for f in fileslist:
-        # if teh signal file and background file were not specified in the config file find them in the input directory
-        if signalFile == '' and f.endswith("sig.root"):
-            signalFile = InputDir+'/'+f
-        elif backgroundFile == '' and f.endswith("bkg.root"):
-            backgroundFile = InputDir+'/'+f
-        # files for event reweighting
-        if f.endswith("sig.nevents"):
-            eventsFileSig = InputDir+'/'+f
-        if f.endswith("bkg.nevents"):
-            eventsFileBkg = InputDir+'/'+f
-        # if pt reweight file hasn't been set find it in the input folder
-        # if there is no pt weights file... we need to create it!
-        if ptweightFile == '' and f.endswith("ptweightsv6"):
-            ptweightFile = InputDir+'/'+f
-        # the mass windows have been calculated. saved as
-        # Algorithm_masswindow.out
-        if massWinFile == '' and f.endswith('masswindow.out'):
-            if f.find('pt') == -1:
-                # rather than continue, should rather just run the calculation!!
-                continue
-            # check that the pt range for this mass window is correct
-            pt_rng = f[f.find('pt')+3:-len('masswindow.out')-1]
-            # the pt range is always split by an underscore
-            spl = pt_rng.split('_')
-            pt_l = float(spl[0])
-            pt_h = float(spl[1])
-            # make sure we have the correct pt range mass window file
-            if pt_l*1000 == float(ptrange[0]) and pt_h*1000 == float(ptrange[1]):
-                print 'mass window file: ' +f 
-                massWinFile = InputDir+'/'+f
-
-
 
     if ptreweight and ptweightFile == '':
-        print 'calculating pt reweighting since no existing file present'
+        print 'calculating pt reweighting since no existing file present.'
         #def run(fname, algorithm, treename, ptfile, version='v6'):
         massPtFunctions.run(signalFile, Algorithm, treename, '', 200, 3000, 'v6')
+        # check that the pt reweighting calculation was a success, if not, quit.
         if pTReweighting.success_pt:
             ptweightFile = massPtFunctions.filename_pt
         else:
@@ -558,38 +530,12 @@ def main(args):
         print 'calculating mass window since no existing file present'
         #def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
         massPtFunctions.run(signalFile, Algorithm, treename, ptweightFile, float(ptrange[0])/1000.,float(ptrange[1])/1000.)
+        # check that the mass window calculation was a success, if not, quit.
         if calculateMassWindow.success_m:
             massWinFile = massPtFunctions.filename_m
         else:
             print 'mass window calculation was a failure'
             sys.exit()
-
-
-    # read the signal and background files
-    for typename in ['sig','bkg']:
-        if typename == 'sig':
-            filename = signalFile
-        else:
-            filename = backgroundFile
-        # open the files
-        files[typename] = TFile(filename)
-        # read in the trees
-        trees[typename] = files[typename].Get(treename)
-    
-        # write the tree out in csv format to use again later
-        if writecsv == True:
-            numpydata = root_numpy.root2array(filename,treename,branches,cutstring)
-            numpydata = pd.DataFrame(numpydata)
-
-            numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
-            if typename == 'sig': 
-                numpydata['label']=1 
-                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
-
-            else: 
-                numpydata['label']=0 
-                numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
-                #numpydata.hist(bins=20,grid=False,histtype='step',label=typename)
 
     # load all of the event weights from the event weighting file
     loadEvents(eventsFileSig)
@@ -601,11 +547,8 @@ def main(args):
     else:
         loadweights(ptweightFile,-1,array('f',ptweightBins))
 
-    # remove any branches that are not in the actual file
+    # remove any branches from the config file that are not in the actual input files
     file_branches = fn.getFileBranches(signalFile, fn.getTree())
-    print signalFile
-    print 'file_branches: '
-    print file_branches
     fn.pruneBranches(file_branches)
 
     # configuration for each variable to plot - axis ranges, titles
@@ -627,7 +570,6 @@ def main(args):
     # keep track of whether or not the plot is a jet variable and needs the algorithm name appended
     plotjetlookup = {v[0]: v[1] for k, v in AlgBranchStubs.items()}
 
-
     # default branches to be plotted
     branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']
 
@@ -643,13 +585,14 @@ def main(args):
     # add algorithm names to branches
     plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs if plotjetlookup[branch] == True]
     plotbranches += [branch for branch in plotbranchstubs if plotjetlookup[branch] == False]
+    # flag if variable bin widths are being used - right now not being used anymore, will re-implement
+    varBinPt = False
 
     # dictionary to hold all histograms
     hist = {}
 
-    # flag if variable bin widths are being used - right now not being used anymore, will re-implement
-    varBinPt = False
-
+    # at this point change the Algorithm to AlgorithmTruth, since we needed the normal
+    # Algorithm name up until now to get pathnames correct.
     if plotTruth:
         Algorithm = AlgorithmTruth
 
@@ -689,6 +632,11 @@ def main(args):
         os.makedirs('optimisation')
     # log the output
     records = open('TaggerOpt'+Algorithm+'_'+fileid+'.out','w')
+
+
+    # flag to write out trees into csv format
+    writecsv= True
+
     # store teh maximum background rejection
     global max_rej, maxrejvar, maxrejm_min, maxrejm_max
     max_rej = 0
@@ -700,6 +648,8 @@ def main(args):
         m_min = m[0]
         m_max = m[1]
         # run the analysis for mass range
+        masses = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
+        fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, [eventsFileSig, eventsFileBkg], ptweightFile, ptweightBins)
         rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
