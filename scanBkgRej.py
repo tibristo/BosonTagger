@@ -10,6 +10,8 @@ import os.path
 from IPython import parallel as par
 from IPython.display import clear_output
 
+import parallelfunctions as pfn
+
 
 def runTag(args):
     '''
@@ -129,6 +131,8 @@ def main(args):
         proclist[CONFIG].append([p,c,f])
         #p = subprocess.Popen(args_tag,stdout=subprocess.PIPE)
         #p.wait()
+
+    pfn.wait_watching_stdout(proclist[PROCESS],rc, False)
 
     # now wait until all jobs are done
     lview.wait(proclist[PROCESS])

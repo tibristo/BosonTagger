@@ -286,7 +286,7 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
     # if we are creating a new pt rw file, save all of the info
     if createptfile:
         filename_pt = folder+algorithm+'.ptweights'+version
-        ptfile_out = open(filename,'w')
+        ptfile_out = open(filename_pt,'w')
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
@@ -317,7 +317,7 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         folder = fname[:fname.rfind('/')+1]
         # write this information out to a text file
         filename_m = folder+algorithm+"_pt_"+ptlow+"_"+pthigh+"_masswindow.out"
-        fout = open(filename,'w')
+        fout = open(filename_m,'w')
         fout.write("width: "+ str(wid)+'\n')
         fout.write("top edge: "+ str(topedge)+'\n')
         fout.write("bottom edge: "+ str(botedge)+'\n')

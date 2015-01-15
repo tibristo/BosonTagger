@@ -542,9 +542,9 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
 
     # for now remove yfilt and split12 - these will be updated soon!
     branches_pruned = copy.deepcopy(branches)
-    for b in branches_pruned:
-        if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
-            branches_pruned.remove(b)
+    #for b in branches_pruned:
+    #    if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
+    #        branches_pruned.remove(b)
     # add entries for weights
     #branches_pruned.append('mc_event_weight')
     branches_pruned.append('mc_channel_number')

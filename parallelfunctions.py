@@ -5,13 +5,14 @@ from IPython.display import clear_output
 
 
 
-def wait_watching_stdout(ar, rc, truncate=1000):
+def wait_watching_stdout(ar, rc, timer, truncate=1000):
     '''
     Method to print elapsed time of all processes on all engines to stdout.
 
     keyword args:
     ar --- list of engine jobs, created with ar.append(lview.apply_async(xxx))
     rc --- The ipython client
+    timer --- If the elapsed time should be printed
     truncate --- accuracy of timing.
     '''
     # keep track of which jobs have finished and init to false for all
@@ -35,9 +36,10 @@ def wait_watching_stdout(ar, rc, truncate=1000):
                     continue
                 # clear_output doesn't work in plain terminal / script environments
                 clear_output()
-                print '-' * 30
-                print "%.3fs elapsed" % eng.elapsed
-                print ""
+                if timer:
+                    print '-' * 30
+                    print "%.3fs elapsed" % eng.elapsed
+                    print ""
                 # print the actual stdout
                 for stdo in stdout: 
                     if stdo:

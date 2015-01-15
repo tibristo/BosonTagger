@@ -55,13 +55,16 @@ scanBkgRej.py
 This scans over a number of algorithms and mass ranges and runs TaggerTim.py multiple times to get the rejection values out.  To run this a number of input parameters are required.
 If other parameters that are used to run TaggerTim.py need to be changed please look in the file - pt ranges for example.
 
-python ScanBkgRej.py -b basedirectory -f listoffolders -c listofconfigs -v version -t treename -m masswindowcut
+To run this there must be ipython engines running.  There are two scripts that start and stop the engines.  startcluster.sh and stopcluster.sh.  This is setup to run 4 engines.  Typically it is best to stop the clusters and restart them again if there was a change made in the code as it can cache the code.
+
+python ScanBkgRej.py -b basedirectory -f listoffolders -c listofconfigs -v version -t treename -m masswindowcut --ptlow --pthigh
 b - The base directory where all of the input root files are.
 f - A list of folders in the base directory that you want to run on, for example, AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc27_fast_v1/ is in the base directory /home/tim/boosted_plotting/BosonTagging/.  The file is a newline separated list of folder names.  (Base directory+folder name) will get passed as the argument to TaggerTim.py -i.
 c - A list of config files for each of the algorithms being run.  Note that I have not yet implemented a matching algorithm between the algorithms listed in -f and -c, so they must match up 1:1 on the same lines.  These are the config files that get passed to TaggerTim.py
 v - A version of the plots.  This is what gets passed to TaggerTim.py -v.
 t - Name of the TTree in the input root files.
 m - Whether or not to apply the mass window cut.
+ptlow/high - the pt range in GeV
 
 Example:
 	python scanBkgRej.py -b /media/win/BoostedBosonFiles/nc29_fast/ -f nc29_fast_files.txt -c nc29_fast_configs.txt -v nc29_fast_mw_v1 -t physics -m true

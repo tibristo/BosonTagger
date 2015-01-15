@@ -172,6 +172,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             print "plotting " + datatype + branchname
 
             # set up the tree.Draw() variable expression for the histogram
+            '''
             if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
                 varexp = 'sqrt('+branchname+')>>'+histname
                 # the yfilt variable isn't filled for anything except split/filtered.  So to fix this
@@ -179,8 +180,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
                 if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
                     new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
                     varexp = 'sqrt('+new_branch+')>>'+histname
-            else:
-                varexp = branchname + '>>' + histname
+            '''
+            # else:
+            varexp = branchname + '>>' + histname
             minxaxis = hist[histname].GetXaxis().GetXmin()
             maxxaxis = hist[histname].GetXaxis().GetXmax()
             # add the mc_weight and weighted number of events to the selection string
@@ -223,13 +225,15 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             hist_full.Reset()
             hist_full.SetName(histname+'_full')
             # need to store the variable in this histogram
+            '''
             if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
                 varexpfull = 'sqrt('+branchname+') >> '+histname+'_full'
                 if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
                     new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
                     varexpfull = 'sqrt('+new_branch+')>>'+histname+'_full'
-            else:
-                varexpfull = branchname + ' >>' + histname+'_full'
+            '''
+            #else:
+            varexpfull = branchname + ' >>' + histname+'_full'
 
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
