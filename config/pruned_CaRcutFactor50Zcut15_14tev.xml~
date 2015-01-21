@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<settings>
+  <cutstring name = "pt">
+    <pt_high name = "350000"></pt_high>
+    <pt_low name = "200000"></pt_low>
+  </cutstring>
+  <Algorithm name = "CamKt12LCTopoPrunedCaRcutFactor50Zcut15">
+    <AlgorithmString>CamKt R=1.2, pruned jets</AlgorithmString>
+    <AlgorithmSettings>cut factor 50, Zcut 1.5</AlgorithmSettings>
+    <Energy>8</Energy>
+  </Algorithm>
+  <plotTruth name = "False">
+  </plotTruth>
+  <fileid name = "fileid_config_test">
+  </fileid>
+  <ptBins>
+    <bin name = "28"></bin>
+  </ptBins>
+  <varName name="pt">
+  <stub>_pt</stub>
+  <plot>True</plot>
+    <maxValue>3500000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="eta">
+  <stub>_eta</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="phi">
+  <stub>_phi</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="Mass">
+  <stub>_m</stub>
+  <plot>True</plot>
+    <maxValue>300000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>			  
+  <varName name="Tau1">
+  <stub>_Tau1</stub>
+  <plot>True</plot>
+    <maxValue>0.7</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau2">
+  <stub>_Tau2</stub>
+  <plot>True</plot>
+    <maxValue>0.4</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau21">
+  <stub>_Tau21</stub>
+  <plot>True</plot>
+    <maxValue>1.5</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Width">
+  <stub>_WIDTH</stub>
+  <plot>False</plot>
+  </varName>
+  <varName name="Split12">
+  <stub>_SPLIT12</stub>
+  <plot>True</plot>
+    <maxValue>100000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="PlanarFlow">
+  <stub>_PlanarFlow</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.2</minValue>
+  </varName>
+  <varName name="Angularity">
+  <stub>_Angularity</stub>
+  <plot>False</plot>
+  </varName>
+  <varName name="Mass Drop">
+  <stub>_massdrop</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="Momentum Balance">
+  <stub>_yt</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.2</minValue>
+  </varName>
+</settings>
+
+

@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<settings>
+  <cutstring name = "pt">
+    <pt_high name = "350000"></pt_high>
+    <pt_low name = "200000"></pt_low>
+  </cutstring>
+  <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut4">
+    <AlgorithmString>C/A R=1.2, split-filtered jets</AlgorithmString>
+    <AlgorithmSettings>#mu=1.0, R_{sub}=0.3, y_{cut}=0.04</AlgorithmSettings>
+    <Energy>8</Energy>
+  </Algorithm>
+  <plotTruth name = "False">
+  </plotTruth>
+  <fileid name = "hvtllqq_cut4_v1">
+  </fileid>
+  <ptBins>
+    <bin name = "20"></bin>
+  </ptBins>
+  <ptreweighting name = "False">
+  </ptreweighting>
+  <treename name = "outputTree"></treename>
+  <varName name="pt">
+  <stub>_pt</stub>
+  <plot>True</plot>
+    <maxValue>3500000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="eta">
+  <stub>_eta</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="phi">
+  <stub>_phi</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="Mass">
+  <stub>_m</stub>
+  <plot>True</plot>
+    <maxValue>300000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>			  
+  <varName name="Tau1">
+  <stub>_Tau1</stub>
+  <plot>True</plot>
+    <maxValue>0.7</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau2">
+  <stub>_Tau2</stub>
+  <plot>True</plot>
+    <maxValue>0.4</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau21">
+  <stub>_Tau21</stub>
+  <plot>True</plot>
+    <maxValue>1.5</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Width">
+  <stub>_WIDTH</stub>
+  <plot>False</plot>
+  </varName>
+  <varName name="Split12">
+  <stub>_SPLIT12</stub>
+  <plot>True</plot>
+    <maxValue>100000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="PlanarFlow">
+  <stub>_PlanarFlow</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.2</minValue>
+  </varName>
+  <varName name="Angularity">
+  <stub>_Angularity</stub>
+  <plot>False</plot>
+  </varName>
+  <varName name="Mass LLJ">
+  <stub>_mass_llj</stub>
+  <plot>True</plot>
+    <maxValue>4000000</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Mass LL">
+  <stub>mll</stub>
+  <jetVariable>False</jetVariable>
+  <plot>True</plot>
+    <maxValue>200000</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="pt LL">
+  <stub>ptll</stub>
+  <jetVariable>False</jetVariable>
+  <plot>True</plot>
+    <maxValue>1000000</maxValue>
+    <minValue>70000.0</minValue>
+  </varName>
+<varName name="YFilt">
+  <stub>_YFilt</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+</settings>
+
+

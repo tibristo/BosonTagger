@@ -14,6 +14,8 @@ success_pt = False
 filename_pt = ''
 success_m = False
 filename_m = ''
+pt_high = 3000
+pt_low = 200
 
 def NEvents(runNumber):
     '''
@@ -133,8 +135,15 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     treename --- treename for input root file
     '''
 
+    global pt_high
+    global pt_low
+
     # load the NEvents file to weight by number of events
-    eventsfile = fname.replace('root','nevents')
+    InputDir = fname[:fname.rfind('/')]
+    fileslist = os.listdir(InputDir)
+    for f in fileslist:
+        if f.find('nevents')!=-1:
+            eventsfile = InputDir+'/'+f
     loadEvents(eventsfile)
 
 
@@ -180,7 +189,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2 or jet.mass > 300*1000.0):# and not createptfile:
                 continue
         else:
-            if abs(jet.eta) > 1.2 or jet.pt > pthigh*1000 or jet.pt < ptlow*1000 or jet.mass >= 300*1000 or jet.mass <= 0:
+            if abs(jet.eta) > 1.2 or jet.pt > pt_high*1000 or jet.pt < pt_low*1000 or jet.mass >= 300*1000 or jet.mass <= 0:
                 continue
 
         if signal and not createptfile:
@@ -264,18 +273,27 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
     ptlow/high --- pt range. default values are those used for pt reweighting file creation
     version --- version of pt file
     '''
-    global filename_mw
-    filename_mw = ''
-    global success_mw
-    success_mw = False
+    global filename_m
+    filename_m = ''
+    global success_m
+    success_m = False
     global filename_pt
     filename_pt = ''
     global success_pt
     success_pt = False
+    global pt_high
+    pt_high = pthigh
+    global pt_low
+    pt_low = ptlow
     # setup the histogram - read in the mass entries from the input file and put them into a histogram
     createptfile = False
     if ptfile == '':
+        # first check if a correct version file exists
+        
+        #success_pt = True
+        # if it doesn't, then we create it
         createptfile = True
+
     hist_sig_m, hist_sig_pt,hist_rw,pthist_sig = setupHistogram(fname, algorithm, treename, True, ptfile, createptfile)
     bkg_fname = fname.replace('sig','bkg')
     hist_bkg_m,hist_bkg_pt,tmp,pthist_bkg = setupHistogram(bkg_fname, algorithm, treename, False, '', createptfile)
@@ -312,11 +330,11 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         canv.SaveAs(folder+"pt_rw.png")
     else: # if we are just doing the mass windows
         # calculate the width, top and bottom edges and the indices for the 68% mass window
-        wid, topedge, botedge, minidx, maxidx = Qw(hist, 0.68)
+        wid, topedge, botedge, minidx, maxidx = Qw(hist_sig_m, 0.68)
         # folder where input file is
         folder = fname[:fname.rfind('/')+1]
         # write this information out to a text file
-        filename_m = folder+algorithm+"_pt_"+ptlow+"_"+pthigh+"_masswindow.out"
+        filename_m = folder+algorithm+"_pt_"+str(ptlow)+"_"+str(pthigh)+"_masswindow.out"
         fout = open(filename_m,'w')
         fout.write("width: "+ str(wid)+'\n')
         fout.write("top edge: "+ str(topedge)+'\n')
@@ -352,7 +370,7 @@ def runAll(input_file, file_id, treename, version='v6'):
         ptfile = ""
         for fil in fileslist:
             # found the signal file!
-            if fil.endswith("sig.root"):
+            if fil.endswith("sig2.root"):#"sig.root"):
                 sigfile = folder+fil
             if fil.endswith("ptweights"+version):
                 ptfile = folder+fil

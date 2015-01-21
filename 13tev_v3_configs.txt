@@ -1,0 +1,4 @@
+config/13tev_v3/AntiKt10LCTopoTrimmedPtFrac5SmallR20.xml
+config/13tev_v3/AntiKt10LCTopoTrimmedPtFrac5SmallR30.xml
+config/13tev_v3/CamKt10LCTopoPrunedCaRCutFactor50Zcut15.xml
+config/13tev_v3/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15.xml

@@ -57,6 +57,7 @@ def main(args):
     for l in pathsf:
         l = l.strip()
         paths.append(base_dir+l)
+        print l
 
     # read in the config files for plotting
     configs = []
@@ -64,6 +65,7 @@ def main(args):
     for l in configsf:
         l = l.strip()    
         configs.append(l)
+        print l
 
     # get the file identifiers that are the suffix for the algorithm name
     fileids = []
@@ -72,6 +74,7 @@ def main(args):
         sl_idx = c.rfind('/')+1
 
         fileids.append(c[sl_idx:-4])
+        print c[sl_idx:-4]
     version = 'v1' # default version number
     if args.version:
         version = args.version
@@ -134,10 +137,16 @@ def main(args):
 
     pfn.wait_watching_stdout(proclist[PROCESS],rc, False)
 
+    # reset counter
+    counter = 0
+
     # now wait until all jobs are done
     lview.wait(proclist[PROCESS])
     for idx,proc in enumerate(proclist[PROCESS]):
+        counter+=1
+        # get teh process
         proc_output = proc.get()
+        # get the version number
         v = proclist[VERSION][idx]
         # check output pickle exists - if not, raise error, set all values to 0
         rej = '0'
@@ -158,7 +167,7 @@ def main(args):
         else:
             var = 'ERROR'
     
-        print 'Algorithm: ' + proclist[CONFIG][idx][2]# index of c, or config file
+        print 'Algorithm: ' + proclist[CONFIG][idx][1]# index of c, or config file
         print 'Rejection: ' + rej
         print 'Variable: ' + var
         print 'Mass min: ' + mass_min
@@ -168,10 +177,10 @@ def main(args):
             maxrejvar = var
             maxrejm_min = float(mass_min)
             maxrejm_max = float(mass_max)
-            maxalg = proclist[CONFIG][idx][2] # index of c
+            maxalg = proclist[CONFIG][idx][1] # index of c
         # load total background rejection matrix from pickle file
-        totalrejection = pickle.load(open("tot_rej_"+version+".p","rb"))
-        rejectionmatrix[f] = totalrejection
+        totalrejection = pickle.load(open("tot_rej_"+v+".p","rb"))
+        rejectionmatrix[proclist[CONFIG][idx][2]] = totalrejection
         #except e:
         #   print 'Failed to analyse: ' + f
         #  print e

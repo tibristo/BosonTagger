@@ -99,7 +99,7 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
         rocs_rejpow[r].Write('bkgrejroc_'+r)
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
+def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -122,6 +122,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     Returns:
     Background rejection at 50% signal efficiency using the ROC curve and variable used to achieve maximum rejection.
     '''
+
+    # open log file
+    logfile = open(records,'w')
+
     # canvas for histogram plots
     canv1 = TCanvas("canv1")
     canv1.Divide(5,5)
@@ -165,11 +169,14 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         bkg_eff = 1.0
 
 
+        logfile.write('blah')
+
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
             histname =  datatype + "_" + branchname
 
             print "plotting " + datatype + branchname
+            logfile.write("plotting " + datatype + branchname+"\n")
 
             # set up the tree.Draw() variable expression for the histogram
             '''
@@ -238,8 +245,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
-            #print 'DEBUG mw_int: ' +str(mw_int)
-            #print 'DEBUG full_int: ' +str(full_int)
+            logfile.write('DEBUG mw_int: ' +str(mw_int)+'\n')
+            logfile.write('DEBUG full_int: ' +str(full_int)+'\n')
 
             if datatype == 'sig':
                 signal_eff = mw_int/full_int
@@ -328,6 +335,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     if savePlots:
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
+    # close logfile
+    logfile.close()
+
     # return the variable with the maximum background rejection
     return maxrej, maxrejvar
 
@@ -517,25 +527,27 @@ def main(args):
     #if len(ptweightBins) == 1:
     #    numbins = int(ptweightBins[0])
     #znumbins = 100
+    print "***************************************signalFile: " + signalFile
 
     if ptreweight and ptweightFile == '':
         print 'calculating pt reweighting since no existing file present.'
         #def run(fname, algorithm, treename, ptfile, version='v6'):
         massPtFunctions.run(signalFile, Algorithm, treename, '', 200, 3000, 'v6')
         # check that the pt reweighting calculation was a success, if not, quit.
-        if pTReweighting.success_pt:
+        if massPtFunctions.success_pt:
             ptweightFile = massPtFunctions.filename_pt
         else:
             print 'pt rweighting file creation failed'
             sys.exit()
 
 
+
     if massWindowCut and massWinFile == '':
         print 'calculating mass window since no existing file present'
         #def run(fname, algorithm, ptlow, pthigh,treename,ptfile):
-        massPtFunctions.run(signalFile, Algorithm, treename, ptweightFile, float(ptrange[0])/1000.,float(ptrange[1])/1000.)
+        massPtFunctions.run(signalFile, Algorithm, treename, ptweightFile, float(ptrange[0])/1000.,float(ptrange[1])/1000., 'v6')
         # check that the mass window calculation was a success, if not, quit.
-        if calculateMassWindow.success_m:
+        if massPtFunctions.success_m:
             massWinFile = massPtFunctions.filename_m
         else:
             print 'mass window calculation was a failure'
@@ -550,6 +562,18 @@ def main(args):
         loadweights(ptweightFile,numbins)
     else:
         loadweights(ptweightFile,-1,array('f',ptweightBins))
+
+
+    for typename in ['sig','bkg']:
+        if typename == 'sig':
+            filename = signalFile
+        else:
+            filename = backgroundFile
+        # open the files
+        files[typename] = TFile(filename)
+        # read in the trees
+        trees[typename] = files[typename].Get(treename)
+
 
     # remove any branches from the config file that are not in the actual input files
     file_branches = fn.getFileBranches(signalFile, fn.getTree())
@@ -634,10 +658,7 @@ def main(args):
     # make sure out optimisation folder exists
     if not os.path.exists('optimisation'):
         os.makedirs('optimisation')
-    # log the output
-    records = open('TaggerOpt'+Algorithm+'_'+fileid+'.out','w')
-
-
+    
     # flag to write out trees into csv format
     writecsv= True
 
@@ -649,20 +670,25 @@ def main(args):
     maxrejm_max = 0
 
     for m in masses:
+
         m_min = m[0]
         m_max = m[1]
+
+        # log the output
+        records = 'TaggerOpt'+Algorithm+'_'+fileid+'_'+str(m_max)+'_'+str(m_min)+'_'+'.out'
+
         # run the analysis for mass range
         masses = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
+        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, [eventsFileSig, eventsFileBkg], ptweightFile, ptweightBins)
-        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
-        records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
+        #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
         if rej > max_rej:
             max_rej = rej
             maxrejvar = rejvar
             maxrejm_min = m_min
             maxrejm_max = m_max
-    records.close()
+    #records.close()
     # dump totalrejection in pickle to be read in by the scanBkgrej module which runs this module
     print totalrejection
 

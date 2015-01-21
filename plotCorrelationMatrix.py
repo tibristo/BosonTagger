@@ -110,7 +110,7 @@ def plotMatrix(version):
                 rejectionmatrix[r].append([v,0])
 
     
-
+    print rejectionmatrix
 
     matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars), len(rejectionmatrix), 1, len(rejectionmatrix))
     matrix.GetZaxis().SetRangeUser(0.0,35.0)
@@ -119,6 +119,7 @@ def plotMatrix(version):
         # r will have [key, [rejection, variable name]]
         # create dictionary from rejectionmatrix[r]
         rej = dict(rejectionmatrix[r])
+        print rej
         # we want to sort rej based on sorted vars.... Won't work yet
         for x, v in enumerate(sortedvars):
             # add teh variables
