@@ -370,7 +370,7 @@ def runAll(input_file, file_id, treename, version='v6'):
         ptfile = ""
         for fil in fileslist:
             # found the signal file!
-            if fil.endswith("sig2.root"):#"sig.root"):
+            if fil.endswith("sig.root"):#"sig.root"):
                 sigfile = folder+fil
             if fil.endswith("ptweights"+version):
                 ptfile = folder+fil

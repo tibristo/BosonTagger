@@ -1,5 +1,5 @@
 . stopcluster.sh
-ipcontroller &
+#ipcontroller &
 ipengine &
 ipengine &
 ipengine &
