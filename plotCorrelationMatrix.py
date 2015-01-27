@@ -95,11 +95,11 @@ def plotMatrix(version):
     # add variables in the "order" list to the sorteredvars list
     for o in order:
         for v in varsdict.items():
-            if o == v[0] and not (o == 'EEC_C2_1' or o == 'EEC_C2_2' or o == 'Dip12' or o == 'Angularity'):
+            if o == v[0] and not (o == 'Dip12' or o == 'Angularity'):
                 sortedvars.append(v)
     # add the remaining variables to the sortedvars list
     for x in toadd:
-        if not (x[0] == 'EEC_C2_1' or x[0] == 'EEC_C2_2' or x[0] == 'Dip12' or x[0] == 'Angularity'):
+        if not (x[0] == 'Dip12' or x[0] == 'Angularity'):
             sortedvars.append(x)
 
     # if there is a missing variable we append this to the end of the row

@@ -249,9 +249,15 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             logfile.write('DEBUG full_int: ' +str(full_int)+'\n')
 
             if datatype == 'sig':
-                signal_eff = mw_int/full_int
+                if full_int !=0:
+                    signal_eff = mw_int/full_int
+                else:
+                    signal_eff = 0
             else:
-                bkg_eff = mw_int/full_int
+                if full_int != 0:
+                    bkg_eff = mw_int/full_int
+                else:
+                    bkg_eff = 0
 
             # set up the axes titles and colours/ styles
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
@@ -660,7 +666,7 @@ def main(args):
         os.makedirs('optimisation')
     
     # flag to write out trees into csv format
-    writecsv= True
+    writecsv= False
 
     # store teh maximum background rejection
     global max_rej, maxrejvar, maxrejm_min, maxrejm_max

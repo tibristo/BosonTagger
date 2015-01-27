@@ -1,5 +1,3 @@
 config/nc29_fast_v3/AntiKt10LCTopoTrimmedPtFrac5SmallR20.xml
 config/nc29_fast_v3/CamKt10LCTopoPrunedCaRcutFactor50Zcut15.xml
 config/nc29_fast_v3/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15.xml
-config/nc29_fast_v3/CamKt12LCTopoSplitFilteredMu100SmallR30YCut4.xml
-config/nc29_fast_v3/CamKt12LCTopoSplitFilteredMu100SmallR30YCut9.xml

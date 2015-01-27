@@ -493,9 +493,9 @@ def getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, pt
 
     for f in fileslist:
         # if teh signal file and background file were not specified in the config file find them in the input directory
-        if signalFile == '' and f.endswith("sig.root"):
+        if signalFile == '' and f.endswith("sig2.root"):
             signalFile = InputDir+'/'+f
-        elif backgroundFile == '' and f.endswith("bkg.root"):
+        elif backgroundFile == '' and f.endswith("bkg2.root"):
             backgroundFile = InputDir+'/'+f
         # files for event reweighting
         if f.endswith("sig.nevents"):
