@@ -6,12 +6,7 @@ import subprocess
 import argparse
 import os.path
 
-
-from IPython import parallel as par
-from IPython.display import clear_output
-
-import parallelfunctions as pfn
-
+from multiprocessing import Pool 
 
 def runTag(args):
     '''
@@ -89,20 +84,6 @@ def main(args):
     # keep all of the rejection values in here
     rejectionmatrix = {}
 
-
-    # set up IPython engines
-    rc=par.Client()
-
-    lview = rc.load_balanced_view()
-    views = rc[:]
-    # import ROOT on all
-    views.execute('from ROOT import *',block=True)
-    views.execute('from AtlasStyle import *',block=True)
-    #views.execute('from AtlasStyle import *',block=True)
-
-    # async
-    lview.block = False
-
     # lists for keeping track of all running jobs, their names and config info
     proclist = [[],[],[]]
     # define some variables for indexing in proclist
@@ -126,8 +107,8 @@ def main(args):
             if args.masswindow == 'true' or args.masswindow == 'True':
                 args_tag.append('--massWindowCut=True')
         print args_tag
-        # add this process to the ipython engine
-        proclist[PROCESS].append(lview.apply_async(runTag, args_tag))
+        # keep track of the args we use, to map to the thread pool later
+        proclist[PROCESS].append(args_tag)
         # keep track of the version number/ process name
         proclist[VERSION].append(version+'_idx_'+str(counter))
         # keep track of the configuration of this - config file, path, file name
@@ -135,17 +116,24 @@ def main(args):
         #p = subprocess.Popen(args_tag,stdout=subprocess.PIPE)
         #p.wait()
 
-    pfn.wait_watching_stdout(proclist[PROCESS],rc, False)
+    print 'starting pool'
+
+    pool = Pool(4)
+
+    # map to the thread pool
+    results = pool.map(runTag, proclist[PROCESS])
+    pool.close()
+    pool.join()
 
     # reset counter
     counter = 0
 
     # now wait until all jobs are done
-    lview.wait(proclist[PROCESS])
+    #lview.wait(proclist[PROCESS])
     for idx,proc in enumerate(proclist[PROCESS]):
         counter+=1
         # get teh process
-        proc_output = proc.get()
+        #proc_output = proc.get()
         # get the version number
         v = proclist[VERSION][idx]
         # check output pickle exists - if not, raise error, set all values to 0
