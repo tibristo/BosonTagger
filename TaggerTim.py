@@ -146,6 +146,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     # hist added to the roc is empty
     writeROC = False
 
+    # dictionary holding all of the histograms without a mass cut
+    hist_nomw = {}
+    saveNoMassWindowPlots = savePlots
+
     maxrej = 0
     maxrejvar = ''
     #set up the cutstring/ selection to cut on the correct jet masses
@@ -179,16 +183,6 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             logfile.write("plotting " + datatype + branchname+"\n")
 
             # set up the tree.Draw() variable expression for the histogram
-            '''
-            if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
-                varexp = 'sqrt('+branchname+')>>'+histname
-                # the yfilt variable isn't filled for anything except split/filtered.  So to fix this
-                # we draw split12/jet mass instead
-                if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
-                    new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
-                    varexp = 'sqrt('+new_branch+')>>'+histname
-            '''
-            # else:
             varexp = branchname + '>>' + histname
             minxaxis = hist[histname].GetXaxis().GetXmin()
             maxxaxis = hist[histname].GetXaxis().GetXmax()
@@ -227,24 +221,27 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
                 else:
                     hist[histname].Scale(1.0/hist[histname].Integral());
 
+
+            # set up the axes titles and colours/ styles
+            hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
+            if (branchname.find('jet_')!=-1):
+                hist[histname].SetXTitle(plotreverselookup[branchname.replace("jet_"+Algorithm,"")])
+            else:
+                hist[histname].SetXTitle(plotreverselookup[branchname])
+            hist[histname].SetYTitle("Normalised Entries")
+
             #now get the same plot for no mass window cut to get the eff
             hist_full = hist[histname].Clone()
             hist_full.Reset()
             hist_full.SetName(histname+'_full')
             # need to store the variable in this histogram
-            '''
-            if branchname.find('YFilt') != -1 or branchname.find('SPLIT12') != -1:
-                varexpfull = 'sqrt('+branchname+') >> '+histname+'_full'
-                if branchname.find('YFilt') != -1 and Algorithm.find('Split') == -1:
-                    new_branch = branchname.replace('YFilt','SPLIT12')+'/'+branchname.replace('YFilt','m')
-                    varexpfull = 'sqrt('+new_branch+')>>'+histname+'_full'
-            '''
-            #else:
             varexpfull = branchname + ' >>' + histname+'_full'
 
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
+            #save this histogram to the no mass window histo dictionary
+            hist_nomw[histname+'_full'] = hist_full
             logfile.write('DEBUG mw_int: ' +str(mw_int)+'\n')
             logfile.write('DEBUG full_int: ' +str(full_int)+'\n')
 
@@ -259,13 +256,6 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
                 else:
                     bkg_eff = 0
 
-            # set up the axes titles and colours/ styles
-            hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
-            if (branchname.find('jet_')!=-1):
-                hist[histname].SetXTitle(plotreverselookup[branchname.replace("jet_"+Algorithm,"")])
-            else:
-                hist[histname].SetXTitle(plotreverselookup[branchname])
-            hist[histname].SetYTitle("Normalised Entries")
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
@@ -280,7 +270,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         pY = Double(0.0)
 
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
-        bkgrej = 1/(1-roc[branchname].Eval(0.5))#Double(0.0)
+        # Howeever, if we want the background rejection power for the mass variable we do not want to take 50% as we already have made
+        # a cut on the mass to get it to 68%.
+        if not branchname.endswith("_m"):
+            bkgrej = 1/(1-roc[branchname].Eval(0.5))#Double(0.0)
+        else:
+            bkgrej = 1/(1-roc[branchname].Eval(0.68))
+
 
         #print 'DEBUG 1-bkgeff: '+ str(bkgrej)
         #print 'DEBUG roc bkg: ' + str(1/(1-roc[branchname].Eval(0.5)))
@@ -299,6 +295,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
         hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
+        if saveNoMassWindowPlots:
+            hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); 
+            hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);  
 
         leg1.Clear()
         # add legend entries for bkg and signal histograms
@@ -323,6 +322,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             tempCanv.SaveAs(varpath+branchname+".png")
             del p
 
+        # now save "no mass window" plots
+        if saveNoMassWindowPlots:
+            p = canv1.cd(index+1).Clone() 
+            tempCanv.cd()
+
+            p.SetPad(0,0,1,1) # resize
+            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
+            if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
+                fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
+            else:
+                fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
+            leg1.Draw()
+
+            p.Draw()
+            tempCanv.SaveAs(varpath+branchname+"_noMW.png")
+            del p
+
         # plot the ROC curves
         canv2.cd()
         roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
@@ -339,6 +355,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
+        #write out the plots after cuts
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
     # close logfile
