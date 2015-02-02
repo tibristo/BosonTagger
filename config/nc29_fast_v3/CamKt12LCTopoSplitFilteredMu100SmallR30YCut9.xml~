@@ -19,7 +19,7 @@
   <varName name="pt">
   <stub>_pt</stub>
   <plot>True</plot>
-    <maxValue>310000</maxValue>
+    <maxValue>310000.0</maxValue>
     <minValue>0.0</minValue>
   </varName>
   <varName name="eta">
@@ -44,13 +44,13 @@
   <stub>_Tau1</stub>
   <plot>True</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.0</minValue>
+    <minValue>0.01</minValue>
   </varName>
   <varName name="Tau2">
   <stub>_Tau2</stub>
   <plot>True</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.0</minValue>
+    <minValue>0.01</minValue>
   </varName>
   <varName name="Tau21">
   <stub>_Tau21</stub>
@@ -72,21 +72,23 @@
   <stub>_PlanarFlow</stub>
   <plot>True</plot>
     <maxValue>1.2</maxValue>
-    <minValue>0.1</minValue>
+    <minValue>0.0</minValue>
   </varName>
   <varName name="Angularity">
   <stub>_Angularity</stub>
   <plot>False</plot>
+  <maxValue>1.0</maxValue>
+  <minValue>0.00065</minValue>
   </varName>
   <varName name="Mass Drop">
-  <stub>_massdrop</stub>
-  <plot>False</plot>
+  <stub>_Mu12</stub>
+  <plot>True</plot>
     <maxValue>1.0</maxValue>
-    <minValue>0.1</minValue>
+    <minValue>0.0</minValue>
   </varName>
   <varName name="Momentum Balance">
-  <stub>_yt</stub>
-  <plot>False</plot>
+  <stub>_YFilt</stub>
+  <plot>True</plot>
     <maxValue>1.0</maxValue>
     <minValue>0.2</minValue>
   </varName>
@@ -94,34 +96,34 @@
 
 
   <varName name="EEC C1">
-  <stub>_EEC_C1</stub>
+  <stub>_EEC_C2_1</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>2.0</maxValue>
   </varName>
   <varName name="EEC C2">
-  <stub>_EEC_C2</stub>
+  <stub>_EEC_C2_2</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>10.0</maxValue>
   </varName>
   <varName name="EEC D1">
-  <stub>_EEC_D1</stub>
+  <stub>_EEC_D2_1</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
-    <maxValue>0.1</maxValue>
+    <maxValue>1.0</maxValue>
   </varName>
   <varName name="EEC D2">
-  <stub>_EEC_D2</stub>
+  <stub>_EEC_D2_2</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
-    <maxValue>0.1</maxValue>
+    <maxValue>1.0</maxValue>
   </varName>
   <varName name="FoxWolfram20">
   <stub>_FoxWolfram20</stub>
   <plot>True</plot>
-    <minValue>0.0</minValue>
-    <maxValue>1.2</maxValue>
+    <minValue>-0.2</minValue>
+    <maxValue>0.6</maxValue>
   </varName>
   <varName name="Soft Drop Fraction">
   <stub>_SoftDrop</stub>
@@ -131,25 +133,25 @@
   </varName>
   <varName name="Sphericity">
   <stub>_Sphericity</stub>
-  <plot>False</plot>
-    <minValue>0.0</minValue>
+  <plot>True</plot>
+    <minValue>0.01</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Aplanarity">
   <stub>_Aplanarity</stub>
-  <plot>False</plot>
-    <minValue>0.0</minValue>
+  <plot>True</plot>
+    <minValue>0.01</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Thrust Maj">
   <stub>_ThrustMaj</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Thrust Min">
   <stub>_ThrustMin</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
@@ -169,12 +171,12 @@
   <stub>_ZCUT12</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
-    <maxValue>1.0</maxValue>
+    <maxValue>0.5</maxValue>
   </varName>
   <varName name="TauWTA2TauWTA1">
   <stub>_TauWTA2TauWTA1</stub>
   <plot>True</plot>
-    <minValue>0.01</minValue>
+    <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Dip12">

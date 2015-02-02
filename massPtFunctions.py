@@ -146,6 +146,9 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             eventsfile = InputDir+'/'+f
     loadEvents(eventsfile)
 
+    sampleString = 'SIG'
+    if signal:
+        sampleString = 'BKG'
 
     # set up a struct so that the SetBranchAddress method can be used.
     # normally one would use tree.variable to access the variable, but since
@@ -166,13 +169,17 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
     # histogram with 300 bins and 0 - 0.3 TeV range
     # histogram storing pt without being reweighted
-    hist_pt = TH1F("pt","pt",100,200*1000,3000*1000)    
+    hist_pt = TH1F("pt"+sampleString+algorithm,"pt",100,200*1000,3000*1000)    
+    hist_pt.SetDirectory(0)
     # jet mass
-    hist_m = TH1F("mass","mass",100,0,300*1000)    
+    hist_m = TH1F("mass"+sampleString+algorithm,"mass",100,0,300*1000)    
+    hist_m.SetDirectory(0)
     # pt 
-    hist_rw = TH1F("ptrw","ptrw",100,200*1000,3000*1000)    
+    hist_rw = TH1F("ptrw"+sampleString+algorithm,"ptrw",100,200*1000,3000*1000)    
+    hist_rw.SetDirectory(0)
     # pt only if creating pt rw file
-    pthist = TH1F("ptreweight","ptreweight",56,200,3000); # gives 50 gev per bin
+    pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",56,200,3000); # gives 50 gev per bin
+    pthist.SetDirectory(0)
     # maximum number of entries in the tree
     entries = tree.GetEntries()
     
@@ -213,7 +220,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             print 'nevents: ' + str(NEvents(tree.mc_channel_number))
             print 'ptweight: ' + str(ptWeight(jet.pt))
         hist_rw.Fill(jet.pt,weight)
-    
+
     return hist_m, hist_pt, hist_rw, pthist
 
 def Qw(histo, frac=0.68):
@@ -234,6 +241,15 @@ def Qw(histo, frac=0.68):
     # info on histogram - number of bins and the integral
     Nbins = histo.GetNbinsX()
     integral = histo.Integral();
+    if integral == 0:# no div/0
+        integral = 1
+    closestWindow = 100
+    closestFrac = 0.0
+    closestTop = 0.0
+    closestBottom = 0.0
+    closestMinIdx = 0.0
+    closestMaxIdx = 99.0
+    numberWindows = 0
 
     # loop through each bin of the histogram
     for i in xrange(0,Nbins):
@@ -244,13 +260,16 @@ def Qw(histo, frac=0.68):
 
         # loop through until the tempFrac is above the frac (68%) criteria,
         # but making sure not to go out of range.                                                                                                                                             
+        prevFrac = 0.0
         while(tempFrac<frac and imax != Nbins):
             tempFrac+=histo.GetBinContent(imax)/integral;
+            prevFrac = histo.GetBinContent(imax)/integral
             imax+=1;
 
         width = histo.GetBinCenter(imax) - histo.GetBinCenter(i);
         # by applying this we say that the window we have just calculate MUST have at least 68%.
-        if tempFrac >= frac and width<minWidth:
+        #if tempFrac >= frac and width<minWidth:
+        if imax != Nbins and width<minWidth:
             # set up the best found mass window variables
             minWidth = width;
             topEdge = histo.GetBinCenter(imax);
@@ -258,8 +277,26 @@ def Qw(histo, frac=0.68):
             minidx = copy.deepcopy(i)
             maxidx = copy.deepcopy(imax)
             maxfrac = copy.deepcopy(tempFrac)
+            
+        if tempFrac > frac:
+            numberWindows += 1
 
-    return minWidth, topEdge, botEdge, minidx, maxidx#, maxfrac
+        # find the closest window. It may be slightly lower than the 68%.
+        if abs(tempFrac-prevFrac-frac) < closestWindow and width < minWidth:
+            closestFrac = tempFrac-prevFrac
+            closestTop = histo.GetBinCenter(imax-1)
+            closestBottom = histo.GetBinCenter(i)
+            closestMinIdx = copy.deepcopy(i)
+            closestMaxIdx = copy.deepcopy(imax-1)
+        if tempFrac-frac < closestWindow and width < minWidth:
+            closestFrac = tempFrac
+            closestTop = histo.GetBinCenter(imax)
+            closestBottom = histo.GetBinCenter(i)
+            closestMinIdx = copy.deepcopy(i)
+            closestMaxIdx = copy.deepcopy(imax)
+                
+
+    return minWidth, topEdge, botEdge, minidx, maxidx, closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numberWindows
 
 
 def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'):
@@ -296,16 +333,21 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
 
     hist_sig_m, hist_sig_pt,hist_rw,pthist_sig = setupHistogram(fname, algorithm, treename, True, ptfile, createptfile)
     bkg_fname = fname.replace('sig','bkg')
+    thing =  pthist_sig.GetXaxis()
     hist_bkg_m,hist_bkg_pt,tmp,pthist_bkg = setupHistogram(bkg_fname, algorithm, treename, False, '', createptfile)
 
     # folder where input file is
     folder = fname[:fname.rfind('/')+1]
 
+    print 'createptfile: '
+    print createptfile
     # if we are creating a new pt rw file, save all of the info
     if createptfile:
         filename_pt = folder+algorithm+'.ptweights'+version
         ptfile_out = open(filename_pt,'w')
+        print 'writing to file' 
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
+            print ' first entry'
             sig = pthist_sig.GetBinContent(i)
             bkg = pthist_bkg.GetBinContent(i)
             edge = pthist_sig.GetXaxis().GetBinUpEdge(i)
@@ -318,9 +360,12 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         canv = TCanvas()
         canv.cd()
         canv.SetLogy()
-        hist_sig_pt.Scale(1/hist_sig_pt.Integral())
-        hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
-        hist_rw.Scale(1/hist_rw.Integral())
+        if hist_sig_pt.Integral() != 0:
+            hist_sig_pt.Scale(1/hist_sig_pt.Integral())
+        if hist_bkg_pt.Integral() != 0:
+            hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
+        if hist_rw.Integral() != 0:
+            hist_rw.Scale(1/hist_rw.Integral())
         hist_sig_pt.Draw()
         hist_bkg_pt.SetLineColor(ROOT.kRed)
         hist_bkg_pt.Draw("same")
@@ -330,17 +375,23 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         canv.SaveAs(folder+"pt_rw.png")
     else: # if we are just doing the mass windows
         # calculate the width, top and bottom edges and the indices for the 68% mass window
-        wid, topedge, botedge, minidx, maxidx = Qw(hist_sig_m, 0.68)
+        wid, topedge, botedge, minidx, maxidx,closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numWin = Qw(hist_sig_m, 0.68)
         # folder where input file is
         folder = fname[:fname.rfind('/')+1]
         # write this information out to a text file
         filename_m = folder+algorithm+"_pt_"+str(ptlow)+"_"+str(pthigh)+"_masswindow.out"
         fout = open(filename_m,'w')
-        fout.write("width: "+ str(wid)+'\n')
-        fout.write("top edge: "+ str(topedge)+'\n')
-        fout.write("bottom edge: "+ str(botedge)+'\n')
-        fout.write("minidx: "+ str(minidx)+'\n')
-        fout.write("maxidx: "+ str(maxidx)+'\n')
+        fout.write("width: " + str(wid) + '\n')
+        fout.write("top edge: " + str(topedge) + '\n')
+        fout.write("bottom edge: " + str(botedge) + '\n')
+        fout.write("minidx: " + str(minidx) + '\n')
+        fout.write("maxidx: " + str(maxidx) + '\n')
+        fout.write('closest frac: ' + str(closestFrac) + '\n')
+        fout.write('closest top: ' + str(closestTop) + '\n')
+        fout.write('closest bottom: ' + str(closestBottom) + '\n')
+        fout.write('closest minidx: ' + str(closestMinIdx) + '\n')
+        fout.write('closest maxidx: ' + str(closestMaxIdx) + '\n')
+        fout.write('number windows found: ' + str(numWin) + '\n')
         fout.close()
         success_m = True
 

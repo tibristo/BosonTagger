@@ -185,4 +185,11 @@
     <minValue>-0.05</minValue>
     <maxValue>10.0</maxValue>
   </varName>
+  <varName name="pileup">
+    <stub>averageIntPerXing</stub>
+    <plot>True</plot>
+    <minValue>0</minValue>
+    <maxValue>100</maxValue>
+    <jetVariable>False</jetVariable>
+    </varName>
 </settings>

@@ -1,49 +1,61 @@
-cd Websites/t/tibristo/20140423_NTup_v1.0
-mput SelectedElTrig/*
-mput SelectedElTrig0BTag/*
-mput SelectedElTrig1BTag/*
-mput SelectedElTrig2BTag/*
-mput SelectedElTrig2LBTag/*
-mput SelectedElTrig2MBTag/*
-mput SelectedElTrig3Jet/*
-mput SelectedElTrig3Jet0BTag/*
-mput SelectedElTrig3Jet1BTag/*
-mput SelectedElTrig3Jet2BTag/*
-mput SelectedElTrig3Jet2LBTag/*
-mput SelectedElTrig3Jet2MBTag/*
-mput SelectedElTrig4Jet/*
-mput SelectedElTrig4Jet0BTag/*
-mput SelectedElTrig4Jet1BTag/*
-mput SelectedElTrig4Jet2BTag/*
-mput SelectedElTrig4Jet2LBTag/*
-mput SelectedElTrig4Jet2MBTag/*
-mput SelectedElTrigMJFit/*
-mput SelectedElTrigMJFit0BTag/*
-mput SelectedElTrigMJFit1BTag/*
-mput SelectedElTrigMJFit2BTag/*
-mput SelectedElTrigMJFit2LBTag/*
-mput SelectedElTrigMJFit2MBTag/*
-mput SelectedMuTrig/*
-mput SelectedMuTrig0BTag/*
-mput SelectedMuTrig1BTag/*
-mput SelectedMuTrig2BTag/*
-mput SelectedMuTrig2LBTag/*
-mput SelectedMuTrig2MBTag/*
-mput SelectedMuTrig3Jet/*
-mput SelectedMuTrig3Jet0BTag/*
-mput SelectedMuTrig3Jet1BTag/*
-mput SelectedMuTrig3Jet2BTag/*
-mput SelectedMuTrig3Jet2LBTag/*
-mput SelectedMuTrig3Jet2MBTag/*
-mput SelectedMuTrig4Jet/*
-mput SelectedMuTrig4Jet0BTag/*
-mput SelectedMuTrig4Jet1BTag/*
-mput SelectedMuTrig4Jet2BTag/*
-mput SelectedMuTrig4Jet2LBTag/*
-mput SelectedMuTrig4Jet2MBTag/*
-mput SelectedMuTrigMJFit/*
-mput SelectedMuTrigMJFit0BTag/*
-mput SelectedMuTrigMJFit1BTag/*
-mput SelectedMuTrigMJFit2BTag/*
-mput SelectedMuTrigMJFit2LBTag/*
-mput SelectedMuTrigMJFit2MBTag/*
+cd Websites/t/tibristo/${1}
+
+mput matrixinv_${1}*.png
+
+# if 13 tev
+if [[ ${1} == *"13tev"* ]]
+then
+cd CamKt10LCTopoPrunedCaRCutFactor50Zcut15/
+
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}*ROCPlot.png
+
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_200_350/*
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_350_500/*
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_500_1000/*
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1000_1500/*
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1500_2000/*
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_2000_3000/*
+#if 8 tev
+else
+cd CamKt10LCTopoPrunedCaRcutFactor50Zcut15/
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}*ROCPlot.png
+
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_200_350/*
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_350_500/*
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_500_1000/*
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1000_1500/*
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1500_2000/*
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_2000_3000/*
+fi
+
+cd ../AntiKt10LCTopoTrimmedPtFrac5SmallR20/
+
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}*ROCPlot.png
+
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_200_350/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_350_500/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_500_1000/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1000_1500/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1500_2000/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_2000_3000/*
+
+cd ../AntiKt10LCTopoTrimmedPtFrac5SmallR30/
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}*ROCPlot.png
+
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_200_350/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_350_500/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_500_1000/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1000_1500/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1500_2000/*
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_2000_3000/*
+
+cd ../CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/
+
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}*ROCPlot.png
+
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_200_350/*
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_350_500/*
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_500_1000/*
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1000_1500/*
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1500_2000/*
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_2000_3000/*

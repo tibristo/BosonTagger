@@ -108,7 +108,6 @@ def plotMatrix(version):
         for v in varsdict:
             if v not in rejvars:
                 rejectionmatrix[r].append([v,0])
-
     
     print rejectionmatrix
 
@@ -118,15 +117,32 @@ def plotMatrix(version):
     for i, r in enumerate(rejectionmatrix):
         # r will have [key, [rejection, variable name]]
         # create dictionary from rejectionmatrix[r]
-        rej = dict(rejectionmatrix[r])
-        print rej
+        
+
+        rej = {}
+        var4 = False
+        for variables in rejectionmatrix[r]:
+            if len(variables) == 4:
+                # nominal, error up, error down
+                rej[variables[0]] = [ variables[1], variables[2], variables[3] ]
+                var4 = True
+        if not 4:
+            rej = dict(rejectionmatrix[r])
+            
+        #print rej
         # we want to sort rej based on sorted vars.... Won't work yet
         for x, v in enumerate(sortedvars):
             # add teh variables
             # Just want to plot the variable name, not the rest of the name
-            #print v
             matrix.GetXaxis().SetBinLabel(x+1,v[0])
-            matrix.SetBinContent(x+1,i+1, rej[v[0]])
+            if len(rej[v[0]]) == 1:
+                value_nominal = rej[v[0]]
+            else:
+                value_nominal = rej[v[0]][0]
+                value_errup = rej[v[0]][1]
+                value_errdo = rej[v[0]][2]
+                matrix.SetBinError(x+1,i+1, value_errup)
+            matrix.SetBinContent(x+1,i+1, value_nominal)
         matrix.GetYaxis().SetBinLabel(i+1,abbreviate(r))
 
     # turn on the colours
@@ -137,6 +153,8 @@ def plotMatrix(version):
     matrix.SetStats(0)
     matrix.SetMarkerSize(1)
     matrix.Draw("TEXTCOLZ")
+    # for errors to be printed in text
+    #matrix.Draw("TEXTECOLZ")
     
     #print rejectionmatrix
     tc.SaveAs("matrixinv_"+version+".pdf")

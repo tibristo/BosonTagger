@@ -1,53 +1,51 @@
 cd Websites/t/tibristo/
 
-cd 20140423_NTup_v1.0
+cd ${1}
 mput index.html
 
-mput SelectedElTrig/index.html
-mput SelectedElTrig0BTag/index.html
-mput SelectedElTrig1BTag/index.html
-mput SelectedElTrig2BTag/index.html
-mput SelectedElTrig2LBTag/index.html
-mput SelectedElTrig2MBTag/index.html
-mput SelectedElTrig3Jet/index.html
-mput SelectedElTrig3Jet0BTag/index.html
-mput SelectedElTrig3Jet1BTag/index.html
-mput SelectedElTrig3Jet2BTag/index.html
-mput SelectedElTrig3Jet2LBTag/index.html
-mput SelectedElTrig3Jet2MBTag/index.html
-mput SelectedElTrig4Jet/index.html
-mput SelectedElTrig4Jet0BTag/index.html
-mput SelectedElTrig4Jet1BTag/index.html
-mput SelectedElTrig4Jet2BTag/index.html
-mput SelectedElTrig4Jet2LBTag/index.html
-mput SelectedElTrig4Jet2MBTag/index.html
-mput SelectedElTrigMJFit/index.html
-mput SelectedElTrigMJFit0BTag/index.html
-mput SelectedElTrigMJFit1BTag/index.html
-mput SelectedElTrigMJFit2BTag/index.html
-mput SelectedElTrigMJFit2LBTag/index.html
-mput SelectedElTrigMJFit2MBTag/index.html
-mput SelectedMuTrig/index.html
-mput SelectedMuTrig0BTag/index.html
-mput SelectedMuTrig1BTag/index.html
-mput SelectedMuTrig2BTag/index.html
-mput SelectedMuTrig2LBTag/index.html
-mput SelectedMuTrig2MBTag/index.html
-mput SelectedMuTrig3Jet/index.html
-mput SelectedMuTrig3Jet0BTag/index.html
-mput SelectedMuTrig3Jet1BTag/index.html
-mput SelectedMuTrig3Jet2BTag/index.html
-mput SelectedMuTrig3Jet2LBTag/index.html
-mput SelectedMuTrig3Jet2MBTag/index.html
-mput SelectedMuTrig4Jet/index.html
-mput SelectedMuTrig4Jet0BTag/index.html
-mput SelectedMuTrig4Jet1BTag/index.html
-mput SelectedMuTrig4Jet2BTag/index.html
-mput SelectedMuTrig4Jet2LBTag/index.html
-mput SelectedMuTrig4Jet2MBTag/index.html
-mput SelectedMuTrigMJFit/index.html
-mput SelectedMuTrigMJFit0BTag/index.html
-mput SelectedMuTrigMJFit1BTag/index.html
-mput SelectedMuTrigMJFit2BTag/index.html
-mput SelectedMuTrigMJFit2LBTag/index.html
-mput SelectedMuTrigMJFit2MBTag/index.html
+# if 13 tev
+if [[ ${1} == *"13tev"* ]]
+then
+cd CamKt10LCTopoPrunedCaRCutFactor50Zcut15/
+
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_200_350/index.html
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_350_500/index.html
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_500_1000/index.html
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1000_1500/index.html
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1500_2000/index.html
+mput CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_2000_3000/index.html
+else
+# if 8 tev
+cd CamKt10LCTopoPrunedCaRcutFactor50Zcut15/
+
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_200_350/index.html
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_350_500/index.html
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_500_1000/index.html
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1000_1500/index.html
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1500_2000/index.html
+mput CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_2000_3000/index.html
+fi
+
+cd ../AntiKt10LCTopoTrimmedPtFrac5SmallR20/
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_200_350/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_350_500/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_500_1000/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1000_1500/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1500_2000/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_2000_3000/index.html
+
+cd ../AntiKt10LCTopoTrimmedPtFrac5SmallR30/
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_200_350/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_350_500/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_500_1000/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1000_1500/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1500_2000/index.html
+mput AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_2000_3000/index.html
+
+cd ../CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_200_350/index.html
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_350_500/index.html
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_500_1000/index.html
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1000_1500/index.html
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1500_2000/index.html
+mput CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_2000_3000/index.html

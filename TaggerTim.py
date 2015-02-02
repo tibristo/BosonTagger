@@ -140,6 +140,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     global totalrejection
     # dict containing all of the ROC curves
     roc={}
+    roc_errUp = {}
+    roc_errDo = {}
     # dict containing the bkgRejPower curves
     bkgRejROC = {}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
@@ -160,6 +162,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         roc[branchname] = TGraph()
         roc[branchname].SetTitle(branchname)
         roc[branchname].SetName('roc_'+branchname)
+        # add error rocs as well
+        roc_errUp[branchname] = TGraph()
+        roc_errUp[branchname].SetTitle(branchname+'_err_up')
+        roc_errUp[branchname].SetName('roc_'+branchname+'_err_up')
+        roc_errDo[branchname] = TGraph()
+        roc_errDo[branchname].SetTitle(branchname+'_err_do')
+        roc_errDo[branchname].SetName('roc_'+branchname+'_err_do')
         # add bkg rej power dictionary entry
         bkgRejROC[branchname] = TGraph()
         bkgRejROC[branchname].SetTitle(branchname)
@@ -259,7 +268,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
-            MakeROCBen(2, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff)
+            MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff, roc_errUp[branchname], roc_errDo[branchname])
             print signal_eff
             print bkg_eff
             writeROC = True
@@ -272,11 +281,38 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
         # Howeever, if we want the background rejection power for the mass variable we do not want to take 50% as we already have made
         # a cut on the mass to get it to 68%.
+        # calculate error on this as well -> deltaX = X*(deltaY/Y)
+        eval_roc = 1
+        err_up = 1
+        err_do = 1
         if not branchname.endswith("_m"):
-            bkgrej = 1/(1-roc[branchname].Eval(0.5))#Double(0.0)
+            eval_roc = roc[branchname].Eval(0.5)
+            # get the bin for this point so that we can find the associated error in roc error tgraphs
+            #rocBin = fn.findYValue(roc[branchname],Double(0.5), pY, 0.01, True, True)
+            bkgrej = 1/(1-eval_roc)
+            eval_rocup = roc_errUp[branchname].Eval(0.5)
+            eval_rocdo = roc_errDo[branchname].Eval(0.5)
+            err_up = bkgrej-1/(1-eval_rocup)
+            err_do = bkgrej-1/(1-eval_rocdo)
         else:
+            eval_roc = roc[branchname].Eval(0.68)
             bkgrej = 1/(1-roc[branchname].Eval(0.68))
+            #rocBin = fn.findYValue(roc[branchname],Double(0.68), pY, 0.01, True, True)
+            eval_rocup = roc_errUp[branchname].Eval(0.68)
+            eval_rocdo = roc_errDo[branchname].Eval(0.68)
+            #err_up = roc_errUp[branchname].GetPoint(rocBin)
+            #err_do = roc_errDo[branchname].GetPoint(rocBin)
 
+        if (eval_rocup != 0):
+            bkgrej_errUp = bkgrej-1/(1-eval_rocup)
+        else:
+            bkgrej_errUp = -1
+        if (eval_rocdo!= 0 ):
+            bkgrej_errDo = bkgrej-1/(1-eval_rocdo)
+            #bkgrej_errUp = err_up#bkgrej*(err_up/eval_roc)
+            #bkgrej_errDo = err_do#bkgrej*(err_do/eval_roc)
+        else:
+            bkgrej_errDo = -1
 
         #print 'DEBUG 1-bkgeff: '+ str(bkgrej)
         #print 'DEBUG roc bkg: ' + str(1/(1-roc[branchname].Eval(0.5)))
@@ -287,7 +323,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         j = '_'.join(groups[:2]), '_'.join(groups[2:])
         #totalrejection.append([branchname[branchname.rfind("_")+1:], float(bkgrej)])
         if not j[1] == 'pt':
-            totalrejection.append([j[1], float(bkgrej)])
+            totalrejection.append([j[1], float(bkgrej), float(bkgrej_errUp), float(bkgrej_errDo)])
 
         if bkgrej > maxrej:
             maxrej = bkgrej
@@ -622,7 +658,7 @@ def main(args):
     plotjetlookup = {v[0]: v[1] for k, v in AlgBranchStubs.items()}
 
     # default branches to be plotted
-    branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']
+    branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']#, 'avgIntPerXing']
 
     # set up the full branch names for each variable
     if not plotTruth:
@@ -635,7 +671,11 @@ def main(args):
 
     # add algorithm names to branches
     plotbranches = ['jet_' + Algorithm + branch for branch in plotbranchstubs if plotjetlookup[branch] == True]
-    plotbranches += [branch for branch in plotbranchstubs if plotjetlookup[branch] == False]
+    for branch in plotbranchstubs:
+        if not plotjetlookup[branch]:
+            plotbranches.append(str(branch))
+    #plotbranches += [branch for branch in plotbranchstubs if plotjetlookup[branch] == False]
+    #plotbranches.append('avgIntPerXing')
     # flag if variable bin widths are being used - right now not being used anymore, will re-implement
     varBinPt = False
 
@@ -650,7 +690,7 @@ def main(args):
     # set up all of the histograms and names
     for typename in ['sig','bkg']:
         histnamestub = typename + '_jet_' + Algorithm
-        print plotconfig.items()
+        #print plotconfig.items()
         for br in plotconfig.keys():
             #print br
             if plotconfig[br][1] == True: # if it is a jet variable
@@ -662,6 +702,7 @@ def main(args):
                 print histname
             else:
                 histname = typename+"_"+plotconfig[br][STUB]
+                print plotconfig[br][STUB]
             hist_title = br
             hist[histname] = TH1D(histname, hist_title, plotconfig[br][BINS], plotconfig[br][MINX], plotconfig[br][MAXX])
   
@@ -691,6 +732,7 @@ def main(args):
     maxrejvar = ''
     maxrejm_min = 0
     maxrejm_max = 0
+    print plotbranches
 
     for m in masses:
 
@@ -703,7 +745,8 @@ def main(args):
         # run the analysis for mass range
         masses = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
         rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
-        fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, [eventsFileSig, eventsFileBkg], ptweightFile, ptweightBins)
+        if writecsv:
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, [eventsFileSig, eventsFileBkg], ptweightFile, ptweightBins)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
         if rej > max_rej:

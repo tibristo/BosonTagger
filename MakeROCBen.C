@@ -1,7 +1,7 @@
 #include "TROOT.h"
 
 //void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &curve_up, TGraph &curve_do){
-void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower, double sigeff, double bkgeff){
+void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower, double sigeff, double bkgeff, TGraph &errUp, TGraph &errDo){
     //Usage:
     //TH1D *S = new TH1D();
     //TH1D *B = new TH1D();
@@ -106,8 +106,8 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
 	//gr.SetPoint(i, myS*sigeff, 1/((1-myB)*(1-bkgeff)));
         if(type==1){
 	  gr_pow.SetPoint(i, myS*sigeff, (1-myB*bkgeff));
-            gr_up.SetPoint(i, myS+mySerr, (1-(myB-myBerr)));
-            gr_do.SetPoint(i, myS-mySerr, (1-(myB+myBerr)));
+	  gr_up.SetPoint(i, (myS+mySerr)*sigeff, (1-(myB+myBerr)*bkgeff));
+	  gr_do.SetPoint(i, (myS-mySerr)*sigeff, (1-(myB-myBerr)*bkgeff));
         }
         else if(type==2){
             if(myB==0)
@@ -129,6 +129,8 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
 
     curve=gr;
     bkgRejPower = gr_pow;
+    errUp = gr_up;
+    errDo = gr_do;
     // curve_up=gr_up;
     // curve_do=gr_do;
 

@@ -24,7 +24,7 @@
   </varName>
   <varName name="FoxWolfram20">
   <stub>_FoxWolfram20</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.2</maxValue>
   </varName>
@@ -36,25 +36,25 @@
   </varName>
   <varName name="Sphericity">
   <stub>_Sphericity</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Aplanarity">
   <stub>_Aplanarity</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Thrust Maj">
   <stub>_ThrustMaj</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
   <varName name="Thrust Min">
   <stub>_ThrustMin</stub>
-  <plot>False</plot>
+  <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>

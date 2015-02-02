@@ -1,52 +1,49 @@
 cd Websites/t/tibristo/
 
-mkdir 20140423_NTup_v1.0
-cd 20140423_NTup_v1.0
-mkdir SelectedElTrig/
-mkdir SelectedElTrig0BTag/
-mkdir SelectedElTrig1BTag/
-mkdir SelectedElTrig2BTag/
-mkdir SelectedElTrig2LBTag/
-mkdir SelectedElTrig2MBTag/
-mkdir SelectedElTrig3Jet/
-mkdir SelectedElTrig3Jet0BTag/
-mkdir SelectedElTrig3Jet1BTag/
-mkdir SelectedElTrig3Jet2BTag/
-mkdir SelectedElTrig3Jet2LBTag/
-mkdir SelectedElTrig3Jet2MBTag/
-mkdir SelectedElTrig4Jet/
-mkdir SelectedElTrig4Jet0BTag/
-mkdir SelectedElTrig4Jet1BTag/
-mkdir SelectedElTrig4Jet2BTag/
-mkdir SelectedElTrig4Jet2LBTag/
-mkdir SelectedElTrig4Jet2MBTag/
-mkdir SelectedElTrigMJFit/
-mkdir SelectedElTrigMJFit0BTag/
-mkdir SelectedElTrigMJFit1BTag/
-mkdir SelectedElTrigMJFit2BTag/
-mkdir SelectedElTrigMJFit2LBTag/
-mkdir SelectedElTrigMJFit2MBTag/
-mkdir SelectedMuTrig/
-mkdir SelectedMuTrig0BTag/
-mkdir SelectedMuTrig1BTag/
-mkdir SelectedMuTrig2BTag/
-mkdir SelectedMuTrig2LBTag/
-mkdir SelectedMuTrig2MBTag/
-mkdir SelectedMuTrig3Jet/
-mkdir SelectedMuTrig3Jet0BTag/
-mkdir SelectedMuTrig3Jet1BTag/
-mkdir SelectedMuTrig3Jet2BTag/
-mkdir SelectedMuTrig3Jet2LBTag/
-mkdir SelectedMuTrig3Jet2MBTag/
-mkdir SelectedMuTrig4Jet/
-mkdir SelectedMuTrig4Jet0BTag/
-mkdir SelectedMuTrig4Jet1BTag/
-mkdir SelectedMuTrig4Jet2BTag/
-mkdir SelectedMuTrig4Jet2LBTag/
-mkdir SelectedMuTrig4Jet2MBTag/
-mkdir SelectedMuTrigMJFit/
-mkdir SelectedMuTrigMJFit0BTag/
-mkdir SelectedMuTrigMJFit1BTag/
-mkdir SelectedMuTrigMJFit2BTag/
-mkdir SelectedMuTrigMJFit2LBTag/
-mkdir SelectedMuTrigMJFit2MBTag/
+mkdir ${1}
+cd ${1}
+
+# if 13tev
+if [[ ${1} == *"13tev"* ]]
+then
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_200_350/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_350_500/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_500_1000/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1000_1500/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_1500_2000/
+mkdir CamKt10LCTopoPrunedCaRCutFactor50Zcut15/CamKt10LCTopoPrunedCaRCutFactor50Zcut15_${1}_2000_3000/
+else
+# if 8 tev
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_200_350/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_350_500/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_500_1000/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1000_1500/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_1500_2000/
+mkdir CamKt10LCTopoPrunedCaRcutFactor50Zcut15/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_${1}_2000_3000/
+fi
+
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_200_350/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_350_500/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_500_1000/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1000_1500/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_1500_2000/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR20/AntiKt10LCTopoTrimmedPtFrac5SmallR20_${1}_2000_3000/
+
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_200_350/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_350_500/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_500_1000/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1000_1500/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_1500_2000/
+mkdir AntiKt10LCTopoTrimmedPtFrac5SmallR30/AntiKt10LCTopoTrimmedPtFrac5SmallR30_${1}_2000_3000/
+
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_200_350/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_350_500/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_500_1000/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1000_1500/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_1500_2000/
+mkdir CamKt12LCTopoSplitFilteredMu100SmallR30YCut15/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_${1}_2000_3000/

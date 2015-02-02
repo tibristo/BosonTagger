@@ -174,6 +174,8 @@ def getFileBranches(inputfile, treename='physics'):
             # last one doesn't have _ at the end
             app_str+=namespl[len(namespl)-1]
             file_branches.append(app_str)
+        elif len(namespl) == 1: # stuff like averageIntPerXing, for example
+            file_branches.append(namespl[0])
     file_in.Close()
     return file_branches
 
@@ -249,7 +251,7 @@ def pruneBranches(file_branches):
     for k in branches.keys():
         # if the stub value (take away the leading underscore) is not in the file
         # mark it to be deleted
-        if not branches[k][0][1:] in file_branches:
+        if not branches[k][0][1:] in file_branches and not branches[k][0] in file_branches:
 
             todelete.append(k)
 
@@ -258,7 +260,7 @@ def pruneBranches(file_branches):
 
     todeleteplot = []
     for k in plotbranches.keys():
-        if not plotbranches[k][0][1:] in file_branches:
+        if not plotbranches[k][0][1:] in file_branches and not plotbranches[k][0] in file_branches:
             todeleteplot.append(k)
     for d in todeleteplot:
         del plotbranches[d]
@@ -458,8 +460,8 @@ def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
                 print " Warning: Requested Y Value for point " +str(pX)
                 print "          but only found point at " + str(x)
                 print " (difference of " + str( ROOT.TMath.Abs(delta/ pX)) + "%)"
-            
-            PointNumber = -1 * PointNumber;
+            # return the closest point
+            #PointNumber = -1 * PointNumber;
             #Py = 0.0
    # ok, we have data points in the region of interest (or warned the user otherwise), now interpolate
     if (pInterpolate):

@@ -7,7 +7,7 @@
   <Algorithm name = "AntiKt10LCTopoTrimmedPtFrac5SmallR20">
     <AlgorithmString>AntiKt R=1.0, trimmed jets</AlgorithmString>
     <AlgorithmSettings>p_{T} fraction 5\%, R_{sub}=0.2</AlgorithmSettings>
-    <Energy>8</Energy>
+    <Energy>13</Energy>
   </Algorithm>
   <plotTruth name = "False">
   </plotTruth>
@@ -95,7 +95,7 @@
 
 
 
-  <varName name="EEC C2beta2beta1">
+  <varName name="EEC C2beta1">
   <stub>_EEC_C2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
@@ -103,11 +103,11 @@
   </varName>
   <varName name="EEC C2beta2">
   <stub>_EEC_C2_2</stub>
-  <plot>True</plot>
+  <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="EEC D2beta2beta1">
+  <varName name="EEC D2beta1">
   <stub>_EEC_D2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
@@ -115,7 +115,7 @@
   </varName>
   <varName name="EEC D2beta2">
   <stub>_EEC_D2_2</stub>
-  <plot>True</plot>
+  <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>50.0</maxValue>
   </varName>
@@ -185,4 +185,11 @@
     <minValue>0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
+  <varName name="pileup">
+    <stub>averageIntPerXing</stub>
+    <plot>True</plot>
+    <minValue>0</minValue>
+    <maxValue>100</maxValue>
+    <jetVariable>False</jetVariable>
+    </varName>
 </settings>
