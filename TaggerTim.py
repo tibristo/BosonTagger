@@ -151,6 +151,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     # dictionary holding all of the histograms without a mass cut
     hist_nomw = {}
     saveNoMassWindowPlots = savePlots
+    hist_mass_nomw = {}
 
     maxrej = 0
     maxrejvar = ''
@@ -219,8 +220,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
             # apply the selection to the tree and store the output in the histogram
             #print cutstringandweight
-            trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
-
+            if branchname.find('_m')==-1:
+                trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
+            else:
+                trees[datatype].Draw(varexp,cutstring+cutstringandweight)
             # if the histogram is not empty then normalise it 
             mw_int = hist[histname].Integral()
 
