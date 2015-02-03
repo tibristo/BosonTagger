@@ -252,6 +252,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             # get the integral and normalise
             full_int = hist_full.Integral()
+            # now scale
+            if full_int != 0.0:
+                if scaleLumi!=1:
+                    hist_full.Scale(scaleLumi)
+                else:
+                    hist_full.Scale(1./full_int)
             #save this histogram to the no mass window histo dictionary
             hist_nomw[histname+'_full'] = hist_full.Clone()
             logfile.write('DEBUG mw_int: ' +str(mw_int)+'\n')
@@ -363,20 +369,21 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         # now save "no mass window" plots
         if saveNoMassWindowPlots:
-            p = canv1.cd(index+1).Clone() 
-            tempCanv.cd()
-
-            p.SetPad(0,0,1,1) # resize
+            #p = canv1.cd(index+1).Clone() 
+            tempCanv2 = TCanvas("tempnomw")
+            tempCanv2.cd()
+            leg1.Draw()
+            #p.SetPad(0,0,1,1) # resize
             fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
             if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
                 fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
             else:
                 fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
-            leg1.Draw()
+            
 
-            p.Draw()
-            tempCanv.SaveAs(varpath+branchname+"_noMW.png")
-            del p
+            #p.Draw()
+            tempCanv2.SaveAs(varpath+branchname+"_noMW.png")
+            del tempCanv2
 
         # plot the ROC curves
         canv2.cd()
