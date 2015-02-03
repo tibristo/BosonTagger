@@ -253,7 +253,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # get the integral and normalise
             full_int = hist_full.Integral()
             #save this histogram to the no mass window histo dictionary
-            hist_nomw[histname+'_full'] = hist_full
+            hist_nomw[histname+'_full'] = hist_full.Clone()
             logfile.write('DEBUG mw_int: ' +str(mw_int)+'\n')
             logfile.write('DEBUG full_int: ' +str(full_int)+'\n')
 
