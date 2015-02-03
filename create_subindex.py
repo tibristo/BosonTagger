@@ -28,8 +28,8 @@ roc = algorithm+'-Tim2-ROCPlot.png'
 
 idx_start = '<html>\n<head>\n<title>'
 
-idx_part2 = '</title>\n</head>\n<body>\n<p>\n<img border="0" src="https://webservices.web.cern.ch/webservices/Images/cernlogo.jpg" alt="CERN Logo" align="bottom">\n<b><font size="6">&nbsp;&nbsp;&nbsp;&nbsp; Hbb Studies</font>\n</p>\n<hr>\n<font size="3">Back: </font><a href="https://dfs.cern.ch/dfs/Websites/t/tibristo/'#20140423_NTup_v1.0'
-idx_part2 += sample+'/'+tag+'/'+algorithm
+idx_part2 = '</title>\n</head>\n<body>\n<p>\n<img border="0" src="https://webservices.web.cern.ch/webservices/Images/cernlogo.jpg" alt="CERN Logo" align="bottom">\n<b><font size="6">&nbsp;&nbsp;&nbsp;&nbsp; Boosted Boson Studies</font>\n</p>\n<hr>\n<font size="3">Back: </font><a href="https://dfs.cern.ch/dfs/Websites/t/tibristo/'#20140423_NTup_v1.0'
+idx_part2 += sample#+'/'+tag+'/'+algorithm
 #idx_part2 += getcwd().split('/')[-1]
 idx_part2 +='/'+sample+'.html">Study Home</a>\n<hr>\n<font size="3">\n'
 
