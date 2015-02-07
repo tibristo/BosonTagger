@@ -65,6 +65,7 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     '''
     # plot the variables
     canv1.SaveAs('plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf')
+    #canv1.SaveAs('plots/' + Algorithm + fileid + '-Tim2-VariablePlot.eps')
     # using linux tool 'convert' gives much higher quality .pngs than if you do canv.SaveAs(xyz.png)
     cmd = 'convert -verbose -density 150 -trim plots/' + Algorithm + fileid + '-Tim2-VariablePlot.pdf -quality 100 -sharpen 0x1.0 plots/'+ Algorithm + fileid +'-Tim2-VariablePlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -74,6 +75,7 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
         return
     #plot the rocs
     canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.pdf')
+    #canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.eps')
     cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
@@ -258,6 +260,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
                     hist_full.Scale(scaleLumi)
                 else:
                     hist_full.Scale(1./full_int)
+            # change the x title
+            hist_full.SetXTitle(hist[histname].GetXaxis().GetTitle()+' (no mass window)')
+
             #save this histogram to the no mass window histo dictionary
             hist_nomw[histname+'_full'] = hist_full.Clone()
             logfile.write('DEBUG mw_int: ' +str(mw_int)+'\n')
@@ -298,28 +303,26 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             eval_roc = roc[branchname].Eval(0.5)
             # get the bin for this point so that we can find the associated error in roc error tgraphs
             #rocBin = fn.findYValue(roc[branchname],Double(0.5), pY, 0.01, True, True)
-            bkgrej = 1/(1-eval_roc)
             eval_rocup = roc_errUp[branchname].Eval(0.5)
             eval_rocdo = roc_errDo[branchname].Eval(0.5)
-            err_up = bkgrej-1/(1-eval_rocup)
-            err_do = bkgrej-1/(1-eval_rocdo)
         else:
             eval_roc = roc[branchname].Eval(0.68)
-            bkgrej = 1/(1-roc[branchname].Eval(0.68))
             #rocBin = fn.findYValue(roc[branchname],Double(0.68), pY, 0.01, True, True)
             eval_rocup = roc_errUp[branchname].Eval(0.68)
             eval_rocdo = roc_errDo[branchname].Eval(0.68)
-            #err_up = roc_errUp[branchname].GetPoint(rocBin)
-            #err_do = roc_errDo[branchname].GetPoint(rocBin)
 
-        if (eval_rocup != 0):
-            bkgrej_errUp = bkgrej-1/(1-eval_rocup)
+        if eval_roc != 1:
+            bkgrej = 1/(1-eval_roc)
+        else:
+            bkgrej = -1
+
+
+        if (eval_rocup != 1):
+            bkgrej_errUp = abs(bkgrej-1/(1-eval_rocup))
         else:
             bkgrej_errUp = -1
-        if (eval_rocdo!= 0 ):
-            bkgrej_errDo = bkgrej-1/(1-eval_rocdo)
-            #bkgrej_errUp = err_up#bkgrej*(err_up/eval_roc)
-            #bkgrej_errDo = err_do#bkgrej*(err_do/eval_roc)
+        if (eval_rocdo!= 1):
+            bkgrej_errDo = abs(bkgrej-1/(1-eval_rocdo))
         else:
             bkgrej_errDo = -1
 
@@ -365,6 +368,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             p.SetPad(0,0,1,1) # resize
             p.Draw()
             tempCanv.SaveAs(varpath+branchname+".png")
+            #tempCanv.SaveAs(varpath+branchname+".eps")
             del p
 
         # now save "no mass window" plots
@@ -383,6 +387,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
             #p.Draw()
             tempCanv2.SaveAs(varpath+branchname+"_noMW.png")
+            #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
             del tempCanv2
 
         # plot the ROC curves
