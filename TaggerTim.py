@@ -373,18 +373,16 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
 
         # now save "no mass window" plots
         if saveNoMassWindowPlots:
-            #p = canv1.cd(index+1).Clone() 
-            tempCanv2 = TCanvas("tempnomw")
+            tempCanv2 = TCanvas("tempnomw"+branchname)
             tempCanv2.cd()
-            leg1.Draw()
-            #p.SetPad(0,0,1,1) # resize
-            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
+
             if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
                 fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
             else:
                 fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
             
-
+            leg1.Draw()
+            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
             #p.Draw()
             tempCanv2.SaveAs(varpath+branchname+"_noMW.png")
             #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
