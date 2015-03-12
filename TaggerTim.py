@@ -27,7 +27,7 @@ max_rej = 0
 maxrejvar = ''
 maxrejm_min = 0
 maxrejm_max = 0
-
+weightedxAOD = False
 
 def getMassWindow(massfile):
     '''
@@ -79,6 +79,85 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
+
+
+def writeResponsePlots(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, fileid, ptreweight = True, mass_min = "", mass_max = "", scaleLumi = 1):
+    '''
+    Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
+    Keyword args:
+    Algorithm -- Name of the algorithm.  Set in main, comes from config file.
+    plotbranches -- the variables to be plotted.  Set in main.
+    plotreverselookup -- Lookup for an algorithm from a variable stub
+    trees -- contains the actual data.
+    cutstring -- basic selection cuts to be applied.
+    fileid -- File identifier that gets used in the output file names
+    ptreweight -- Reweight signal according to pT
+    mass_min -- Mass window minimum
+    mass_max -- Mass window maximum
+    scaleLumi -- luminosity scale factor
+
+    Writes out the response distributions for signal and background.
+    '''
+    leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
+    cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
+    for index, branchname in enumerate(plotbranches):
+        for indexin, datatype in enumerate(trees):
+            histname =  datatype + "_" + branchname
+            varexp = branchname + '>>' + histname
+            if not weightedxAOD:
+                cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'
+            else:
+                cutstringandweight = '*mc_event_weight*1./evt_nEvts'
+            # add the cross section and filter efficiency for the background            
+            if datatype == 'bkg': 
+                if not weightedxAOD:
+                    cutstringandweight += '*filter_eff*xs*k_factor'
+                else:
+                    cutstringandweight += '*evt_filtereff*xs*evt_kfactor'
+                hist[histname].SetMarkerStyle(21)
+            # filter efficiency for signal
+            elif datatype == 'sig':
+                if not weightedxAOD:
+                    cutstringandweight += '*filter_eff'
+                else:
+                    cutstringandweight += '*evt_filtereff'
+                # apply pt reweighting to the signal
+                if ptreweight:
+                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
+                # if we don't apply pt reweighting then we can reweight by cross section
+                else:
+                    cutstringandweight += '*xs'
+            
+            hist[histname].Sumw2();
+            trees[datatype].Draw(varexp,cutstring+cutstringandweight)
+            if hist[histname].Integral() > 0.0:
+                if scaleLumi != 1:
+                    hist[histname].Scale(scaleLumi);
+                else:
+                    hist[histname].Scale(1.0/hist[histname].Integral());
+
+            hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
+        hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
+        hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
+        leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
+        # plot the maximum histogram
+        if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
+            fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
+        else:
+            fn.drawHists(hist['bkg_' + branchname], hist['sig_' + branchname])
+        leg1.Draw()
+
+        # add correctly formatted text to the plot for the ATLAS collab text, energy, etc.
+        fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
+        # save individual plots
+        if savePlots:
+            p = canv1.cd(index+1).Clone() 
+            tempCanv.cd()
+            p.SetPad(0,0,1,1) # resize
+            p.Draw()
+            tempCanv.SaveAs(varpath+branchname+".png")
+            #tempCanv.SaveAs(varpath+branchname+".eps")
+            del p
 
 
 def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
@@ -139,6 +218,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
     for h in hist.keys():
         hist[h].Reset()
     
+    global weightedxAOD
+
     global totalrejection
     # dict containing all of the ROC curves
     roc={}
@@ -201,16 +282,25 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
             # add the mc_weight and weighted number of events to the selection string
             # also make sure that the variable being plotted is within the bounds specified 
             # in the config file (the limits on the histogram)
-            cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
+            if not weightedxAOD:
+                cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
+            else:
+                cutstringandweight = '*mc_event_weight*1./evt_nEvts'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
 
             # add the cross section and filter efficiency for the background
             
             if datatype == 'bkg': 
-                cutstringandweight += '*filter_eff*xs*k_factor'
+                if not weightedxAOD:
+                    cutstringandweight += '*filter_eff*xs*k_factor'
+                else:
+                    cutstringandweight += '*evt_filtereff*xs*evt_kfactor'
                 hist[histname].SetMarkerStyle(21)
             # filter efficiency for signal
             elif datatype == 'sig':
-                cutstringandweight += '*filter_eff'
+                if not weightedxAOD:
+                    cutstringandweight += '*filter_eff'
+                else:
+                    cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
                     cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
@@ -438,6 +528,7 @@ def main(args):
     parser.add_argument('--lumi', help = 'Luminosity scale factor')
     parser.add_argument('--massWindowCut', help = 'Whether a mass window cut should be applied')
     parser.add_argument('-v','--version',help = 'Version number')
+    parser.add_argument('--weightedxAOD', help = 'If the xAOD has been weighted already.')
 
     args = parser.parse_args()
 
@@ -568,6 +659,16 @@ def main(args):
         channelcut = ''
     else:
         channelcut = ' * (mc_channel_number == '+str(args.channelnumber)+')'
+
+    # set the weightedxAOD flag
+    global weightedxAOD
+    if not args.weightedxAOD:
+        weightedxAOD = False
+    elif args.weightedxAOD == 'true' or args.weightedxAOD == 'True':
+        weightedxAOD = True
+    else:
+        weightedxAOD = False
+        
 
     # lumi scaling
     lumi = 1.0

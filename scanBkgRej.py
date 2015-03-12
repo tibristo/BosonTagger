@@ -29,6 +29,7 @@ def main(args):
     parser.add_argument('-m', '--masswindow', help = 'Apply mass window cuts')
     parser.add_argument('--ptlow', help = 'pt low in GeV')
     parser.add_argument('--pthigh', help = 'pt high in GeV')
+    parser.add_argument('--weightedxAOD', help = 'If the input files are pre-weighted xAODs.')
 
     args = parser.parse_args()
 
@@ -106,6 +107,10 @@ def main(args):
         if args.masswindow:
             if args.masswindow == 'true' or args.masswindow == 'True':
                 args_tag.append('--massWindowCut=True')
+        if args.weightedxAOD:
+            if args.weightedxAOD == 'true' or args.weightedxAOD == 'True':
+                args_tag.append('--weightedxAOD=True')
+
         print args_tag
         # keep track of the args we use, to map to the thread pool later
         proclist[PROCESS].append(args_tag)

@@ -16,6 +16,7 @@ success_m = False
 filename_m = ''
 pt_high = 3000
 pt_low = 200
+weightedxAOD = False
 
 def NEvents(runNumber):
     '''
@@ -137,6 +138,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
 
     global pt_high
     global pt_low
+    global weightedxAOD
 
     # load the NEvents file to weight by number of events
     InputDir = fname[:fname.rfind('/')]
@@ -188,8 +190,12 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         tree.GetEntry(e)
         if e%1000 == 0:
             print 'Progress: ' + str(e) + '/' + str(entries)
-        weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
-        weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
+        if not weightedxAOD:
+            weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
+            weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
+        else:
+            weight = 1*tree.mc_event_weight*tree.evt_kfactor*tree.evt_filtereff*(1/tree.evt_nEvts)
+            weight2 = 1*tree.mc_event_weight*tree.evt_kfactor*tree.evt_filtereff*(1/tree.evt_nEvts)
 
         # apply basic selection criteria - slightly different for pt and mass window
         if createptfile:
@@ -214,10 +220,16 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         if weight <= 0 and False:
             print 'weight is 0!'
             print 'mc_event_weight: ' + str(tree.mc_event_weight)
-            print 'k_factor: ' + str(tree.k_factor)
-            print 'filter_eff: ' + str(tree.filter_eff)
-            print 'xs: ' + str(tree.xs)
-            print 'nevents: ' + str(NEvents(tree.mc_channel_number))
+            if not weightedxAOD:
+                print 'k_factor: ' + str(tree.k_factor)
+                print 'filter_eff: ' + str(tree.filter_eff)
+                print 'xs: ' + str(tree.xs)
+                print 'nevents: ' + str(NEvents(tree.mc_channel_number))
+            else:
+                print 'k_factor: ' + str(tree.evt_kfactor)
+                print 'filter_eff: ' + str(tree.evt_filtereff)
+                print 'xs: ' + str(tree.xs)
+                print 'nevents: ' + str(tree.evt_nEvts)
             print 'ptweight: ' + str(ptWeight(jet.pt))
         hist_rw.Fill(jet.pt,weight)
 
@@ -421,7 +433,7 @@ def runAll(input_file, file_id, treename, version='v6'):
         ptfile = ""
         for fil in fileslist:
             # found the signal file!
-            if fil.endswith("sig2.root"):#"sig.root"):
+            if fil.endswith("sig.root"):#"sig2.root"):
                 sigfile = folder+fil
             if fil.endswith("ptweights"+version):
                 ptfile = folder+fil
