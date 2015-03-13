@@ -81,29 +81,67 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     p.wait()
 
 
-def writeResponsePlots(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, fileid, ptreweight = True, mass_min = "", mass_max = "", scaleLumi = 1):
+def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight = True, varpath = "", mass_min = "", mass_max = "", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
     Algorithm -- Name of the algorithm.  Set in main, comes from config file.
-    plotbranches -- the variables to be plotted.  Set in main.
-    plotreverselookup -- Lookup for an algorithm from a variable stub
+    plotconfig -- Contains the settings for the plot like bin number and hist limits. The key of the dict is the variable name.
     trees -- contains the actual data.
     cutstring -- basic selection cuts to be applied.
     fileid -- File identifier that gets used in the output file names
     ptreweight -- Reweight signal according to pT
+    varpath -- Output directory
     mass_min -- Mass window minimum
     mass_max -- Mass window maximum
     scaleLumi -- luminosity scale factor
 
-    Writes out the response distributions for signal and background.
+    Writes out the response distributions for signal and background and then returns the dictionary of histograms.
     '''
+    hist = {}
+    variables = []
+    # remove all of the leading underscores
+    for x, v in enumerate(plotconfig.keys()):
+        stub = plotconfig[v][STUB]
+        if not plotconfig[v][1] == True: # if it is not a jet variable
+            continue
+        if stub.startswith('_'):
+            stub = stub[1:]
+        variables.append(stub)
+
+    # create all of the histograms
+    for typename in ['sig','bkg']:
+        histnamestub = typename + '_jet_' + Algorithm + '_response' 
+        for br in plotconfig.keys(): # variable names
+            if plotconfig[br][1] == True: # if it is a jet variable
+                histname = histnamestub+plotconfig[br][STUB]
+            else:
+                continue
+            #    histname = typename+"_"+plotconfig[br][STUB]
+            hist_title = br
+            hist[histname] = TH1D(histname, hist_title, plotconfig[br][BINS], 0, 5)#plotconfig[br][MINX], plotconfig[br][MAXX])
+            hist[histname].SetYTitle("Normalised Entries")
+            hist[histname].SetXTitle("response " + br)
+  
+
+    # create a tlegend to go on the plot
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
+    # set the cutstring
     cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
-    for index, branchname in enumerate(plotbranches):
+
+    # the colours for the background and signal
+    col_sig = 4
+    col_bkg = 2
+
+    # loop through all of the variables
+    for index, branchname in enumerate(variables):
+        col = 1
+        responseName = "jet_" +Algorithm+'_response_' + branchname
+        # loop through the background and signal input trees
         for indexin, datatype in enumerate(trees):
-            histname =  datatype + "_" + branchname
-            varexp = branchname + '>>' + histname
+            histname =  datatype + "_jet_" +Algorithm+'_response_' + branchname
+            varexp = 'response_'+branchname + '>>' + histname
+            # the weights are stored in the ntuple for the weighted xAODs.
             if not weightedxAOD:
                 cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'
             else:
@@ -115,6 +153,7 @@ def writeResponsePlots(Algorithm, plotbranches, plotreverselookup,  trees, cutst
                 else:
                     cutstringandweight += '*evt_filtereff*xs*evt_kfactor'
                 hist[histname].SetMarkerStyle(21)
+                col = col_bkg
             # filter efficiency for signal
             elif datatype == 'sig':
                 if not weightedxAOD:
@@ -127,40 +166,39 @@ def writeResponsePlots(Algorithm, plotbranches, plotreverselookup,  trees, cutst
                 # if we don't apply pt reweighting then we can reweight by cross section
                 else:
                     cutstringandweight += '*xs'
+                col = col_sig
             
             hist[histname].Sumw2();
+            #apply the selection.
             trees[datatype].Draw(varexp,cutstring+cutstringandweight)
+            # scale the histogram
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
                     hist[histname].Scale(scaleLumi);
                 else:
                     hist[histname].Scale(1.0/hist[histname].Integral());
-
+            # set the style for the histogram.
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
-        hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
-        hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
-        leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
+            hist[histname].SetFillColor(col); hist[histname].SetLineColor(col); hist[histname].SetMarkerColor(col); 
+
+        leg1.AddEntry(hist["sig_" + responseName],"W jets","l");    leg1.AddEntry(hist["bkg_" + responseName],"QCD jets","l");
         # plot the maximum histogram
-        if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
-            fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
+        canv1 = TCanvas("tempCanvas")
+        if (hist['sig_'+responseName].GetMaximum() > hist['bkg_'+responseName].GetMaximum()):
+            fn.drawHists(hist['sig_' + responseName], hist['bkg_' + responseName])
         else:
-            fn.drawHists(hist['bkg_' + branchname], hist['sig_' + branchname])
+            fn.drawHists(hist['bkg_' + responseName], hist['sig_' + responseName])
         leg1.Draw()
 
         # add correctly formatted text to the plot for the ATLAS collab text, energy, etc.
         fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
         # save individual plots
-        if savePlots:
-            p = canv1.cd(index+1).Clone() 
-            tempCanv.cd()
-            p.SetPad(0,0,1,1) # resize
-            p.Draw()
-            tempCanv.SaveAs(varpath+branchname+".png")
-            #tempCanv.SaveAs(varpath+branchname+".eps")
-            del p
+        canv1.SaveAs(varpath+responseName+".png")
+        del canv1
+    return hist
+        
 
-
-def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
+def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, recreate=True):
     '''
     Write plots to a ROOT file instead of png/pdf
     Keyword args:
@@ -170,7 +208,10 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
     rocs -- dictionary of ROCs
     rocs_rejpow -- dictionary of ROCs rejection power
     '''
-    fo = TFile.Open('plots/'+Algorithm+fileid+'.root','RECREATE')
+    if recreate:
+        fo = TFile.Open('plots/'+Algorithm+fileid+'.root','RECREATE')
+    else:
+        fo = TFile.Open('plots/'+Algorithm+fileid+'.root','UPDATE')
     for h in hist.keys():
         if hist[h].Integral() != 0:
             hist[h].Write()
@@ -180,13 +221,14 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs, rocs_rejpow):
         rocs_rejpow[r].Write('bkgrejroc_'+r)
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
+def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
     Algorithm -- Name of the algorithm.  Set in main, comes from config file.
     plotbranches -- the variables to be plotted.  Set in main.
     plotreverselookup -- Lookup for an algorithm from a variable stub
+    plotconfig --- Dictionary of the plotting arguments for different variables.
     trees -- contains the actual data.
     cutstring -- basic selection cuts to be applied.
     hist -- Histograms that will be filled/ saved.
@@ -497,6 +539,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup,  trees, cutstring, hist,
         #write out the plots after cuts
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
+        responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, True, varpath, mass_min, mass_max, scaleLumi)
+        writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
     # close logfile
     logfile.close()
 
@@ -858,7 +902,7 @@ def main(args):
 
         # run the analysis for mass range
         masses = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
-        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
+        rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
         if writecsv:
             fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, [eventsFileSig, eventsFileBkg], ptweightFile, ptweightBins)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
