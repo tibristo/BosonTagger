@@ -201,6 +201,7 @@ nvtxlow = 0
 ptreweightflag = True
 lumi = 1.0
 
+
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -592,3 +593,157 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             numpydata['label']=0 
             numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
             
+
+
+def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
+    '''
+    Method taken from Sam's code:
+    svn+ssh://svn.cern.ch/reps/atlasperf/CombPerf/JetETMiss/JetSubstructure2012/BoostedBosonTagging/code/meehan/PostAnalysis
+    1-sided ROC Curve:
+    PostAnalysis/MyPackages/MyLocalFunctions.py
+
+    Different method of creating the ROC curve with a right/ left cut instead of 
+    just going from left.
+
+
+    Key args:
+    sig -- Signal histogram
+    bkg -- Bkg histogram
+    sigeff -- Signal efficiency
+    bkgeff -- Bkg efficiency
+    curve -- The roc curve we are filling
+    bkgRejPower -- The background rejection power curve
+    cutside -- L or R
+
+    Returns:
+    gr -- the TGraph with the ROC curve
+    hsigreg50 -- 50% signal
+    hcutval50 -- 50% signal cut
+    hsigreg25 -- 25% signal
+    hcutval25 -- 25% signal cut
+    '''
+    print "\n\nMake ROC curve using right/left cut",cutside
+
+    n = bkg.GetNbinsX()
+    #print "NBins",n
+
+    # normalise hists
+    if sig.Integral()!=0:
+        sig.Scale(1.0/sig.Integral());
+    if(bkg.Integral()!=0):
+        bkg.Scale(1.0/bkg.Integral());
+
+    totalBerr=Double()
+    totalSerr=Double()
+    totalB = bkg.IntegralAndError(0,n,totalBerr)
+    totalS = sig.IntegralAndError(0,n,totalSerr)
+    
+    siglow  = sig.GetXaxis().GetXmin()
+    sighigh = sig.GetXaxis().GetXmax()
+    hsigreg50 = TH1F("hsigreg50","hsigreg50",n,siglow,sighigh)
+    hsigreg50.SetDirectory(0)
+    hcutval50 = TH1F("hcutval50","hcutval50",5,0,5)
+    hcutval50.SetDirectory(0)
+    hcutval50.GetXaxis().SetBinLabel(1,"Left(0) , Right(1)")
+    hcutval50.GetXaxis().SetBinLabel(2,"LowerCut")
+    hcutval50.GetXaxis().SetBinLabel(3,"UpperCut")
+    hsigreg25 = TH1F("hsigreg25","hsigreg25",n,siglow,sighigh)
+    hsigreg25.SetDirectory(0)
+    hcutval25 = TH1F("hcutval25","hcutval25",5,0,5)
+    hcutval25.SetDirectory(0)
+    hcutval25.GetXaxis().SetBinLabel(1,"Left(0) , Right(1)")
+    hcutval25.GetXaxis().SetBinLabel(2,"LowerCut")
+    hcutval25.GetXaxis().SetBinLabel(3,"UpperCut")
+    if cutside=="R":
+        hcutval50.SetBinContent(1,1)
+        hcutval50.SetBinContent(3,sig.GetXaxis().GetBinLowEdge(n)+sig.GetXaxis().GetBinWidth(n))
+        extrema50 = 100000
+        hcutval25.SetBinContent(1,1)
+        hcutval25.SetBinContent(3,sig.GetXaxis().GetBinLowEdge(n)+sig.GetXaxis().GetBinWidth(n))
+        extrema25 = 100000
+    elif cutside=="L":
+        hcutval50.SetBinContent(1,0)
+        hcutval50.SetBinContent(2,sig.GetXaxis().GetBinLowEdge(1))
+        extrema50 = -100000
+        hcutval25.SetBinContent(1,0)
+        hcutval25.SetBinContent(2,sig.GetXaxis().GetBinLowEdge(1))
+        extrema25 = -100000
+
+    gr = TGraphErrors(n)
+    for i in range(1,n+1):
+        myS = 0.
+        myB = 0.
+
+        if cutside=="R":
+            #loop grom i to end
+            myBerr=Double()
+            mySerr=Double()
+            myB = bkg.IntegralAndError(i,n,myBerr)
+            myS = sig.IntegralAndError(i,n,mySerr)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if myS<=0.73:
+                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                #print tempex,extrema50
+                if tempex<extrema50:
+                    extrema50 = tempex
+                    #print "found extrema R: ",extrema50
+            if myS<=0.36:
+                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                #print tempex,extrema25
+                if tempex<extrema25:
+                    extrema25 = tempex
+                    #print "found extrema R: ",extrema50
+        elif cutside=="L":
+            #loop grom 0 to i
+            myBerr=Double()
+            mySerr=Double()
+            myB = bkg.IntegralAndError(1,i,myBerr)
+            myS = sig.IntegralAndError(1,i,mySerr)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if myS<=0.73:
+                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                print tempex,extrema50
+                if tempex>extrema50:
+                    extrema50 = tempex
+                    #print "found extrema L: ",extrema50
+            if myS<=0.36:
+                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                print tempex,extrema25
+                if tempex>extrema25:
+                    extrema25 = tempex
+                    #print "found extrema L: ",extrema50
+            
+            
+        else:
+            print "You did not choose a left or right handed cut - EXITTING ..."
+            sys.exit()
+            
+    #artificially set the first point to (1,1) to avoid overflow issues
+    gr.SetPoint(0, 1.0, 1.0)
+    gr.SetPointError(0, 0.0, 0.0)
+            
+    ctest = TCanvas("ctest","ctest",400,400)
+    gr.SetMinimum(0.0)
+    gr.SetMaximum(1.0)
+    gr.GetXaxis().SetRangeUser(0.0,1.0)
+    gr.Draw("AE3")
+    
+    if cutside=="R":
+        hcutval50.SetBinContent(2,extrema50)
+        hcutval25.SetBinContent(2,extrema25)
+    elif cutside=="L":
+        hcutval50.SetBinContent(3,extrema50)
+        hcutval25.SetBinContent(3,extrema25)
+
+    curve = gr
+    bkgRejPower = gr
+    print "RETURNING from Single sided ROC calculation"
+    return gr#,hsigreg50,hcutval50,hsigreg25,hcutval25

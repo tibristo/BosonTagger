@@ -30,6 +30,7 @@ def main(args):
     parser.add_argument('--ptlow', help = 'pt low in GeV')
     parser.add_argument('--pthigh', help = 'pt high in GeV')
     parser.add_argument('--weightedxAOD', help = 'If the input files are pre-weighted xAODs.')
+    parser.add_argument('--ROCside', help = 'L/R for left or right sided ROC.  Leave blank for the sorted method.')
 
     args = parser.parse_args()
 
@@ -110,6 +111,8 @@ def main(args):
         if args.weightedxAOD:
             if args.weightedxAOD == 'true' or args.weightedxAOD == 'True':
                 args_tag.append('--weightedxAOD=True')
+        if args.ROCside:
+            args_tag.append('--ROCside='+args.ROCside)
 
         print args_tag
         # keep track of the args we use, to map to the thread pool later

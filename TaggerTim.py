@@ -28,6 +28,7 @@ maxrejvar = ''
 maxrejm_min = 0
 maxrejm_max = 0
 weightedxAOD = False
+singleSidedROC = ''
 
 def getMassWindow(massfile):
     '''
@@ -261,12 +262,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         hist[h].Reset()
     
     global weightedxAOD
+    global singleSidedROC
 
     global totalrejection
     # dict containing all of the ROC curves
     roc={}
-    roc_errUp = {}
-    roc_errDo = {}
+    #roc_errUp = {}
+    #roc_errDo = {}
     # dict containing the bkgRejPower curves
     bkgRejROC = {}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
@@ -285,18 +287,18 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     # loop through the indices and branchnames
     for index, branchname in enumerate(plotbranches):
         # add ROC dictionary entry
-        roc[branchname] = TGraph()
+        roc[branchname] = TGraphErrors()
         roc[branchname].SetTitle(branchname)
         roc[branchname].SetName('roc_'+branchname)
         # add error rocs as well
-        roc_errUp[branchname] = TGraph()
-        roc_errUp[branchname].SetTitle(branchname+'_err_up')
-        roc_errUp[branchname].SetName('roc_'+branchname+'_err_up')
-        roc_errDo[branchname] = TGraph()
-        roc_errDo[branchname].SetTitle(branchname+'_err_do')
-        roc_errDo[branchname].SetName('roc_'+branchname+'_err_do')
+        #roc_errUp[branchname] = TGraph()
+        #roc_errUp[branchname].SetTitle(branchname+'_err_up')
+        #roc_errUp[branchname].SetName('roc_'+branchname+'_err_up')
+        #roc_errDo[branchname] = TGraph()
+        #roc_errDo[branchname].SetTitle(branchname+'_err_do')
+        #roc_errDo[branchname].SetName('roc_'+branchname+'_err_do')
         # add bkg rej power dictionary entry
-        bkgRejROC[branchname] = TGraph()
+        bkgRejROC[branchname] = TGraphErrors()
         bkgRejROC[branchname].SetTitle(branchname)
         bkgRejROC[branchname].SetName('bkgrejroc_'+branchname)
         # new canvas
@@ -414,13 +416,17 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
-            MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff, roc_errUp[branchname], roc_errDo[branchname])
-            print signal_eff
-            print bkg_eff
+
+            if singleSidedROC == 'L' or singleSidedROC == 'R':
+                roc[branchname] = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff,bkg_eff, cutside=singleSidedROC)
+                bkgRejROC[branchname] = roc[branchname]
+            else:
+                MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff)#, roc_errUp[branchname], roc_errDo[branchname])
+            #print signal_eff
+            #print bkg_eff
             writeROC = True
 
-
-
+        canv1.cd(index+1)
         pX = Double(0.5)
         pY = Double(0.0)
 
@@ -435,13 +441,15 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             eval_roc = roc[branchname].Eval(0.5)
             # get the bin for this point so that we can find the associated error in roc error tgraphs
             #rocBin = fn.findYValue(roc[branchname],Double(0.5), pY, 0.01, True, True)
-            eval_rocup = roc_errUp[branchname].Eval(0.5)
-            eval_rocdo = roc_errDo[branchname].Eval(0.5)
+            bin = roc[branchname].GetXaxis().FindBin(0.5)#roc_errUp[branchname].Eval(0.5)
+            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
+            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin)
         else:
             eval_roc = roc[branchname].Eval(0.68)
             #rocBin = fn.findYValue(roc[branchname],Double(0.68), pY, 0.01, True, True)
-            eval_rocup = roc_errUp[branchname].Eval(0.68)
-            eval_rocdo = roc_errDo[branchname].Eval(0.68)
+            bin = roc[branchname].GetXaxis().FindBin(0.68)#roc_errUp[branchname].Eval(0.5)
+            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
+            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin)
 
         if eval_roc != 1:
             bkgrej = 1/(1-eval_roc)
@@ -573,6 +581,7 @@ def main(args):
     parser.add_argument('--massWindowCut', help = 'Whether a mass window cut should be applied')
     parser.add_argument('-v','--version',help = 'Version number')
     parser.add_argument('--weightedxAOD', help = 'If the xAOD has been weighted already.')
+    parser.add_argument('--ROCside', help = 'L or R for left or right sided ROC cut, leave blank for sorted version.')
 
     args = parser.parse_args()
 
@@ -713,6 +722,11 @@ def main(args):
     else:
         weightedxAOD = False
         
+
+    global singleSidedROC
+    if args.ROCside:
+        if args.ROCside == 'L' or args.ROCside == 'R':
+            singleSidedROC = args.ROCside
 
     # lumi scaling
     lumi = 1.0
