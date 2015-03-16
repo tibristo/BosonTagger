@@ -82,7 +82,7 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     p.wait()
 
 
-def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight = True, varpath = "", mass_min = "", mass_max = "", scaleLumi = 1):
+def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight = True, varpath = "", mass_min = "0.0", mass_max = "300000.0", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -99,6 +99,8 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
 
     Writes out the response distributions for signal and background and then returns the dictionary of histograms.
     '''
+
+    global weightedxAOD
     hist = {}
     variables = []
     # remove all of the leading underscores
@@ -125,8 +127,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
             hist[histname].SetXTitle("response " + br)
   
 
-    # create a tlegend to go on the plot
-    leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
+
     # set the cutstring
     cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
 
@@ -171,7 +172,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
             
             hist[histname].Sumw2();
             #apply the selection.
-            trees[datatype].Draw(varexp,cutstring+cutstringandweight)
+            trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
             # scale the histogram
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
@@ -181,7 +182,9 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
             # set the style for the histogram.
             hist[histname].SetLineStyle(1); hist[histname].SetFillStyle(0); hist[histname].SetMarkerSize(1);
             hist[histname].SetFillColor(col); hist[histname].SetLineColor(col); hist[histname].SetMarkerColor(col); 
-
+        # need to clear leg1
+        # create a tlegend to go on the plot
+        leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
         leg1.AddEntry(hist["sig_" + responseName],"W jets","l");    leg1.AddEntry(hist["bkg_" + responseName],"QCD jets","l");
         # plot the maximum histogram
         canv1 = TCanvas("tempCanvas")
@@ -222,7 +225,7 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, recreate=
         rocs_rejpow[r].Write('bkgrejroc_'+r)
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "", mass_max = "", scaleLumi = 1):
+def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "0.0", mass_max = "300000.0", scaleLumi = 1):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -547,7 +550,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         #write out the plots after cuts
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
-        responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, True, varpath, mass_min, mass_max, scaleLumi)
+        responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
         writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
     # close logfile
     logfile.close()

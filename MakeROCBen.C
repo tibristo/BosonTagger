@@ -1,6 +1,6 @@
 #include "TROOT.h"
 
-void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower, double sigeff, double bkgeff){//, TGraph &errUp, TGraph &errDo){
+void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraphErrors &curve, TGraphErrors &bkgRejPower, double sigeff, double bkgeff){//, TGraph &errUp, TGraph &errDo){
 
   if(S->Integral()!=0) S->Scale(1.0/S->Integral());
   if(B->Integral()!=0) B->Scale(1.0/B->Integral());
@@ -63,10 +63,10 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
 
 
     //put into graph
-    TGraph gr(n);
-    TGraph gr_pow(n);
-    TGraph gr_up(n);
-    TGraph gr_do(n);
+    TGraphErrors gr(n);
+    TGraphErrors gr_pow(n);
+    TGraphErrors gr_up(n);
+    TGraphErrors gr_do(n);
 
     for (int i=0; i<n; i++){
         double myS = 0.;
@@ -82,7 +82,7 @@ void MakeROCBen(int type, TH1D *&S, TH1D *&B, TGraph &curve, TGraph &bkgRejPower
 
         }
 	gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff));
-	gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+	gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff);
 	//gr.SetPoint(i, myS*sigeff, 1/((1-myB)*(1-bkgeff)));
         if(type==1){
 	  gr_pow.SetPoint(i, myS*sigeff, (1-myB*bkgeff));
