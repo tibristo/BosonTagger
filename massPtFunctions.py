@@ -167,8 +167,10 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     
     # set branch address for the groomed jet mass
     tree.SetBranchAddress("jet_"+algorithm+"_m", AddressOf(jet,'mass'))
-    tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
-    tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
+    #tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
+    tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_pt", AddressOf(jet,'pt'))
+    #tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
+    tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_eta", AddressOf(jet,'eta'))
     # histogram with 300 bins and 0 - 0.3 TeV range
     # histogram storing pt without being reweighted
     hist_pt = TH1F("pt"+sampleString+algorithm,"pt",100,200*1000,3000*1000)    

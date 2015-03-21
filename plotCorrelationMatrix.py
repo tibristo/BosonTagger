@@ -67,7 +67,7 @@ def plotMatrix(version):
 
 
     tc = ROOT.TCanvas()
-
+    
     maxlistvars = []
     maxlistcounter = 0
     varsdict = {}
@@ -155,6 +155,21 @@ def plotMatrix(version):
     matrix.Draw("TEXTCOLZ")
     # for errors to be printed in text
     #matrix.Draw("TEXTECOLZ")
+
+    from ROOT import TLatex 
+    texw = TLatex();
+    texw.SetNDC();
+    texw.SetTextSize(0.035);
+    texw.SetTextFont(72);
+    texw.DrawLatex(0.6,0.91,"ATLAS");
+    p = TLatex();
+    p.SetNDC();
+    p.SetTextFont(42);
+    p.SetTextSize(0.035);
+    p.SetTextColor(ROOT.kBlack);
+    p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
+
+
     
     #print rejectionmatrix
     tc.SaveAs("matrixinv_"+version+".pdf")

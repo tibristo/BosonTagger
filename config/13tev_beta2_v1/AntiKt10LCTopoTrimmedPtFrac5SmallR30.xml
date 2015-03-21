@@ -6,7 +6,7 @@
   </cutstring>
   <Algorithm name = "AntiKt10LCTopoTrimmedPtFrac5SmallR30">
     <AlgorithmString>AntiKt R=1.0, trimmed jets</AlgorithmString>
-    <AlgorithmSettings>p_{T} fraction 5\%, R_{sub}=0.3</AlgorithmSettings>
+    <AlgorithmSettings>p_{T} frac 5\%, R_{sub}=0.3</AlgorithmSettings>
     <Energy>13</Energy>
   </Algorithm>
   <plotTruth name = "False">
@@ -111,13 +111,13 @@
   <stub>_EEC_D2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
-    <maxValue>50.0</maxValue>
+    <maxValue>5.0</maxValue>
   </varName>
   <varName name="EEC D2beta2">
   <stub>_EEC_D2_2</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
-    <maxValue>50.0</maxValue>
+    <maxValue>25.0</maxValue>
   </varName>
   <varName name="FoxWolfram20">
   <stub>_FoxWolfram20</stub>

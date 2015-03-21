@@ -82,7 +82,7 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     p.wait()
 
 
-def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight = True, varpath = "", mass_min = "0.0", mass_max = "300000.0", scaleLumi = 1):
+def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight = True, varpath = "", mass_min = "0.0", mass_max = "300000.0", scaleLumi = 1, applyMassWindow = True):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -96,6 +96,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
     mass_min -- Mass window minimum
     mass_max -- Mass window maximum
     scaleLumi -- luminosity scale factor
+    applyMassWindow -- Whether or not to apply the 68% mass window cut when plotting.
 
     Writes out the response distributions for signal and background and then returns the dictionary of histograms.
     '''
@@ -122,14 +123,17 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
                 continue
             #    histname = typename+"_"+plotconfig[br][STUB]
             hist_title = br
-            hist[histname] = TH1D(histname, hist_title, plotconfig[br][BINS], 0, 5)#plotconfig[br][MINX], plotconfig[br][MAXX])
+            hist[histname] = TH1D(histname, hist_title, 100, 0, 4)#plotconfig[br][MINX], plotconfig[br][MAXX])
             hist[histname].SetYTitle("Normalised Entries")
             hist[histname].SetXTitle("response " + br)
   
 
 
     # set the cutstring
-    cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
+    if applyMassWindow:
+        cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
+    else:
+        cutstring_mass = cutstring
 
     # the colours for the background and signal
     col_sig = 4
@@ -164,7 +168,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
                     cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
-                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
+                    cutstringandweight +='*SignalPtWeight2(jet_'+Algorithm.replace('LCTopo','Truth')+'_pt)'#CamKt12Truth_pt)'
                 # if we don't apply pt reweighting then we can reweight by cross section
                 else:
                     cutstringandweight += '*xs'
@@ -197,7 +201,11 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
         # add correctly formatted text to the plot for the ATLAS collab text, energy, etc.
         fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
         # save individual plots
-        canv1.SaveAs(varpath+responseName+".png")
+        if applyMassWindow:
+            canv1.SaveAs(varpath+responseName+".png")
+        else:
+            canv1.SaveAs(varpath+responseName+"_noMW.png")
+
         del canv1
     return hist
         
@@ -350,7 +358,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                     cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
-                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
+                    cutstringandweight +='*SignalPtWeight2(jet_'+Algorithm.replace('LCTopo','Truth')+'_pt)'#CamKt12Truth_pt)'
                 # if we don't apply pt reweighting then we can reweight by cross section
                 else:
                     cutstringandweight += '*xs'
@@ -421,7 +429,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
 
             if singleSidedROC == 'L' or singleSidedROC == 'R':
-                roc[branchname] = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff,bkg_eff, cutside=singleSidedROC)
+                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff,bkg_eff, cutside=singleSidedROC)
                 bkgRejROC[branchname] = roc[branchname]
             else:
                 MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff)#, roc_errUp[branchname], roc_errDo[branchname])
@@ -551,6 +559,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
         responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
+        responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi, applyMassWindow=False)
         writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
     # close logfile
     logfile.close()
@@ -651,7 +660,7 @@ def main(args):
     varpath = 'plots/'+Algorithm
 
     # truth algorithm
-    AlgorithmTruth = 'CamKt12Truth'
+    AlgorithmTruth = Algorithm.replace('LCTopo','Truth')##'CamKt12Truth'
     if not setTruth:
         plotTruth = fn.getTruth() # get truth flag from config file if not set in command line args
     if plotTruth:
@@ -737,7 +746,8 @@ def main(args):
         lumi = fn.getLumi()
 
     # default selection string
-    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta >= -1.2) * (jet_CamKt12Truth_eta <= 1.2) " + channelcut
+    #cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt < "+str(ptrange[1])+") * (jet_CamKt12Truth_eta >= -1.2) * (jet_CamKt12Truth_eta <= 1.2) " + channelcut
+    cutstring = "(jet_"+Algorithm.replace('LCTopo','Truth')+"_pt > "+str(ptrange[0])+") * (jet_"+Algorithm.replace('LCTopo','Truth')+"_pt < "+str(ptrange[1])+") * (jet_"+Algorithm.replace('LCTopo','Truth')+"_eta >= -1.2) * (jet_"+Algorithm.replace('LCTopo','Truth')+"_eta <= 1.2) " + channelcut
 
     # set up the input signal file
     signalFile = fn.getSignalFile()
@@ -833,7 +843,8 @@ def main(args):
     plotjetlookup = {v[0]: v[1] for k, v in AlgBranchStubs.items()}
 
     # default branches to be plotted
-    branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']#, 'avgIntPerXing']
+    #branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']#, 'avgIntPerXing']
+    branches = ['mc_event_weight', 'jet_'+AlgorithmTruth+'_pt', 'jet_'+AlgorithmTruth+'_eta']#, 'avgIntPerXing']
 
     # set up the full branch names for each variable
     if not plotTruth:

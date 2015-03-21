@@ -379,44 +379,44 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
-    texw.SetTextSize(0.045);
+    texw.SetTextSize(0.035);
     texw.SetTextFont(72);
-    texw.DrawLatex(0.6,0.88,"ATLAS");
+    texw.DrawLatex(0.58,0.88,"ATLAS");
     
     p = TLatex();
     p.SetNDC();
     p.SetTextFont(42);
-    p.SetTextSize(0.045);
+    p.SetTextSize(0.035);
     p.SetTextColor(ROOT.kBlack);
-    p.DrawLatex(0.71,0.88,"Internal Simulation");
+    p.DrawLatex(0.66,0.88,"Simulation Work in Progress");#"Internal Simulation");
 
     p = TLatex();
     p.SetNDC();
     p.SetTextFont(42);
-    p.SetTextSize(0.035);
+    p.SetTextSize(0.032);
     p.SetTextColor(ROOT.kBlack);
     p.DrawLatex(0.65,0.64,"#sqrt{s} = "+str(E)+" TeV");
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
-    p2.SetTextSize(0.035);
+    p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
     p2.DrawLatex(0.65,0.82,algo);
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
-    p2.SetTextSize(0.035);
+    p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
     p2.DrawLatex(0.65,0.76,algosettings);
     
     p3 = TLatex();
     p3.SetNDC();
     p3.SetTextFont(42);
-    p3.SetTextSize(0.035);
+    p3.SetTextSize(0.032);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000) + ' GeV')#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000))#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
 def drawHists(hist1, hist2):
     hist1.SetMaximum(hist1.GetMaximum()*1.2)
@@ -709,14 +709,14 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             if myS<=0.73:
                 hsigreg50.SetBinContent(i, sig.GetBinContent(i))
                 tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
-                print tempex,extrema50
+                #print tempex,extrema50
                 if tempex>extrema50:
                     extrema50 = tempex
                     #print "found extrema L: ",extrema50
             if myS<=0.36:
                 hsigreg25.SetBinContent(i, sig.GetBinContent(i))
                 tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
-                print tempex,extrema25
+                #print tempex,extrema25
                 if tempex>extrema25:
                     extrema25 = tempex
                     #print "found extrema L: ",extrema50
@@ -746,4 +746,4 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
     curve = gr
     bkgRejPower = gr
     print "RETURNING from Single sided ROC calculation"
-    return gr#,hsigreg50,hcutval50,hsigreg25,hcutval25
+    return gr,hsigreg50,hcutval50,hsigreg25,hcutval25
