@@ -34,25 +34,25 @@
     <maxValue>5</maxValue>
     <minValue>-5</minValue>
   </varName>
-  <varName name="Mass">
+  <varName name="Mass (GeV)">
   <stub>_m</stub>
   <plot>True</plot>
     <maxValue>300000.0</maxValue>
     <minValue>0.0</minValue>
   </varName>			  
-  <varName name="Tau1">
+  <varName name="#tau_{1} (dimensionless)">
   <stub>_Tau1</stub>
   <plot>False</plot>
     <maxValue>1.0</maxValue>
     <minValue>0.0</minValue>
   </varName>
-  <varName name="Tau2">
+  <varName name="#tau_{2} (dimensionless)">
   <stub>_Tau2</stub>
   <plot>False</plot>
     <maxValue>1.0</maxValue>
     <minValue>0.0</minValue>
   </varName>
-  <varName name="Tau21">
+  <varName name="#tau_{21} (dimensionless)">
   <stub>_Tau21</stub>
   <plot>True</plot>
     <maxValue>1</maxValue>
@@ -95,25 +95,25 @@
 
 
 
-  <varName name="EEC C2beta1">
+  <varName name="EEC C2 #beta=1 (dimensionless)">
   <stub>_EEC_C2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="EEC C2beta2">
+  <varName name="EEC C2 #beta=2 (dimensionless)">
   <stub>_EEC_C2_2</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="EEC D2beta1">
+  <varName name="EEC D2 #beta=1 (dimensionless)">
   <stub>_EEC_D2_1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
     <maxValue>5.0</maxValue>
   </varName>
-  <varName name="EEC D2beta2">
+  <varName name="EEC D2 #beta=2 (dimensionless)">
   <stub>_EEC_D2_2</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
@@ -155,13 +155,13 @@
     <minValue>0.0</minValue>
     <maxValue>1.0</maxValue>
   </varName>
-  <varName name="TauWTA1">
+  <varName name="#tau_{WTA1} (dimensionless)">
   <stub>_TauWTA1</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
     <maxValue>1.2</maxValue>
   </varName>
-  <varName name="TauWTA2">
+  <varName name="#tau_{WTA2} (dimensionless)">
   <stub>_TauWTA2</stub>
   <plot>False</plot>
     <minValue>0.0</minValue>
@@ -173,7 +173,7 @@
     <minValue>0.0</minValue>
     <maxValue>0.5</maxValue>
   </varName>
-  <varName name="TauWTA2TauWTA1">
+  <varName name="#tau_{WTA2}/#tau_{WTA1} (dimensionless)">
   <stub>_TauWTA2TauWTA1</stub>
   <plot>True</plot>
     <minValue>0.0</minValue>
