@@ -27,10 +27,13 @@ def main(args):
     parser.add_argument('-v', '--version', help = 'Version to use in pickle file')
     parser.add_argument('-t', '--treename', help = 'Treename in input root files')
     parser.add_argument('-m', '--masswindow', help = 'Apply mass window cuts')
+    parser.add_argument('--ptreweighting', help = 'Apply pT reweighting')
     parser.add_argument('--ptlow', help = 'pt low in GeV')
     parser.add_argument('--pthigh', help = 'pt high in GeV')
     parser.add_argument('--weightedxAOD', help = 'If the input files are pre-weighted xAODs.')
     parser.add_argument('--ROCside', help = 'L/R for left or right sided ROC.  Leave blank for the sorted method.')
+    parser.add_argument('--massWindowOverwrite', help = 'Overwrite the current mass window file if it exists.')
+    parser.add_argument('--ptweightFileOverwrite', help = 'Overwrite the current pt weight file if it exists.')
 
     args = parser.parse_args()
 
@@ -113,6 +116,20 @@ def main(args):
                 args_tag.append('--weightedxAOD=True')
         if args.ROCside:
             args_tag.append('--ROCside='+args.ROCside)
+
+        if not args.ptweightFileOverwrite:
+            args_tag.append('--ptweightFileOverwrite=false')
+        else:
+            args_tag.append('--ptweightFileOverwrite='+args.ptweightFileOverwrite)
+            
+        if not args.massWindowOverwrite:
+            args_tag.append('--massWindowOverwrite=false')
+        else:
+            args_tag.append('--massWindowOverwrite='+args.massWindowOverwrite)
+            
+        if args.ptreweighting:
+            args_tag.append('--ptreweighting='+args.ptreweighting)
+
 
         print args_tag
         # keep track of the args we use, to map to the thread pool later

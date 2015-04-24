@@ -167,16 +167,17 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     
     # set branch address for the groomed jet mass
     tree.SetBranchAddress("jet_"+algorithm+"_m", AddressOf(jet,'mass'))
-    #tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
-    tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_pt", AddressOf(jet,'pt'))
-    #tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
-    tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_eta", AddressOf(jet,'eta'))
-    # histogram with 300 bins and 0 - 0.3 TeV range
+    tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
+    #tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_pt", AddressOf(jet,'pt'))
+    tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
+    #tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_eta", AddressOf(jet,'eta'))
+    # histogram with 300 bins and 0 - 3 TeV range
     # histogram storing pt without being reweighted
     hist_pt = TH1F("pt"+sampleString+algorithm,"pt",100,200*1000,3000*1000)    
+    #hist_pt = TH1F("jet_CamKt12Truth_pt","CA12Truth_pt",100,200*1000,3000*1000)    
     hist_pt.SetDirectory(0)
     # jet mass
-    hist_m = TH1F("mass"+sampleString+algorithm,"mass",100,0,300*1000)    
+    hist_m = TH1F("mass"+sampleString+algorithm,"mass",600,0,1200*1000)    
     hist_m.SetDirectory(0)
     # pt 
     hist_rw = TH1F("ptrw"+sampleString+algorithm,"ptrw",100,200*1000,3000*1000)    
@@ -192,6 +193,8 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         tree.GetEntry(e)
         if e%1000 == 0:
             print 'Progress: ' + str(e) + '/' + str(entries)
+        # weight is used for the mass window calculation
+        # weight2 is used for the pt reweighting
         if not weightedxAOD:
             weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
             weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
@@ -201,10 +204,10 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
 
         # apply basic selection criteria - slightly different for pt and mass window
         if createptfile:
-            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2 or jet.mass > 300*1000.0):# and not createptfile:
+            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2):# or jet.mass > 300*1000.0):# and not createptfile:
                 continue
         else:
-            if abs(jet.eta) > 1.2 or jet.pt > pt_high*1000 or jet.pt < pt_low*1000 or jet.mass >= 300*1000 or jet.mass <= 0:
+            if abs(jet.eta) > 1.2 or jet.pt >= pt_high*1000 or jet.pt < pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
                 continue
 
         if signal and not createptfile:
@@ -340,7 +343,6 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
     createptfile = False
     if ptfile == '':
         # first check if a correct version file exists
-        
         #success_pt = True
         # if it doesn't, then we create it
         createptfile = True
@@ -359,6 +361,7 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
     if createptfile:
         filename_pt = folder+algorithm+'.ptweights'+version
         ptfile_out = open(filename_pt,'w')
+        #ptfile_cutflow = open(filename_pt.replace('.ptweights'+version,'.cutflow'),'w')
         print 'writing to file' 
         for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
             print ' first entry'
@@ -366,7 +369,9 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
             bkg = pthist_bkg.GetBinContent(i)
             edge = pthist_sig.GetXaxis().GetBinUpEdge(i)
             ptfile_out.write(str(edge)+','+str(bkg)+','+str(sig)+'\n')
+            
         ptfile_out.close()
+        #ptfile_cutflow.close()
         success_pt = True
 
         # write this information out as a plot
@@ -400,6 +405,7 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         fout.write("bottom edge: " + str(botedge) + '\n')
         fout.write("minidx: " + str(minidx) + '\n')
         fout.write("maxidx: " + str(maxidx) + '\n')
+        fout.write('num entries' + str(hist_sig_m.GetEntries())+'\n')
         fout.write('closest frac: ' + str(closestFrac) + '\n')
         fout.write('closest top: ' + str(closestTop) + '\n')
         fout.write('closest bottom: ' + str(closestBottom) + '\n')
