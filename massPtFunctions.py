@@ -18,6 +18,17 @@ pt_high = 3000
 pt_low = 200
 weightedxAOD = False
 
+def dR(eta1, phi1, eta2, phi2):
+    '''
+    Calculate the deltaR between two particles given their eta and phi values.
+    '''
+    dphi = abs(phi1-phi2)
+    deta = eta1-eta2
+    if dphi > math.pi:
+        dphi = 2*math.pi - dphi
+    return math.sqrt(dphi*dphi + deta*deta)
+
+
 def NEvents(runNumber):
     '''
     Method for getting the number of events given a specific RunNumber.
@@ -155,7 +166,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     # set up a struct so that the SetBranchAddress method can be used.
     # normally one would use tree.variable to access the variable, but since
     # this variable name changes for each algorithm this is a better way to do it.
-    gROOT.ProcessLine("struct jet_t { Float_t mass; Float_t pt; Float_t eta;} ")
+    gROOT.ProcessLine("struct jet_t { Float_t mass; Float_t pt; Float_t eta; Float_t phi; Float_t eta_topo; Float_t phi_topo;} ")
     # create an object of this struct
     jet = jet_t()
     if signal and not createptfile:
@@ -168,9 +179,11 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     # set branch address for the groomed jet mass
     tree.SetBranchAddress("jet_"+algorithm+"_m", AddressOf(jet,'mass'))
     tree.SetBranchAddress("jet_CamKt12Truth_pt", AddressOf(jet,'pt'))
-    #tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_pt", AddressOf(jet,'pt'))
     tree.SetBranchAddress("jet_CamKt12Truth_eta", AddressOf(jet,'eta'))
-    #tree.SetBranchAddress("jet_"+algorithm.replace("LCTopo","Truth")+"_eta", AddressOf(jet,'eta'))
+    tree.SetBranchAddress("jet_CamKt12Truth_phi", AddressOf(jet,'phi'))
+    tree.SetBranchAddress("jet_CamKt12LCTopo_eta", AddressOf(jet,'eta_topo'))
+    tree.SetBranchAddress("jet_CamKt12LCTopo_phi", AddressOf(jet,'phi_topo'))
+
     # histogram with 300 bins and 0 - 3 TeV range
     # histogram storing pt without being reweighted
     hist_pt = TH1F("pt"+sampleString+algorithm,"pt",100,200*1000,3000*1000)    
@@ -193,18 +206,23 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         tree.GetEntry(e)
         if e%1000 == 0:
             print 'Progress: ' + str(e) + '/' + str(entries)
+        # According to the email from Chris (25/04/2015) we should not be applying any weights on the signal except for ptrw. 
+        # in addition we should be matching the ca12truth jet to the ca12lctopo jet as well. We are also not doing k_factor rw.
         # weight is used for the mass window calculation
         # weight2 is used for the pt reweighting
-        if not weightedxAOD:
-            weight = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
-            weight2 = 1*tree.mc_event_weight*tree.k_factor*tree.filter_eff*(1/NEvents(tree.mc_channel_number))
-        else:
-            weight = 1*tree.mc_event_weight*tree.evt_kfactor*tree.evt_filtereff*(1/tree.evt_nEvts)
-            weight2 = 1*tree.mc_event_weight*tree.evt_kfactor*tree.evt_filtereff*(1/tree.evt_nEvts)
+        if not weightedxAOD and not signal:
+            weight = 1*tree.mc_event_weight*tree.filter_eff*(1/NEvents(tree.mc_channel_number))#*tree.k_factor
+            weight2 = 1*tree.mc_event_weight*tree.filter_eff*(1/NEvents(tree.mc_channel_number))#*tree.k_factor
+        elif not signal:
+            weight = 1*tree.mc_event_weight*tree.evt_filtereff*(1/tree.evt_nEvts)#*tree.k_factor
+            weight2 = 1*tree.mc_event_weight*tree.evt_filtereff*(1/tree.evt_nEvts)#*tree.k_factor
+        else: # if it is signal
+            weight = 1.0
+            weight2 = 1.0
 
         # apply basic selection criteria - slightly different for pt and mass window
         if createptfile:
-            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2):# or jet.mass > 300*1000.0):# and not createptfile:
+            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2) or abs(dR(jet.eta,jet.phi,jet.eta_topo,jet.phi_topo)) >= 0.75*1.2: # need to match the lctopo and truth ca12 jets. 0.75*1.2 = 
                 continue
         else:
             if abs(jet.eta) > 1.2 or jet.pt >= pt_high*1000 or jet.pt < pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
@@ -222,20 +240,6 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
         if createptfile:
             pthist.Fill(jet.pt/1000,weight)
 
-        if weight <= 0 and False:
-            print 'weight is 0!'
-            print 'mc_event_weight: ' + str(tree.mc_event_weight)
-            if not weightedxAOD:
-                print 'k_factor: ' + str(tree.k_factor)
-                print 'filter_eff: ' + str(tree.filter_eff)
-                print 'xs: ' + str(tree.xs)
-                print 'nevents: ' + str(NEvents(tree.mc_channel_number))
-            else:
-                print 'k_factor: ' + str(tree.evt_kfactor)
-                print 'filter_eff: ' + str(tree.evt_filtereff)
-                print 'xs: ' + str(tree.xs)
-                print 'nevents: ' + str(tree.evt_nEvts)
-            print 'ptweight: ' + str(ptWeight(jet.pt))
         hist_rw.Fill(jet.pt,weight)
 
     return hist_m, hist_pt, hist_rw, pthist

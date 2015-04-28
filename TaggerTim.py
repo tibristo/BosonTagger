@@ -153,22 +153,26 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
                 cutstringandweight = '*mc_event_weight*1./evt_nEvts'
             # add the cross section and filter efficiency for the background            
             if datatype == 'bkg': 
+                # according to Chris we don't apply the kfactor
                 if not weightedxAOD:
-                    cutstringandweight += '*filter_eff*xs*k_factor'
+                    cutstringandweight += '*filter_eff*xs'#*k_factor'
                 else:
-                    cutstringandweight += '*evt_filtereff*xs*evt_kfactor'
+                    cutstringandweight += '*evt_filtereff*xs'#*evt_kfactor'
                 hist[histname].SetMarkerStyle(21)
                 col = col_bkg
             # filter efficiency for signal
             elif datatype == 'sig':
-                if not weightedxAOD:
-                    cutstringandweight += '*filter_eff'
-                else:
-                    cutstringandweight += '*evt_filtereff'
+                # according to Chris we do not apply any of these to signal
+                # so reset the cutstring
+                cutstringandweight = ''
+                #if not weightedxAOD:
+                #    cutstringandweight += '*filter_eff'
+                #else:
+                #    cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
-                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'#'+Algorithm.replace('LCTopo','Truth')+'_pt)'
-                # if we don't apply pt reweighting then we can reweight by cross section
+                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
+                # if we don't apply pt reweighting then we can reweight by cross section, but Chris says we never do this
                 else:
                     cutstringandweight += '*xs'
                 col = col_sig
@@ -347,20 +351,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # add the cross section and filter efficiency for the background
             
             if datatype == 'bkg': 
+                # no longer apply the k factor
                 if not weightedxAOD:
-                    cutstringandweight += '*filter_eff*xs*k_factor'
+                    cutstringandweight += '*filter_eff*xs'#*k_factor'
                 else:
-                    cutstringandweight += '*evt_filtereff*xs*evt_kfactor'
+                    cutstringandweight += '*evt_filtereff*xs'#*evt_kfactor'
                 hist[histname].SetMarkerStyle(21)
             # filter efficiency for signal
             elif datatype == 'sig':
-                if not weightedxAOD:
-                    cutstringandweight += '*filter_eff'
-                else:
-                    cutstringandweight += '*evt_filtereff'
+                # we only apply pt rw now, so reset the cutstring
+                cutstringandweight=''
+                #if not weightedxAOD:
+                #    cutstringandweight += '*filter_eff'
+                #else:
+                #    cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
-                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'#+Algorithm.replace('LCTopo','Truth')+'_pt)'#CamKt12Truth_pt)'
+                    cutstringandweight +='*SignalPtWeight2(jet_CamKt12Truth_pt)'
                 # if we don't apply pt reweighting then we can reweight by cross section
                 else:
                     cutstringandweight += '*xs'
