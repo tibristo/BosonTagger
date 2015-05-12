@@ -3,6 +3,7 @@ import sys
 import os
 import copy
 import numpy as n
+import math
 from array import array
 
 ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
@@ -136,6 +137,12 @@ def setupPtWeight(filename):
     tc.cd()
     ptweights.Draw()
     tc.SaveAs('reweight.png')
+
+    # loop through ptweights and save to file
+    db = open('ptrw_debug.txt','w')
+    for x in range(1, ptweights.GetNbinsX()+1):
+        db.write(str(ptweights.GetBinLowEdge(x)) + ': ' + str(ptweights.GetBinContent(x))+'\n')
+    db.close();
     f.close();
 
 def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createptfile = False):
@@ -196,7 +203,9 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     hist_rw = TH1F("ptrw"+sampleString+algorithm,"ptrw",100,200*1000,3000*1000)    
     hist_rw.SetDirectory(0)
     # pt only if creating pt rw file
-    pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",56,200,3000); # gives 50 gev per bin
+    #pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",56,200,3000); # gives 50 gev per bin
+    global ptweightBins
+    pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
     pthist.SetDirectory(0)
     # maximum number of entries in the tree
     entries = tree.GetEntries()
@@ -225,8 +234,13 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2) or abs(dR(jet.eta,jet.phi,jet.eta_topo,jet.phi_topo)) >= 0.75*1.2: # need to match the lctopo and truth ca12 jets. 0.75*1.2 = 
                 continue
         else:
-            if abs(jet.eta) > 1.2 or jet.pt >= pt_high*1000 or jet.pt < pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
+            if abs(jet.eta) > 1.2 or jet.pt > pt_high*1000 or jet.pt <= pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
                 continue
+
+        # TODO: check that this is correct. It seems like Chris only applies xs weights to bkg when calculating the pt weights
+        if createptfile:
+            weight = 1.0
+            weight2 = 1.0
 
         if signal and not createptfile:
             weight*=ptWeight(jet.pt)
@@ -363,6 +377,14 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
     print createptfile
     # if we are creating a new pt rw file, save all of the info
     if createptfile:
+        # normalise all of the pt histograms
+        if hist_sig_pt.Integral() != 0:
+            hist_sig_pt.Scale(1/hist_sig_pt.Integral())
+        if hist_bkg_pt.Integral() != 0:
+            hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
+        if hist_rw.Integral() != 0:
+            hist_rw.Scale(1/hist_rw.Integral())
+
         filename_pt = folder+algorithm+'.ptweights'+version
         ptfile_out = open(filename_pt,'w')
         #ptfile_cutflow = open(filename_pt.replace('.ptweights'+version,'.cutflow'),'w')
@@ -383,12 +405,6 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         canv = TCanvas()
         canv.cd()
         canv.SetLogy()
-        if hist_sig_pt.Integral() != 0:
-            hist_sig_pt.Scale(1/hist_sig_pt.Integral())
-        if hist_bkg_pt.Integral() != 0:
-            hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
-        if hist_rw.Integral() != 0:
-            hist_rw.Scale(1/hist_rw.Integral())
         hist_sig_pt.Draw()
         hist_bkg_pt.SetLineColor(ROOT.kRed)
         hist_bkg_pt.Draw("same")

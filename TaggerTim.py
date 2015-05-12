@@ -130,7 +130,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
 
     # set the cutstring
     if applyMassWindow:
-        cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
+        cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m <= " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
     else:
         cutstring_mass = cutstring
 
@@ -302,7 +302,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     maxrej = 0
     maxrejvar = ''
     #set up the cutstring/ selection to cut on the correct jet masses
-    cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m < " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
+    cutstring_mass = cutstring+ " * (jet_" +Algorithm + "_m <= " +mass_max+ ")" + " * (jet_" +Algorithm + "_m > " +mass_min+ ") " 
     # loop through the indices and branchnames
     for index, branchname in enumerate(plotbranches):
         # add ROC dictionary entry
@@ -775,7 +775,7 @@ def main(args):
         args.massWindowOverwrite = 'false'
 
     # default selection string
-    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt <= "+str(ptrange[1])+") * (jet_CamKt12Truth_eta >= -1.2) * (jet_CamKt12Truth_eta <= 1.2) " + channelcut
+    cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt <= "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) " + channelcut
     #cutstring = "(jet_"+Algorithm.replace('LCTopo','Truth')+"_pt > "+str(ptrange[0])+") * (jet_"+Algorithm.replace('LCTopo','Truth')+"_pt < "+str(ptrange[1])+") * (jet_"+Algorithm.replace('LCTopo','Truth')+"_eta >= -1.2) * (jet_"+Algorithm.replace('LCTopo','Truth')+"_eta <= 1.2) " + channelcut
 
     # set up the input signal file
