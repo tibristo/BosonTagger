@@ -33,7 +33,7 @@ def main(args):
     parser.add_argument('--weightedxAOD', help = 'If the input files are pre-weighted xAODs.')
     parser.add_argument('--ROCside', help = 'L/R for left or right sided ROC.  Leave blank for the sorted method.')
     parser.add_argument('--massWindowOverwrite', help = 'Overwrite the current mass window file if it exists.')
-    parser.add_argument('--ptweightFileOverwrite', help = 'Overwrite the current pt weight file if it exists.')
+    parser.add_argument('--writecsv', help = 'Write the data into a csv file, do not run analyse.')
 
     args = parser.parse_args()
 
@@ -116,11 +116,6 @@ def main(args):
                 args_tag.append('--weightedxAOD=True')
         if args.ROCside:
             args_tag.append('--ROCside='+args.ROCside)
-
-        if not args.ptweightFileOverwrite:
-            args_tag.append('--ptweightFileOverwrite=false')
-        else:
-            args_tag.append('--ptweightFileOverwrite='+args.ptweightFileOverwrite)
             
         if not args.massWindowOverwrite:
             args_tag.append('--massWindowOverwrite=false')
@@ -129,6 +124,9 @@ def main(args):
             
         if args.ptreweighting:
             args_tag.append('--ptreweighting='+args.ptreweighting)
+
+        if args.writecsv:
+            args_tag.append('--writecsv='+args.writecsv)
 
 
         print args_tag
@@ -153,8 +151,10 @@ def main(args):
     # reset counter
     counter = 0
 
-    # now wait until all jobs are done
-    #lview.wait(proclist[PROCESS])
+    # we don't want to run the rejection plotting if we're only writing out the csv file
+    if args.writecsv and args.writecsv.lower() == 'true':
+        return
+
     for idx,proc in enumerate(proclist[PROCESS]):
         counter+=1
         # get teh process

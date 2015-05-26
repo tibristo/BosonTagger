@@ -111,13 +111,13 @@ def plotMatrix(version):
     
     print rejectionmatrix
 
-    matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars), len(rejectionmatrix), 1, len(rejectionmatrix))
+    matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars)+1, len(rejectionmatrix), 1, len(rejectionmatrix)+1)
     matrix.GetZaxis().SetRangeUser(0.0,35.0)
     # fill the th2 with all of the values
     for i, r in enumerate(rejectionmatrix):
         # r will have [key, [rejection, variable name]]
         # create dictionary from rejectionmatrix[r]
-        
+
 
         rej = {}
         var4 = False
@@ -142,9 +142,12 @@ def plotMatrix(version):
                 value_errup = rej[v[0]][1]
                 value_errdo = rej[v[0]][2]
                 matrix.SetBinError(x+1,i+1, value_errup)
+                #print 'setting bin error: ' + str(value_errup)
             matrix.SetBinContent(x+1,i+1, value_nominal)
+            #print str(x+1) + ', ' + str(i+1) + ' : ' + str(value_nominal)
         matrix.GetYaxis().SetBinLabel(i+1,abbreviate(r))
 
+    print 'matrix setup done'
     # turn on the colours
     ROOT.gStyle.SetPalette(1)
     ROOT.gStyle.SetPadBorderSize(0)
@@ -156,6 +159,7 @@ def plotMatrix(version):
     # for errors to be printed in text
     #matrix.Draw("TEXTECOLZ")
 
+    print 'matrix drawn'
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
@@ -168,11 +172,11 @@ def plotMatrix(version):
     p.SetTextSize(0.035);
     p.SetTextColor(ROOT.kBlack);
     p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
-
+    tc.SaveAs("matrixinv_"+version+".pdf")
 
     
     #print rejectionmatrix
-    tc.SaveAs("matrixinv_"+version+".pdf")
+    
 
 
 if __name__=='__main__':

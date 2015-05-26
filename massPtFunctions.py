@@ -8,7 +8,8 @@ from array import array
 
 ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
 #ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
-ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
+#ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
+ptweights = TH1F()
 
 nevents = {}
 success_pt = False
@@ -18,6 +19,48 @@ filename_m = ''
 pt_high = 3000
 pt_low = 200
 weightedxAOD = False
+
+def setPtWeightFile(sigtmp, bkgtmp):
+    '''
+    Set up the histogram used for pt rw.  The signal and background pt TH1F histograms are 
+    used to create this.
+    sigtmp --- signal pT TH1F 
+    bkgtmp --- background pT TH1F
+    '''
+    global ptweights
+
+    sig = sigtmp.Clone()
+    bkg = bkgtmp.Clone()
+
+    if sig.Integral() != 0:
+        sig.Scale(1./sig.Integral())
+    if bkg.Integral() != 0:
+        bkg.Scale(1./bkg.Integral())
+
+    ptweights = copy.deepcopy(bkg)
+    ptweights.SetDirectory(0)
+    ptweights.Divide(sig)
+
+    t = TCanvas("ptrw")
+    gPad.SetLogy()
+    print 'draw'
+    ptweights.Draw()
+    print 'drawn'
+    t.SaveAs("ptrw.png")
+
+    f = open('ptrw_weights','w')
+    for x in range(1, int(ptweights.GetNbinsX())+1):
+        f.write(str(ptweights.GetXaxis().GetBinLowEdge(x))+': ' + str(ptweights.GetBinContent(x)) + '\n')
+    f.close()
+
+
+def getPtWeightsFile():
+    '''
+    Return a copy of the ptweights histogram.
+    '''
+
+    return ptweights
+
 
 def dR(eta1, phi1, eta2, phi2):
     '''
@@ -63,6 +106,12 @@ def loadEvents(filename):
     f.close()
 
 
+def drawPtWeight():
+    #global ptweights
+    t = TCanvas("blah")
+    ptweights.Draw()
+    t.SaveAs("blahblahblah.png")
+
 def ptWeight(pt):
     '''
     Method to return the weight for a given pT.
@@ -71,81 +120,14 @@ def ptWeight(pt):
     returns scale factor/ weight.
     '''
     # load global pt weights histogram
-    global ptweights
-    return ptweights.GetBinContent(ptweights.GetXaxis().FindBin(pt/1000));
+    #global ptweights
+    
+    ptw = ptweights.GetBinContent(ptweights.GetXaxis().FindBin(pt/1000));
+    #print ptw
+    return ptw
 
 
-def setupPtWeight(filename):
-    '''
-    Method to read in a text file that contains the pt weighting information.  It is a csv that has: lower edge, bkg events, signal events.
-    The number of events per bin entry for background and signal are taken as a ratio for weighting signal events.
-    filename --- Input csv.
-    '''
-    # load the global pt weights histogram
-    global ptweights
-    print 'ptfile: '+filename
-    # open file and set up parameters for running through the file.
-    f = open(filename);
-    # step size of 30
-    numbins = 100
-    step_size = 3000/numbins;
-    counter = 1;
-    running_bkg = 0
-    running_sig = 0
-    current_edge = 0
-    next_edge = 0;
-    next_edge = step_size;
-    # start at 200, don't care about anything below this.
-    current_edge = 200;
-    # the end of the bin, so now have the initial bin up and low edges
-    next_edge = ptweights.GetXaxis().GetBinUpEdge(1)
-    #next_edge = current_edge+step_size;
-
-    # loop through the input file
-    for line in f:
-        spl = line.strip().split(',')
-        print line
-        edge = spl[0]
-        bkg = spl[1]
-        sig = spl[2]
-        # don't care about anything less than 200
-        if float(current_edge) < 200:
-            continue
-
-      
-        # if we are now into the next bin.
-        if (float(edge) > next_edge):
-            # we now have the low edge as the old up edge
-            current_edge = copy.deepcopy(next_edge)
-            # get the new up edge
-            next_edge = ptweights.GetXaxis().GetBinUpEdge(counter+1);
-            # fill in the pt weights
-            if (running_sig == 0):
-                ptweights.SetBinContent( counter, 0 );
-            else:
-                ptweights.SetBinContent( counter, running_bkg/running_sig );
-            # reset the running totals and increment the bin counter
-            running_bkg = 0;
-            running_sig = 0;
-            counter+=1;
-            
-        # keep track of the total bkg and signal in this bin.
-        running_bkg += float(bkg);
-        running_sig += float(sig);
-
-    tc = TCanvas()
-    tc.cd()
-    ptweights.Draw()
-    tc.SaveAs('reweight.png')
-
-    # loop through ptweights and save to file
-    db = open('ptrw_debug.txt','w')
-    for x in range(1, ptweights.GetNbinsX()+1):
-        db.write(str(ptweights.GetBinLowEdge(x)) + ': ' + str(ptweights.GetBinContent(x))+'\n')
-    db.close();
-    f.close();
-
-def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createptfile = False):
+def setupHistogram(fname, algorithm, treename, ptweightsHist, signal=False):
     '''
     Read in the jet mass from the input file and fill it into a histogram.  The histogram gets used to calculate the mass window.
     Keyword args:
@@ -157,7 +139,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     global pt_high
     global pt_low
     global weightedxAOD
-
+    #drawPtWeight()
     # load the NEvents file to weight by number of events
     InputDir = fname[:fname.rfind('/')]
     fileslist = os.listdir(InputDir)
@@ -176,8 +158,6 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     gROOT.ProcessLine("struct jet_t { Float_t mass; Float_t pt; Float_t eta; Float_t phi; Float_t eta_topo; Float_t phi_topo;} ")
     # create an object of this struct
     jet = jet_t()
-    if signal and not createptfile:
-        setupPtWeight(ptfile)
     
     # open file and ttree
     f = TFile.Open(fname,"READ")
@@ -202,11 +182,7 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
     # pt 
     hist_rw = TH1F("ptrw"+sampleString+algorithm,"ptrw",100,200*1000,3000*1000)    
     hist_rw.SetDirectory(0)
-    # pt only if creating pt rw file
-    #pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",56,200,3000); # gives 50 gev per bin
-    global ptweightBins
-    pthist = TH1F("ptreweight"+sampleString+algorithm,"ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
-    pthist.SetDirectory(0)
+
     # maximum number of entries in the tree
     entries = tree.GetEntries()
     
@@ -230,33 +206,26 @@ def setupHistogram(fname, algorithm, treename, signal=False, ptfile = '',createp
             weight2 = 1.0
 
         # apply basic selection criteria - slightly different for pt and mass window
-        if createptfile:
-            if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2) or abs(dR(jet.eta,jet.phi,jet.eta_topo,jet.phi_topo)) >= 0.75*1.2: # need to match the lctopo and truth ca12 jets. 0.75*1.2 = 
-                continue
-        else:
-            if abs(jet.eta) > 1.2 or jet.pt > pt_high*1000 or jet.pt <= pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
-                continue
+        #if createptfile:
+        #    if (jet.pt < 200*1000 or abs(jet.eta) >= 1.2) or abs(dR(jet.eta,jet.phi,jet.eta_topo,jet.phi_topo)) >= 0.75*1.2: # need to match the lctopo and truth ca12 jets. 0.75*1.2 = 
+        #        continue
+        #else:
+        if abs(jet.eta) > 1.2 or jet.pt > pt_high*1000 or jet.pt <= pt_low*1000 or jet.mass <= 0: #or jet.mass >= 300*1000 
+            continue
 
-        # TODO: check that this is correct. It seems like Chris only applies xs weights to bkg when calculating the pt weights
-        if createptfile:
-            weight = 1.0
-            weight2 = 1.0
-
-        if signal and not createptfile:
+        if signal:
+            #ptw = ptweightsHist.GetBinContent(ptweightsHist.GetXaxis().FindBin(jet.pt/1000));
             weight*=ptWeight(jet.pt)
         elif not signal:
-            weight*=tree.xs
-            weight2*=tree.xs
-        
+            weight*=tree.evt_xsec
+            weight2*=tree.evt_xsec
+        #print weight
         hist_m.Fill(jet.mass,weight)
         hist_pt.Fill(jet.pt,weight2)
 
-        if createptfile:
-            pthist.Fill(jet.pt/1000,weight)
-
         hist_rw.Fill(jet.pt,weight)
 
-    return hist_m, hist_pt, hist_rw, pthist
+    return hist_m, hist_pt, hist_rw
 
 def Qw(histo, frac=0.68):
     '''
@@ -334,85 +303,31 @@ def Qw(histo, frac=0.68):
     return minWidth, topEdge, botEdge, minidx, maxidx, closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numberWindows
 
 
-def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'):
+def run(fname, algorithm, treename, ptweightsHist, ptlow=200, pthigh=3000):
     '''
     Method for running over a single algorithm and calculating the mass window.
     Keyword args:
     fname --- the input file name
     algorithm --- the name of the algorithm
     treename --- Name of tree in input root files
-    ptfile --- pt reweighting file
     ptlow/high --- pt range. default values are those used for pt reweighting file creation
-    version --- version of pt file
     '''
     global filename_m
     filename_m = ''
     global success_m
     success_m = False
-    global filename_pt
-    filename_pt = ''
-    global success_pt
-    success_pt = False
     global pt_high
     pt_high = pthigh
     global pt_low
     pt_low = ptlow
     # setup the histogram - read in the mass entries from the input file and put them into a histogram
-    createptfile = False
-    if ptfile == '':
-        # first check if a correct version file exists
-        #success_pt = True
-        # if it doesn't, then we create it
-        createptfile = True
 
-    hist_sig_m, hist_sig_pt,hist_rw,pthist_sig = setupHistogram(fname, algorithm, treename, True, ptfile, createptfile)
-    bkg_fname = fname.replace('sig','bkg')
-    thing =  pthist_sig.GetXaxis()
-    hist_bkg_m,hist_bkg_pt,tmp,pthist_bkg = setupHistogram(bkg_fname, algorithm, treename, False, '', createptfile)
-
+    hist_sig_m, hist_sig_pt,hist_rw = setupHistogram(fname, algorithm, treename, ptweightsHist, True)
+    
     # folder where input file is
     folder = fname[:fname.rfind('/')+1]
 
-    print 'createptfile: '
-    print createptfile
-    # if we are creating a new pt rw file, save all of the info
-    if createptfile:
-        # normalise all of the pt histograms
-        if hist_sig_pt.Integral() != 0:
-            hist_sig_pt.Scale(1/hist_sig_pt.Integral())
-        if hist_bkg_pt.Integral() != 0:
-            hist_bkg_pt.Scale(1/hist_bkg_pt.Integral())
-        if hist_rw.Integral() != 0:
-            hist_rw.Scale(1/hist_rw.Integral())
-
-        filename_pt = folder+algorithm+'.ptweights'+version
-        ptfile_out = open(filename_pt,'w')
-        #ptfile_cutflow = open(filename_pt.replace('.ptweights'+version,'.cutflow'),'w')
-        print 'writing to file' 
-        for i in range(1,pthist_sig.GetXaxis().GetNbins()+1):
-            print ' first entry'
-            sig = pthist_sig.GetBinContent(i)
-            bkg = pthist_bkg.GetBinContent(i)
-            edge = pthist_sig.GetXaxis().GetBinUpEdge(i)
-            ptfile_out.write(str(edge)+','+str(bkg)+','+str(sig)+'\n')
-            
-        ptfile_out.close()
-        #ptfile_cutflow.close()
-        success_pt = True
-
-        # write this information out as a plot
-        # this is used to compare the pt before and after rw
-        canv = TCanvas()
-        canv.cd()
-        canv.SetLogy()
-        hist_sig_pt.Draw()
-        hist_bkg_pt.SetLineColor(ROOT.kRed)
-        hist_bkg_pt.Draw("same")
-        canv.SaveAs(folder+"pt_truth.png")
-        hist_rw.Draw()
-        hist_bkg_pt.Draw("same")
-        canv.SaveAs(folder+"pt_rw.png")
-    else: # if we are just doing the mass windows
+    if True: # if we are just doing the mass windows
         # calculate the width, top and bottom edges and the indices for the 68% mass window
         wid, topedge, botedge, minidx, maxidx,closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numWin = Qw(hist_sig_m, 0.68)
         # folder where input file is
@@ -436,14 +351,13 @@ def run(fname, algorithm, treename, ptfile, ptlow=200, pthigh=3000, version='v6'
         success_m = True
 
 
-def runAll(input_file, file_id, treename, version='v6'):
+def runAll(input_file, file_id, treename):
     '''
     Method for running over a collection of algorithms and checking truth pt
     The algorithms are stored in a text file which is read in.  Each line gives the input folder, with the folder of the form ALGORITHM_fileID/.
     input_file --- the text file with the folders
     file_id --- the folder suffix
     treename --- Name of tree in input root files
-    version --- version of pt reweighting file
     '''
     # open input file
     f = open(input_file,"read")
@@ -458,13 +372,11 @@ def runAll(input_file, file_id, treename, version='v6'):
         # now get the files in this folder and iterate through, looking for the signal file
         fileslist = os.listdir(folder)
         sigfile = ""
-        ptfile = ""
         for fil in fileslist:
             # found the signal file!
             if fil.endswith("sig.root"):#"sig2.root"):
                 sigfile = folder+fil
-            if fil.endswith("ptweights"+version):
-                ptfile = folder+fil
+
         # the algorithm can be obtained from the folder by removing the leading
         # directory information and removing the file identifier
         alg = l.split('/')[-2][:-len(file_id)]
@@ -474,14 +386,4 @@ def runAll(input_file, file_id, treename, version='v6'):
     # loop through all of the algorithms and find the mass windows
     for a in fnames:
         print "running " + a[1]
-        run(a[0],a[1],treename, ptfile)
-
-if __name__=="__main__":
-    print len(sys.argv)
-    if len(sys.argv) < 3:
-        print "usage: python ptreweighting.py text_file_with_folder_names folder_suffix(including leading underscore) tree-name [version]"
-        sys.exit()
-    if len(sys.argv) == 4:
-        runAll(sys.argv[1],sys.argv[2],sys.argv[3])
-    elif len(sys.argv) == 5:
-        runAll(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
+        run(a[0],a[1],treename)

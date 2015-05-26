@@ -476,15 +476,14 @@ def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
     return PointNumber, pY
 
 
-def getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, ptrange):
+def getFiles(InputDir, signalFile, backgroundFile, massWinFile, ptrange):
     '''
-    This method traverses the input directory searching for the signal and background files, the ptweight file, mass window file and the events files for signal and background.
+    This method traverses the input directory searching for the signal and background files, mass window file and the events files for signal and background.
     If any of the variables have already been set before running this method they will not
     be reset here again.
     Keyword args:
     InputDir --- The input directory of the algorithm being run.
     signal/backgroundFile --- The input sig/bkg root files.
-    ptweightFile --- The file containing the pt weights.
     massWinFile --- File with mass window cuts.
     ptrange --- The low and high pt cuts.
     '''
@@ -505,10 +504,6 @@ def getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, pt
             eventsFileSig = InputDir+'/'+f
         if f.endswith("bkg.nevents"):
             eventsFileBkg = InputDir+'/'+f
-        # if pt reweight file hasn't been set find it in the input folder
-        # if there is no pt weights file... we need to create it!
-        if ptweightFile == '' and f.endswith("ptweightsv6"):
-            ptweightFile = InputDir+'/'+f
         # the mass windows have been calculated. saved as
         # Algorithm_masswindow.out
         if massWinFile == '' and f.endswith('masswindow.out'):
@@ -526,19 +521,12 @@ def getFiles(InputDir, signalFile, backgroundFile, ptweightFile, massWinFile, pt
                 print 'mass window file: ' +f 
                 massWinFile = InputDir+'/'+f
 
-    return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, ptweightFile, massWinFile
+    return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, massWinFile
 
 
-def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, eventsfiles, ptreweightfile, ptweightBins):
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights):
     import copy    
     from array import array
-    #SetAtlasStyle()
-    #gROOT.LoadMacro("MakeROCBen.C")
-    #gROOT.LoadMacro("SignalPtWeight2.C")
-    #gROOT.LoadMacro("NEvents.C")
-    #loadEvents(eventsfiles[0])
-    #loadEvents(eventsfiles[1])
-    #loadweights(ptreweightfile, -1, array('f',ptweightBins))
 
     # flag to write out trees into csv format
     writecsv= True
@@ -549,12 +537,10 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
     #    if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
     #        branches_pruned.remove(b)
     # add entries for weights
-    #branches_pruned.append('mc_event_weight')
-    branches_pruned.append('mc_channel_number')
-    branches_pruned.append('xs')
-    branches_pruned.append('filter_eff')
-    branches_pruned.append('k_factor')
-
+    to_append = ['mc_event_weight', 'evt_xsec', 'evt_filtereff', 'evt_nEvts', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta', 'jet_CamKt12Truth_phi', 'jet_CamKt12Truth_m', 'jet_CamKt12LCTopo_pt', 'jet_CamKt12LCTopo_eta', 'jet_CamKt12LCTopo_phi', 'jet_CamKt12LCTopo_m']
+    for a in to_append:
+        if a not in branches_pruned:
+            branches_pruned.append(a)
 
     # read the signal and background files
     for typename in ['sig','bkg']:
@@ -574,24 +560,24 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
         # need to add single entry per event with full weight -> mc*pt*rest
         # see https://stackoverflow.com/questions/12555323/adding-new-column-to-existing-dataframe-in-python-pandas
         numpydata = pd.DataFrame(numpydata)
-        numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm,''), inplace=True)
-        print long(numpydata['mc_channel_number'][0])
+        numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm+'_',''), inplace=True)
 
         if typename == 'bkg':
-            numpydata['weight'] = [numpydata['filter_eff'][i]*numpydata['xs'][i]*numpydata['k_factor'][i]*numpydata['mc_event_weight'][i]*(1./NEvents(long(numpydata['mc_channel_number'][i]))) for i in xrange(0,len(numpydata['xs']))]
+            numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*numpydata['evt_nEvts'][i] for i in xrange(0,len(numpydata['evt_xsec']))]
         else:
-            numpydata['weight'] = [numpydata['filter_eff'][i]*SignalPtWeight2(numpydata['jet_CamKt12Truth_pt'][i])*numpydata['mc_event_weight'][i]*(1./NEvents(long(numpydata['mc_channel_number'][i]))) for i in xrange(0,len(numpydata['xs']))]
-            #numpydata['weight'] = [numpydata['filter_eff'][i] for i in xrange(0,len(numpydata['xs']))]
+            numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
         print list(numpydata)
         
 
         if typename == 'sig': 
             numpydata['label']=1 
-            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv')
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')
             
         else: 
             numpydata['label']=0 
-            numpydata.to_csv('csv/' + Algorithm + fileid + '-merged.csv',mode='a',header=False)
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv',mode='a',header=False)
+
+        file_in.Close()
             
 
 
