@@ -1,0 +1,5 @@
+/Disk/speyside8/lhcb/atlas/tibristo/BosonTaggingOutput/nc29_fast_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc29_fast_v1/
+/Disk/speyside8/lhcb/atlas/tibristo/BosonTaggingOutput/nc29_fast_v1/CamKt10LCTopoPrunedCaRcutFactor50Zcut15_nc29_fast_v1/
+/Disk/speyside8/lhcb/atlas/tibristo/BosonTaggingOutput/nc29_fast_v1/CamKt12LCTopoSplitFilteredMu100SmallR30YCut15_nc29_fast_v1/
+/Disk/speyside8/lhcb/atlas/tibristo/BosonTaggingOutput/nc29_fast_v1/CamKt12LCTopoSplitFilteredMu100SmallR30YCut4_nc29_fast_v1/
+/Disk/speyside8/lhcb/atlas/tibristo/BosonTaggingOutput/nc29_fast_v1/CamKt12LCTopoSplitFilteredMu100SmallR30YCut9_nc29_fast_v1/

@@ -1,0 +1,90 @@
+  <varName name="EEC C1">
+  <stub>_EEC_C1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>2.0</minValue>
+  </varName>
+  <varName name="EEC C2">
+  <stub>_EEC_C2</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>10.0</minValue>
+  </varName>
+  <varName name="EEC D1">
+  <stub>_EEC_D1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="EEC D2">
+  <stub>_EEC_D2</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="FoxWolfram20">
+  <stub>_foxwolfram20</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>1.2</minValue>
+  </varName>
+  <varName name="Soft Drop Fraction">
+  <stub>_softdrop</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>1.0</minValue>
+  </varName>
+  <varName name="Sphericity">
+  <stub>_sphericity</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="Aplanarity">
+  <stub>_aplanarity</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="Thrust Maj">
+  <stub>_thrust_maj</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="Thrust Min">
+  <stub>_thrust_min</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="TauWTA1">
+  <stub>_TauWTA1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>1.0</minValue>
+  </varName>
+  <varName name="TauWTA2">
+  <stub>_TauWTA2</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>1.0</minValue>
+  </varName>
+  <varName name="ZCUT12">
+  <stub>_TauWTA1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>1.0</minValue>
+  </varName>
+  <varName name="TauWTA2TauWTA1">
+  <stub>_TauWTA2TauWTA1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="Dip12">
+  <stub>_Dip12</stub>
+  <plot>True</plot>
+    <maxValue>-1.0</maxValue>
+    <minValue>3.0</minValue>
+  </varName>

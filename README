@@ -1,3 +1,12 @@
+Requirements
+------------
+IPython (www.ipython.org)
+numpy ()
+pyROOT ()
+pandas ()
+sci-kit learn ()
+matplotlib ()
+
 Tagger.py
 Makes plots (using ROOT) of single variables and their performance as taggers
 
@@ -6,3 +15,58 @@ Just writes the data (with some cuts) (using root_numpy) into csv [This stage sh
 
 TaggerMVA.py
 This runs an MVA in scikit
+
+TaggerTim.py
+This creates plots of single variables and their performance as taggers.  There are many options that can be given to the code:
+python TaggerTim.py config -i inputfile -f fileid [--pthigh] [--ptlow] [--nvtxlow] [--nvtx] [--ptreweighting] [--saveplots] [--version] [--tree] [--massWindowCut] [--channelnumber] [--lumi]
+
+config - first argument is always a config xml file.  Sample ones can be seen under config/.
+-i - is the folder where the input files are.
+-f - is the file-id that the output files will use.
+pthigh/low - the pt range in GeV.  Default is 200-350 GeV
+nvtx - cut on the number of primary vertices. Default is 0-99
+ptreweighting - reweight the signal according to the background pt spectrum. Default is false.
+saveplots - save all variables separately as well as the overview VariablesPlot and ROC curve plot.  Default is false.
+-v the version number of the plotting you are running (this can be different from the file-id above). Default is ''
+tree - the name of the TTree in the input files. Default is 'physics'
+massWindowCut - Whether or not to apply the 68% mass window cut. Note, to run this you need to create the mass window input file - see below. Default is false.
+channelnumber - To run on a run number. Default is no restriction.
+lumi - The lumi scale factor. Default is 1.
+
+Example:
+	python TaggerTim.py config/nc29_fast/AntiKt10LCTopoTrimmedPtFrac5SmallR20.xml -i /media/win/BoostedBosonFiles/nc29_fast/AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc29_fast_v1/ -f AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc29_fast_v1 --pthigh=1000 --ptlow=500 --nvtx=99 --nvtxlow=0 --ptreweighting=true --saveplots=true -v nc29_fast_v1 --tree=physics --massWindowCut=True
+
+When you run this it will print some stuff to screen, but will also save the rejection matrix to a pickle file with the version number (-v above) in the file name.  This pickle file
+is then read in by scanBkgRej.py if that is being run.
+
+calculateMassWindow.py
+This calculates the 68% mass window for all algorithms in one folder.  It produces a text file in the algorithm folder with the suffix .masswindow which contains the mass cuts. This is read in by TaggerTim.py which then applies the mass window cuts during plotting.
+
+python CalculateMassWindow.py foldernames foldersuffix [treename]
+
+foldernames - This is the full path of all of the algorithms. Example: /media/win/BoostedBosonFiles/nc27_fast/AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc27_fast_v1.  In scanBkgRej.py this is the same as the base directory+folder.
+foldersuffix - The part added to the file name after the end of the algorithm name.  So in the example above this is _nc27_fast_v1.  This should be changed. It is only there to get a length value, but right now this is the quickest way to do it.
+treename - The tree name in the input file. Default is 'physics'.
+
+Example:
+	python calculateMassWindow.py nc27_fast_folders.txt _nc27_fast_v1 physics	
+
+scanBkgRej.py
+This scans over a number of algorithms and mass ranges and runs TaggerTim.py multiple times to get the rejection values out.  To run this a number of input parameters are required.
+If other parameters that are used to run TaggerTim.py need to be changed please look in the file - pt ranges for example.
+
+To run this there must be ipython engines running.  There are two scripts that start and stop the engines.  startcluster.sh and stopcluster.sh.  This is setup to run 4 engines.  Typically it is best to stop the clusters and restart them again if there was a change made in the code as it can cache the code.
+
+python ScanBkgRej.py -b basedirectory -f listoffolders -c listofconfigs -v version -t treename -m masswindowcut --ptlow --pthigh
+b - The base directory where all of the input root files are.
+f - A list of folders in the base directory that you want to run on, for example, AntiKt10LCTopoTrimmedPtFrac5SmallR20_nc27_fast_v1/ is in the base directory /home/tim/boosted_plotting/BosonTagging/.  The file is a newline separated list of folder names.  (Base directory+folder name) will get passed as the argument to TaggerTim.py -i.
+c - A list of config files for each of the algorithms being run.  Note that I have not yet implemented a matching algorithm between the algorithms listed in -f and -c, so they must match up 1:1 on the same lines.  These are the config files that get passed to TaggerTim.py
+v - A version of the plots.  This is what gets passed to TaggerTim.py -v.
+t - Name of the TTree in the input root files.
+m - Whether or not to apply the mass window cut.
+ptlow/high - the pt range in GeV
+
+Example:
+	python scanBkgRej.py -b /media/win/BoostedBosonFiles/nc29_fast/ -f nc29_fast_files.txt -c nc29_fast_configs.txt -v nc29_fast_mw_v1 -t physics -m true
+
+functions.py

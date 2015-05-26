@@ -1,0 +1,24 @@
+  <varName name="EEC C1">
+  <stub>_EEC_C1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>2.0</minValue>
+  </varName>
+  <varName name="EEC C2">
+  <stub>_EEC_C2</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>2.0</minValue>
+  </varName>
+  <varName name="EEC D1">
+  <stub>_EEC_D1</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>
+  <varName name="EEC D2">
+  <stub>_EEC_D2</stub>
+  <plot>True</plot>
+    <maxValue>0.0</maxValue>
+    <minValue>0.1</minValue>
+  </varName>

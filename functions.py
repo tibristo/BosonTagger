@@ -1,126 +1,19 @@
-import ROOT
-def setweights(weights):
-    # right now we are not applying the k-factors, the first set of xs weights are in pb
-    weights['signal'] = 1.0 * 1.000000 * (1.0/1.0) # * 1.00 
-    weights['140_280_CJetVetoBVeto'] = 20100 * 31.10010 * (1/10348.6/0.72) #* 1.11
-    weights['140_280_CJetFilterBVeto'] = 20100 * 31.10010 * (1/16681.4/0.21) #* 1.11
-    weights['140_280_BFilter'] = 20100 * 31.10010 * (1/81338.2/0.06) #* 1.11
-    weights['280_500_CJetVetoBVeto'] = 20100 * 1.837170 * (1/14243.9/0.69) #* 1.11
-    weights['280_500_CJetFilterBVeto'] = 20100 * 1.837170 * (1/41406.9/0.23) #* 1.11
-    weights['280_500_BFilter'] = 20100 * 1.837170 * (1/109731 /0.08) # 1.11 *
-    weights['500_CJetVetoBVeto'] = 20100 * 0.100100 * (1/2022.2 /0.66) # 1.11 *
-    weights['500_CJetFilterBVeto'] = 20100 * 0.100100 * (1/2037.5 /0.24) # 1.11 *
-    weights['500_BFilter'] = 20100 * 0.100100 * (1/10522.3/0.10) #1.11 * 
-    # these cross sections are in nb right now
-    weights['JZ3W'] = 1.6664E+03*1.9139E-03 # RunNumber 147913
-    weights['JZ4W'] = 2.7646E+01*1.4296E-03 # RunNumber 147914
-    weights['JZ5W'] = 3.0317E-01*5.5040E-03 # RunNumber 147915
-    weights['JZ6W'] = 7.5078E-03*1.5252E-02 # RunNumber 147916
-    weights['JZ7W'] = 1.3760E-03*7.6369E-02 # RunNumber 147917
-
-
-def setrunnumbers(runs):
-    runs[147913] = 'JZ3W'
-    runs[147914] = 'JZ4W'
-    runs[147915] = 'JZ5W'
-    runs[147916] = 'JZ6W'
-    runs[147917] = 'JZ7W'
-    #signal
-    runs[158225] = 'signal'
-    runs[158226] = 'signal'
-    runs[158227] = 'signal'
-    runs[158228] = 'signal'
-    runs[158229] = 'signal'
-    runs[158230] = 'signal'
-    runs[158231] = 'signal'
-    runs[158232] = 'signal'
-    runs[158233] = 'signal'
-    runs[158234] = 'signal'
-    runs[158235] = 'signal'
-    runs[158236] = 'signal'
-    runs[158237] = 'signal'
-    runs[158238] = 'signal'
-    runs[158239] = 'signal'
-    runs[158240] = 'signal'
-    runs[158241] = 'signal'
-    runs[158242] = 'signal'
-    # backgrounds
-    runs[167770] = '140_280_BFilter'
-    runs[167771] = '140_280_CJetFilterBVeto'
-    runs[167772] = '140_280_CJetVetoBVeto'
-    runs[167773] = '140_280_BFilter'
-    runs[167774] = '140_280_CJetFilterBVeto'
-    runs[167775] = '140_280_CJetVetoBVeto'
-    runs[167776] = '140_280_BFilter'
-    runs[167777] = '140_280_CJetFilterBVeto'
-    runs[167778] = '140_280_CJetVetoBVeto'
-    runs[167779] = '280_500_BFilter'
-    runs[167780] = '280_500_CJetFilterBVeto'
-    runs[167781] = '280_500_CJetVetoBVeto'
-    runs[167782] = '280_500_BFilter'
-    runs[167783] = '280_500_CJetFilterBVeto'
-    runs[167784] = '280_500_CJetVetoBVeto'
-    runs[167785] = '280_500_BFilter'
-    runs[167786] = '280_500_CJetFilterBVeto'
-    runs[167787] = '280_500_CJetVetoBVeto'
-    runs[167788] = '500_BFilter'
-    runs[167789] = '500_CJetFilterBVeto'
-    runs[167790] = '500_CJetVetoBVeto'
-    runs[167791] = '500_BFilter'
-    runs[167792] = '500_CJetFilterBVeto'
-    runs[167793] = '500_CJetVetoBVeto'
-    runs[167794] = '500_BFilter'
-    runs[167795] = '500_CJetFilterBVeto'
-    runs[167796] = '500_CJetVetoBVeto'
-    runs[167809] = '140_280_BFilter'
-    runs[167810] = '140_280_CFilterBVeto'
-    runs[167811] = '140_280_CVetoBVeto'
-    runs[167812] = '140_280_BFilter'
-    runs[167813] = '140_280_CFilterBVeto'
-    runs[167814] = '140_280_CVetoBVeto'
-    runs[167815] = '140_280_BFilter'
-    runs[167816] = '140_280_CFilterBVeto'
-    runs[167817] = '140_280_CVetoBVeto'
-    runs[167821] = '280_500_BFilter'
-    runs[167822] = '280_500_CFilterBVeto'
-    runs[167823] = '280_500_CVetoBVeto'
-    runs[167824] = '280_500_BFilter'
-    runs[167825] = '280_500_CFilterBVeto'
-    runs[167826] = '280_500_CVetoBVeto'
-    runs[167827] = '280_500_BFilter'
-    runs[167828] = '280_500_CFilterBVeto'
-    runs[167829] = '280_500_CVetoBVeto'
-    runs[167833] = '500_BFilter'
-    runs[167834] = '500_CFilterBVeto'
-    runs[167835] = '500_CVetoBVeto'
-    runs[167836] = '500_BFilter'
-    runs[167837] = '500_CFilterBVeto'
-    runs[167838] = '500_CVetoBVeto'
-    runs[167839] = '500_BFilter'
-    runs[167840] = '500_CFilterBVeto'
-    runs[167841] = '500_CVetoBVeto'
-    # not using these yet....
-    '''
-    117050,PowhegPythia_P2011C_ttbar,253.00,1.000000,0.543,
-    105200,McAtNloJimmy_CT10_ttbar_LeptonFilter,253.00,1.000000,0.543,
-    117360,AcerMCPythia_AUET2BCTEQ6L1_singletop_tchan_e,8.604,1.10,1.000000,
-    117361,AcerMCPythia_AUET2BCTEQ6L1_singletop_tchan_mu,8.604,1.10,1.000000,
-    117362,AcerMCPythia_AUET2BCTEQ6L1_singletop_tchan_tau,8.604,1.10,1.000000,
-    108343,McAtNloJimmy_CT10NLOME_AUET2CTEQ6L1MPI_SingleTopSChanWenu,0.564440,1.074,1.000000,
-    108344,McAtNloJimmy_CT10NLOME_AUET2CTEQ6L1MPI_SingleTopSChanWmunu,0.564260,1.074,1.000000,
-    108345,McAtNloJimmy_CT10NLOME_AUET2CTEQ6L1MPI_SingleTopSChanWtaunu,0.564040,1.074,1.000000,
-    108346,McAtNloJimmy_CT10NLOME_AUET2CTEQ6L1MPI_SingleTopWtChanIncl,20.658000,1.083,1.000000,
-    '''
+from ROOT import *
+import os
+from numpy import *
+import root_numpy
+import pandas as pd
+#from AtlasStyle import *
 
 def pTReweight(hist_sig, hist_bkg, algorithm, varBinPt, xbins):
-    from ROOT import *
+    import ROOT
     from array import array
     bins = hist_bkg.GetNbinsX()
     name = 'ptreweight'+algorithm
     if not varBinPt:
-        hist_reweight = TH1D(name,name, bins, 0, hist_bkg.GetXaxis().GetBinUpEdge(bins))
+        hist_reweight = ROOT.TH1D(name,name, bins, 0, hist_bkg.GetXaxis().GetBinUpEdge(bins))
     else:
-        hist_reweight = TH1D(name,name, len(xbins)-1, array('d',xbins))
+        hist_reweight = ROOT.TH1D(name,name, len(xbins)-1, array('d',xbins))
     for x in range(1,bins):
         if hist_sig.GetBinContent(x) == 0:
             weight = -1
@@ -128,23 +21,45 @@ def pTReweight(hist_sig, hist_bkg, algorithm, varBinPt, xbins):
             weight = hist_bkg.GetBinContent(x)/hist_sig.GetBinContent(x)
         hist_reweight.SetBinContent(x,weight)
         print str(hist_sig.GetXaxis().GetBinLowEdge(x)/1000) + ' - ' + str(hist_sig.GetXaxis().GetBinUpEdge(x)/1000) + ' weight: ' + str(weight)
-    tc = TCanvas("ptr")
+    tc = ROOT.TCanvas("ptr")
     hist_reweight.Draw('e')
     tc.SaveAs('pt_reweight'+algorithm+'.png')
 
-def getFileIDNumber(inputdir):
-    if inputdir.lower().find('mu100') != -1:
-        return '2'
-    elif inputdir.lower().find('mu67') != -1:
-        return '1'
-    elif inputdir.lower().find('trim') != -1:
-        return '3'
-    else:
-        return ''
+def getFileBranches(inputfile, treename='physics'):
+    file_branches = []
+    file_branches_stubs = []
+    file_in = TFile(inputfile)
+    print inputfile
+    print treename
+    physics = file_in.Get(treename)
+    ob = physics.GetListOfBranches()
+    for tb in ob:
+        name = tb.GetName()
+        namespl = name.split('_')
+        # normally it will be jet_ALGORITHM_variable, so 3 parts
+        if len(namespl) == 3:
+        #file_branches.append(name)
+        # get the variable name
+            file_branches.append(namespl[2])#name[name.rfind('_')+1:])
+        # sometimes it is jet_ALGORITHM_VAR_IABLE
+        elif len(namespl) > 3:
+            app_str = ''
+            # add almost all
+            for i in range(2,len(namespl)-1):
+                app_str+=namespl[i]+'_'
+            # last one doesn't have _ at the end
+            app_str+=namespl[len(namespl)-1]
+            file_branches.append(app_str)
+        elif len(namespl) == 1: # stuff like averageIntPerXing, for example
+            file_branches.append(namespl[0])
+    file_in.Close()
+    return file_branches
 
 
+
+tree = ''
 plotbranches = {}
-branches = []
+branches = {}
 pt_high = 3500000
 pt_low = 0
 algorithm = ''
@@ -159,6 +74,10 @@ algorithmSettings = ''
 energy = ''
 nvtx = 999
 nvtxlow = 0
+ptreweightflag = True
+lumi = 1.0
+
+
 def getPlotBranches():
     return plotbranches
 def getBranches():
@@ -189,26 +108,80 @@ def getNvtx():
     return nvtx
 def getNvtxLow():
     return nvtxlow
+def getTree():
+    return tree
+def getPtReweightFlag():
+    return ptreweightflag
+def getLumi():
+    return lumi
+
+def pruneBranches(file_branches):
+    global plotbranches
+    global branches
+    todelete = []
+    print file_branches
+    # if we have split12 and jet mass we can calculate YFilt
+    # so look for these two variables (mass is always there), and if they are there, YFilt can be added
+    if 'SPLIT12' in file_branches:
+        file_branches.append('YFilt')
+    # loop through all of the variables in the branches dict
+    for k in branches.keys():
+        # if the stub value (take away the leading underscore) is not in the file
+        # mark it to be deleted
+        if not branches[k][0][1:] in file_branches and not branches[k][0] in file_branches:
+
+            todelete.append(k)
+
+    for d in todelete:
+        del branches[d]
+
+    todeleteplot = []
+    for k in plotbranches.keys():
+        if not plotbranches[k][0][1:] in file_branches and not plotbranches[k][0] in file_branches:
+            todeleteplot.append(k)
+    for d in todeleteplot:
+        del plotbranches[d]
 
 
 def readXML(configfile):
     """Read in the variable names and histogram limits froms the config xml file."""
-    
+    # TODO: add try catch statements incase values are not well defined (for example floats being ill-defined as a string)
+ 
     import xml.etree.ElementTree as ET
     xmlTree = ET.parse(configfile)
     root = xmlTree.getroot()
 
+
+    global tree
+    for t in root.findall('treename'):
+        tree = t.get('name')
+
     varName = ''
     global plotbranches
     global branches
+    global file_branches
+
     for child in root.findall('varName'):
         varName = child.get('name')
         stub = child.find('stub').text
-        branches.append(stub)
+        jetVariable = True
+        function = ''
+        if child.find('jetVariable') is not None:
+            if child.find('jetVariable').text == "False":
+                jetVariable = False
+                print varName
+        if child.find('function') is not None:
+            function = child.find('function').text
+        #if function!='':
+        #    varName = function+'('+varName+')'
+        branches[varName] = [stub, jetVariable, function]
         if child.find('plot').text == "True":
             maxV = float(child.find('maxValue').text)
             minV = float(child.find('minValue').text)
-            plotbranches[varName] = [stub,minV,maxV]
+            nbins = 100
+            if child.find('bins') is not None:
+                nbins = int(child.find('bins').text)
+            plotbranches[varName] = [stub,jetVariable,minV,maxV,nbins,function]
 
     global pt_high
     global pt_low
@@ -235,7 +208,7 @@ def readXML(configfile):
         if not aE is None:
             energy = algo.find('Energy').text
         else:
-            energy = '14'
+            energy = '13'
 
     global truth
     for tr in root.findall('plotTruth'):
@@ -274,48 +247,52 @@ def readXML(configfile):
             elif v.tag == 'low':
                 nvtxlow = int(v.text)
 
+    global lumi
+    for l in root.findall('lumi'):
+        lumi = float(l.get('name'))
+
 def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
-    texw.SetTextSize(0.045);
+    texw.SetTextSize(0.035);
     texw.SetTextFont(72);
-    texw.DrawLatex(0.6,0.88,"ATLAS");
+    texw.DrawLatex(0.58,0.88,"ATLAS");
     
     p = TLatex();
     p.SetNDC();
     p.SetTextFont(42);
-    p.SetTextSize(0.045);
+    p.SetTextSize(0.035);
     p.SetTextColor(ROOT.kBlack);
-    p.DrawLatex(0.71,0.88,"Internal Simulation");
+    p.DrawLatex(0.66,0.88,"Simulation Work in Progress");#"Internal Simulation");
 
     p = TLatex();
     p.SetNDC();
     p.SetTextFont(42);
-    p.SetTextSize(0.035);
+    p.SetTextSize(0.032);
     p.SetTextColor(ROOT.kBlack);
     p.DrawLatex(0.65,0.64,"#sqrt{s} = "+str(E)+" TeV");
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
-    p2.SetTextSize(0.035);
+    p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
     p2.DrawLatex(0.65,0.82,algo);
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
-    p2.SetTextSize(0.035);
+    p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
     p2.DrawLatex(0.65,0.76,algosettings);
     
     p3 = TLatex();
     p3.SetNDC();
     p3.SetTextFont(42);
-    p3.SetTextSize(0.035);
+    p3.SetTextSize(0.032);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} < ' + str(ptrange[1]/1000) + ', '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000))#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
 def drawHists(hist1, hist2):
     hist1.SetMaximum(hist1.GetMaximum()*1.2)
@@ -323,3 +300,312 @@ def drawHists(hist1, hist2):
     hist1.Draw("hist same")
     hist2.Draw("e same")
     hist2.Draw("hist same")
+
+
+
+
+def findYValue(pGraph, pX, pY, Epsilon=0.01, pInterpolate=True, pWarn=True):
+    # adapted from here: http://www.desy.de/~hperrey/root/GraphRoutines.h.html
+    import ROOT
+    import copy
+    # finds the Y value in a graph corresponding to a given X value as closely as possible
+    # returns negative point number, if the point is not within a certain percentage of x
+    # (percentage determined by Epsilon parameter)
+    # uses the Eval() method of the tgraph to interpolate (linearly) between data points
+    # (after the existance of data points in the region has been veryfied)
+    PointNumber =0
+    x = ROOT.Double(0)
+    y = ROOT.Double(0)
+    pGraph.GetPoint(0,x,y);
+    delta = ROOT.TMath.Abs(pX-x);
+    for i in range (1,pGraph.GetN()):
+        # loop over points
+        x1 = ROOT.Double()
+        y1 = ROOT.Double()
+        pGraph.GetPoint(i,x1,y1);
+        #print 'entry: ' + str(i)
+        #print x1
+        #print y1
+        # check if this points is closer to the x value we are looking for
+        if (ROOT.TMath.Abs(pX-x1)<delta):
+            # remember point
+            delta = ROOT.TMath.Abs(pX-x1)
+            x = copy.deepcopy(x1);y=copy.deepcopy(y1);PointNumber=copy.deepcopy(i)
+    # warn if delta exceeds a certain percentage of x
+    if ((ROOT.TMath.Abs(pX - Epsilon)) < ROOT.TMath.Abs(delta)):
+            if (pWarn):
+                print " Warning: Requested Y Value for point " +str(pX)
+                print "          but only found point at " + str(x)
+                print " (difference of " + str( ROOT.TMath.Abs(delta/ pX)) + "%)"
+            # return the closest point
+            #PointNumber = -1 * PointNumber;
+            #Py = 0.0
+   # ok, we have data points in the region of interest (or warned the user otherwise), now interpolate
+    if (pInterpolate):
+            # we need to sort the graph in order to use the Eval() method.
+            # better use a copy before messing around with the graph...
+            Copy = copy.deepcopy(pGraph)#.Clone();
+            Copy.Sort();
+            y = Copy.Eval(pX);
+            Copy.Delete()
+    pY = copy.deepcopy(y)
+    return PointNumber, pY
+
+
+def getFiles(InputDir, signalFile, backgroundFile, massWinFile, ptrange):
+    '''
+    This method traverses the input directory searching for the signal and background files, mass window file and the events files for signal and background.
+    If any of the variables have already been set before running this method they will not
+    be reset here again.
+    Keyword args:
+    InputDir --- The input directory of the algorithm being run.
+    signal/backgroundFile --- The input sig/bkg root files.
+    massWinFile --- File with mass window cuts.
+    ptrange --- The low and high pt cuts.
+    '''
+    # get a list of the files in the input directory and search for the needed files
+    fileslist = os.listdir(InputDir)
+    sigtmp = ''
+    eventsFileSig = ''
+    eventsFileBkg = ''
+
+    for f in fileslist:
+        # if teh signal file and background file were not specified in the config file find them in the input directory
+        if signalFile == '' and f.endswith("sig.root"):#"sig2.root"):
+            signalFile = InputDir+'/'+f
+        elif backgroundFile == '' and f.endswith("bkg.root"):#("bkg2.root"):
+            backgroundFile = InputDir+'/'+f
+        # files for event reweighting
+        if f.endswith("sig.nevents"):
+            eventsFileSig = InputDir+'/'+f
+        if f.endswith("bkg.nevents"):
+            eventsFileBkg = InputDir+'/'+f
+        # the mass windows have been calculated. saved as
+        # Algorithm_masswindow.out
+        if massWinFile == '' and f.endswith('masswindow.out'):
+            if f.find('pt') == -1:
+                # rather than continue, should rather just run the calculation!!
+                continue
+            # check that the pt range for this mass window is correct
+            pt_rng = f[f.find('pt')+3:-len('masswindow.out')-1]
+            # the pt range is always split by an underscore
+            spl = pt_rng.split('_')
+            pt_l = float(spl[0])
+            pt_h = float(spl[1])
+            # make sure we have the correct pt range mass window file
+            if pt_l*1000 == float(ptrange[0]) and pt_h*1000 == float(ptrange[1]):
+                print 'mass window file: ' +f 
+                massWinFile = InputDir+'/'+f
+
+    return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, massWinFile
+
+
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights):
+    import copy    
+    from array import array
+
+    # flag to write out trees into csv format
+    writecsv= True
+
+    # for now remove yfilt and split12 - these will be updated soon!
+    branches_pruned = copy.deepcopy(branches)
+    #for b in branches_pruned:
+    #    if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
+    #        branches_pruned.remove(b)
+    # add entries for weights
+    to_append = ['mc_event_weight', 'evt_xsec', 'evt_filtereff', 'evt_nEvts', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta', 'jet_CamKt12Truth_phi', 'jet_CamKt12Truth_m', 'jet_CamKt12LCTopo_pt', 'jet_CamKt12LCTopo_eta', 'jet_CamKt12LCTopo_phi', 'jet_CamKt12LCTopo_m']
+    for a in to_append:
+        if a not in branches_pruned:
+            branches_pruned.append(a)
+
+    # read the signal and background files
+    for typename in ['sig','bkg']:
+        if typename == 'sig':
+            filename = signalFile
+        else:
+            filename = backgroundFile
+        # open the files
+        file_in = TFile(filename)
+        # read in the trees
+        tree = file_in.Get(treename)
+    
+        # write the tree out in csv format to use again later
+        # need to add some entries to branches to store the event weights
+        numpydata = root_numpy.root2array(filename,treename,branches_pruned,cutstring)
+
+        # need to add single entry per event with full weight -> mc*pt*rest
+        # see https://stackoverflow.com/questions/12555323/adding-new-column-to-existing-dataframe-in-python-pandas
+        numpydata = pd.DataFrame(numpydata)
+        numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm+'_',''), inplace=True)
+
+        if typename == 'bkg':
+            numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*numpydata['evt_nEvts'][i] for i in xrange(0,len(numpydata['evt_xsec']))]
+        else:
+            numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
+        print list(numpydata)
+        
+
+        if typename == 'sig': 
+            numpydata['label']=1 
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')
+            
+        else: 
+            numpydata['label']=0 
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv',mode='a',header=False)
+
+        file_in.Close()
+            
+
+
+def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
+    '''
+    Method taken from Sam's code:
+    svn+ssh://svn.cern.ch/reps/atlasperf/CombPerf/JetETMiss/JetSubstructure2012/BoostedBosonTagging/code/meehan/PostAnalysis
+    1-sided ROC Curve:
+    PostAnalysis/MyPackages/MyLocalFunctions.py
+
+    Different method of creating the ROC curve with a right/ left cut instead of 
+    just going from left.
+
+
+    Key args:
+    sig -- Signal histogram
+    bkg -- Bkg histogram
+    sigeff -- Signal efficiency
+    bkgeff -- Bkg efficiency
+    curve -- The roc curve we are filling
+    bkgRejPower -- The background rejection power curve
+    cutside -- L or R
+
+    Returns:
+    gr -- the TGraph with the ROC curve
+    hsigreg50 -- 50% signal
+    hcutval50 -- 50% signal cut
+    hsigreg25 -- 25% signal
+    hcutval25 -- 25% signal cut
+    '''
+    print "\n\nMake ROC curve using right/left cut",cutside
+
+    n = bkg.GetNbinsX()
+    #print "NBins",n
+
+    # normalise hists
+    if sig.Integral()!=0:
+        sig.Scale(1.0/sig.Integral());
+    if(bkg.Integral()!=0):
+        bkg.Scale(1.0/bkg.Integral());
+
+    totalBerr=Double()
+    totalSerr=Double()
+    totalB = bkg.IntegralAndError(0,n,totalBerr)
+    totalS = sig.IntegralAndError(0,n,totalSerr)
+    
+    siglow  = sig.GetXaxis().GetXmin()
+    sighigh = sig.GetXaxis().GetXmax()
+    hsigreg50 = TH1F("hsigreg50","hsigreg50",n,siglow,sighigh)
+    hsigreg50.SetDirectory(0)
+    hcutval50 = TH1F("hcutval50","hcutval50",5,0,5)
+    hcutval50.SetDirectory(0)
+    hcutval50.GetXaxis().SetBinLabel(1,"Left(0) , Right(1)")
+    hcutval50.GetXaxis().SetBinLabel(2,"LowerCut")
+    hcutval50.GetXaxis().SetBinLabel(3,"UpperCut")
+    hsigreg25 = TH1F("hsigreg25","hsigreg25",n,siglow,sighigh)
+    hsigreg25.SetDirectory(0)
+    hcutval25 = TH1F("hcutval25","hcutval25",5,0,5)
+    hcutval25.SetDirectory(0)
+    hcutval25.GetXaxis().SetBinLabel(1,"Left(0) , Right(1)")
+    hcutval25.GetXaxis().SetBinLabel(2,"LowerCut")
+    hcutval25.GetXaxis().SetBinLabel(3,"UpperCut")
+    if cutside=="R":
+        hcutval50.SetBinContent(1,1)
+        hcutval50.SetBinContent(3,sig.GetXaxis().GetBinLowEdge(n)+sig.GetXaxis().GetBinWidth(n))
+        extrema50 = 100000
+        hcutval25.SetBinContent(1,1)
+        hcutval25.SetBinContent(3,sig.GetXaxis().GetBinLowEdge(n)+sig.GetXaxis().GetBinWidth(n))
+        extrema25 = 100000
+    elif cutside=="L":
+        hcutval50.SetBinContent(1,0)
+        hcutval50.SetBinContent(2,sig.GetXaxis().GetBinLowEdge(1))
+        extrema50 = -100000
+        hcutval25.SetBinContent(1,0)
+        hcutval25.SetBinContent(2,sig.GetXaxis().GetBinLowEdge(1))
+        extrema25 = -100000
+
+    gr = TGraphErrors(n)
+    for i in range(1,n+1):
+        myS = 0.
+        myB = 0.
+
+        if cutside=="R":
+            #loop grom i to end
+            myBerr=Double()
+            mySerr=Double()
+            myB = bkg.IntegralAndError(i,n,myBerr)
+            myS = sig.IntegralAndError(i,n,mySerr)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if myS<=0.73:
+                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                #print tempex,extrema50
+                if tempex<extrema50:
+                    extrema50 = tempex
+                    #print "found extrema R: ",extrema50
+            if myS<=0.36:
+                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                #print tempex,extrema25
+                if tempex<extrema25:
+                    extrema25 = tempex
+                    #print "found extrema R: ",extrema50
+        elif cutside=="L":
+            #loop grom 0 to i
+            myBerr=Double()
+            mySerr=Double()
+            myB = bkg.IntegralAndError(1,i,myBerr)
+            myS = sig.IntegralAndError(1,i,mySerr)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if myS<=0.73:
+                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                #print tempex,extrema50
+                if tempex>extrema50:
+                    extrema50 = tempex
+                    #print "found extrema L: ",extrema50
+            if myS<=0.36:
+                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
+                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                #print tempex,extrema25
+                if tempex>extrema25:
+                    extrema25 = tempex
+                    #print "found extrema L: ",extrema50
+            
+            
+        else:
+            print "You did not choose a left or right handed cut - EXITTING ..."
+            sys.exit()
+            
+    #artificially set the first point to (1,1) to avoid overflow issues
+    gr.SetPoint(0, 1.0, 1.0)
+    gr.SetPointError(0, 0.0, 0.0)
+            
+    ctest = TCanvas("ctest","ctest",400,400)
+    gr.SetMinimum(0.0)
+    gr.SetMaximum(1.0)
+    gr.GetXaxis().SetRangeUser(0.0,1.0)
+    gr.Draw("AE3")
+    
+    if cutside=="R":
+        hcutval50.SetBinContent(2,extrema50)
+        hcutval25.SetBinContent(2,extrema25)
+    elif cutside=="L":
+        hcutval50.SetBinContent(3,extrema50)
+        hcutval25.SetBinContent(3,extrema25)
+
+    curve = gr
+    bkgRejPower = gr
+    print "RETURNING from Single sided ROC calculation"
+    return gr,hsigreg50,hcutval50,hsigreg25,hcutval25

@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<settings>
+  <cutstring name = "pt">
+    <pt_high name = "310000"></pt_high>
+    <pt_low name = "200000"></pt_low>
+  </cutstring>
+  <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut4">
+    <AlgorithmString>C/A R=1.2, split-filtered jets</AlgorithmString>
+    <AlgorithmSettings>#mu=1.0, R_{sub}=0.3, y_{cut}=0.04</AlgorithmSettings>
+    <Energy>8</Energy>
+  </Algorithm>
+  <plotTruth name = "False">
+  </plotTruth>
+  <fileid name = "fileid_config_test">
+  </fileid>
+  <ptBins>
+    <bin name = "28"></bin>
+  </ptBins>
+  <varName name="pt">
+  <stub>_pt</stub>
+  <plot>True</plot>
+    <maxValue>310000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="eta">
+  <stub>_eta</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="phi">
+  <stub>_phi</stub>
+  <plot>False</plot>
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+  </varName>
+  <varName name="Mass">
+  <stub>_m</stub>
+  <plot>True</plot>
+    <maxValue>300000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>			  
+  <varName name="Tau1">
+  <stub>_Tau1</stub>
+  <plot>False</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau2">
+  <stub>_Tau2</stub>
+  <plot>False</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Tau21">
+  <stub>_Tau21</stub>
+  <plot>True</plot>
+    <maxValue>1</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Width">
+  <stub>_WIDTH</stub>
+  <plot>False</plot>
+  </varName>
+  <varName name="Split12">
+  <stub>_SPLIT12</stub>
+  <plot>True</plot>
+    <maxValue>1000.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="PlanarFlow">
+  <stub>_PlanarFlow</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Angularity">
+  <stub>_Angularity</stub>
+  <plot>True</plot>
+  <maxValue>0.05</maxValue>
+  <minValue>0.0</minValue>
+  </varName>
+  <varName name="Mass Drop">
+  <stub>_Mu12</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+  <varName name="Momentum Balance">
+  <stub>_YFilt</stub>
+  <plot>True</plot>
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+  </varName>
+
+
+
+  <varName name="EEC C2beta2beta1">
+  <stub>_EEC_C2_1</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="EEC C2beta2">
+  <stub>_EEC_C2_2</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="EEC D2beta2beta1">
+  <stub>_EEC_D2_1</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>50.0</maxValue>
+  </varName>
+  <varName name="EEC D2beta2">
+  <stub>_EEC_D2_2</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>50.0</maxValue>
+  </varName>
+  <varName name="FoxWolfram20">
+  <stub>_FoxWolfram20</stub>
+  <plot>True</plot>
+    <minValue>0</minValue>
+    <maxValue>1</maxValue>
+  </varName>
+  <varName name="Soft Drop Fraction">
+  <stub>_SoftDrop</stub>
+  <plot>False</plot>
+    <minValue>0.0</minValue>
+    <maxValue>4.0</maxValue>
+  </varName>
+  <varName name="Sphericity">
+  <stub>_Sphericity</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="Aplanarity">
+  <stub>_Aplanarity</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="Thrust Maj">
+  <stub>_ThrustMaj</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="Thrust Min">
+  <stub>_ThrustMin</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="TauWTA1">
+  <stub>_TauWTA1</stub>
+  <plot>False</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.2</maxValue>
+  </varName>
+  <varName name="TauWTA2">
+  <stub>_TauWTA2</stub>
+  <plot>False</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="ZCUT12">
+  <stub>_ZCUT12</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>0.5</maxValue>
+  </varName>
+  <varName name="TauWTA2TauWTA1">
+  <stub>_TauWTA2TauWTA1</stub>
+  <plot>True</plot>
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+  <varName name="Dip12">
+  <stub>_Dip12</stub>
+  <plot>True</plot>
+    <minValue>0</minValue>
+    <maxValue>1.0</maxValue>
+  </varName>
+</settings>
