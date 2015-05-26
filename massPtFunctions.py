@@ -7,8 +7,6 @@ import math
 from array import array
 
 ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
-#ptweights = TH1F("ptreweight","ptreweight",100,0,3000);
-#ptweights = TH1F("ptreweight","ptreweight",len(ptweightBins)-1,array('d',ptweightBins));
 ptweights = TH1F()
 
 nevents = {}
@@ -119,11 +117,7 @@ def ptWeight(pt):
     
     returns scale factor/ weight.
     '''
-    # load global pt weights histogram
-    #global ptweights
-    
     ptw = ptweights.GetBinContent(ptweights.GetXaxis().FindBin(pt/1000));
-    #print ptw
     return ptw
 
 
@@ -139,7 +133,7 @@ def setupHistogram(fname, algorithm, treename, ptweightsHist, signal=False):
     global pt_high
     global pt_low
     global weightedxAOD
-    #drawPtWeight()
+
     # load the NEvents file to weight by number of events
     InputDir = fname[:fname.rfind('/')]
     fileslist = os.listdir(InputDir)
@@ -174,7 +168,6 @@ def setupHistogram(fname, algorithm, treename, ptweightsHist, signal=False):
     # histogram with 300 bins and 0 - 3 TeV range
     # histogram storing pt without being reweighted
     hist_pt = TH1F("pt"+sampleString+algorithm,"pt",100,200*1000,3000*1000)    
-    #hist_pt = TH1F("jet_CamKt12Truth_pt","CA12Truth_pt",100,200*1000,3000*1000)    
     hist_pt.SetDirectory(0)
     # jet mass
     hist_m = TH1F("mass"+sampleString+algorithm,"mass",600,0,1200*1000)    
@@ -327,28 +320,27 @@ def run(fname, algorithm, treename, ptweightsHist, ptlow=200, pthigh=3000):
     # folder where input file is
     folder = fname[:fname.rfind('/')+1]
 
-    if True: # if we are just doing the mass windows
-        # calculate the width, top and bottom edges and the indices for the 68% mass window
-        wid, topedge, botedge, minidx, maxidx,closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numWin = Qw(hist_sig_m, 0.68)
-        # folder where input file is
-        folder = fname[:fname.rfind('/')+1]
-        # write this information out to a text file
-        filename_m = folder+algorithm+"_pt_"+str(ptlow)+"_"+str(pthigh)+"_masswindow.out"
-        fout = open(filename_m,'w')
-        fout.write("width: " + str(wid) + '\n')
-        fout.write("top edge: " + str(topedge) + '\n')
-        fout.write("bottom edge: " + str(botedge) + '\n')
-        fout.write("minidx: " + str(minidx) + '\n')
-        fout.write("maxidx: " + str(maxidx) + '\n')
-        fout.write('num entries' + str(hist_sig_m.GetEntries())+'\n')
-        fout.write('closest frac: ' + str(closestFrac) + '\n')
-        fout.write('closest top: ' + str(closestTop) + '\n')
-        fout.write('closest bottom: ' + str(closestBottom) + '\n')
-        fout.write('closest minidx: ' + str(closestMinIdx) + '\n')
-        fout.write('closest maxidx: ' + str(closestMaxIdx) + '\n')
-        fout.write('number windows found: ' + str(numWin) + '\n')
-        fout.close()
-        success_m = True
+    # calculate the width, top and bottom edges and the indices for the 68% mass window
+    wid, topedge, botedge, minidx, maxidx,closestFrac, closestTop, closestBottom, closestMinIdx, closestMaxIdx, numWin = Qw(hist_sig_m, 0.68)
+    # folder where input file is
+    folder = fname[:fname.rfind('/')+1]
+    # write this information out to a text file
+    filename_m = folder+algorithm+"_pt_"+str(ptlow)+"_"+str(pthigh)+"_masswindow.out"
+    fout = open(filename_m,'w')
+    fout.write("width: " + str(wid) + '\n')
+    fout.write("top edge: " + str(topedge) + '\n')
+    fout.write("bottom edge: " + str(botedge) + '\n')
+    fout.write("minidx: " + str(minidx) + '\n')
+    fout.write("maxidx: " + str(maxidx) + '\n')
+    fout.write('num entries' + str(hist_sig_m.GetEntries())+'\n')
+    fout.write('closest frac: ' + str(closestFrac) + '\n')
+    fout.write('closest top: ' + str(closestTop) + '\n')
+    fout.write('closest bottom: ' + str(closestBottom) + '\n')
+    fout.write('closest minidx: ' + str(closestMinIdx) + '\n')
+    fout.write('closest maxidx: ' + str(closestMaxIdx) + '\n')
+    fout.write('number windows found: ' + str(numWin) + '\n')
+    fout.close()
+    success_m = True
 
 
 def runAll(input_file, file_id, treename):
