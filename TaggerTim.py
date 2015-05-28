@@ -436,10 +436,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
 
             if singleSidedROC == 'L' or singleSidedROC == 'R':
-                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff,bkg_eff, cutside=singleSidedROC)
+                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
                 bkgRejROC[branchname] = roc[branchname]
             else:
-                MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname],signal_eff,bkg_eff)
+                MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname], signal_eff, bkg_eff)
             writeROC = True
 
         canv1.cd(index+1)
@@ -447,7 +447,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         pY = Double(0.0)
 
         # find the corresponding bkg rejection for the 50% signal efficiency point from bkg rejection power ROC curve
-        # Howeever, if we want the background rejection power for the mass variable we do not want to take 50% as we already have made
+        # However, if we want the background rejection power for the mass variable we do not want to take 50% as we already have made
         # a cut on the mass to get it to 68%.
         # calculate error on this as well -> deltaX = X*(deltaY/Y)
         eval_roc = 1

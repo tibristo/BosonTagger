@@ -537,7 +537,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
         myB = 0.
 
         if cutside=="R":
-            #loop grom i to end
+            #loop from i to end
             myBerr=Double()
             mySerr=Double()
             myB = bkg.IntegralAndError(i,n,myBerr)
@@ -560,7 +560,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
                     extrema25 = tempex
                     #print "found extrema R: ",extrema50
         elif cutside=="L":
-            #loop grom 0 to i
+            #loop from 0 to i
             myBerr=Double()
             mySerr=Double()
             myB = bkg.IntegralAndError(1,i,myBerr)
@@ -585,7 +585,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             
             
         else:
-            print "You did not choose a left or right handed cut - EXITTING ..."
+            print "You did not choose a left or right handed cut - EXITING ..."
             sys.exit()
             
     #artificially set the first point to (1,1) to avoid overflow issues
