@@ -20,7 +20,7 @@ def pTReweight(hist_sig, hist_bkg, algorithm, varBinPt, xbins):
         else:
             weight = hist_bkg.GetBinContent(x)/hist_sig.GetBinContent(x)
         hist_reweight.SetBinContent(x,weight)
-        print str(hist_sig.GetXaxis().GetBinLowEdge(x)/1000) + ' - ' + str(hist_sig.GetXaxis().GetBinUpEdge(x)/1000) + ' weight: ' + str(weight)
+        #print str(hist_sig.GetXaxis().GetBinLowEdge(x)/1000) + ' - ' + str(hist_sig.GetXaxis().GetBinUpEdge(x)/1000) + ' weight: ' + str(weight)
     tc = ROOT.TCanvas("ptr")
     hist_reweight.Draw('e')
     tc.SaveAs('pt_reweight'+algorithm+'.png')
@@ -400,23 +400,41 @@ def getFiles(InputDir, signalFile, backgroundFile, massWinFile, ptrange):
     return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, massWinFile
 
 
-def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights):
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights, plotranges):
+    '''
+    Create csv files of the signal and background ntuples.
+    Keyword args:
+    signal/backgroundFile -- The filenames for the signal and bkg.
+    branches -- the variables to be kept in the csv.
+    cutstring -- basic selection cuts to be applied.
+    treename -- name of tree in ntuples
+    Algorithm -- algorithm being run
+    fileid -- File identifier that gets used in the output file names
+    ptweights -- pt weight file (bkg/signal pt)
+    plotranges --- Dictionary of the ranges for different variables. This is the stub variable from Tagger, so it has a leading _
+    '''
+
     import copy    
     from array import array
 
-    # flag to write out trees into csv format
-    writecsv= True
-
-    # for now remove yfilt and split12 - these will be updated soon!
     branches_pruned = copy.deepcopy(branches)
-    #for b in branches_pruned:
-    #    if b.find('SPLIT12') !=-1 or b.find('YFilt') != -1:
-    #        branches_pruned.remove(b)
+
     # add entries for weights
     to_append = ['mc_event_weight', 'evt_xsec', 'evt_filtereff', 'evt_nEvts', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta', 'jet_CamKt12Truth_phi', 'jet_CamKt12Truth_m', 'jet_CamKt12LCTopo_pt', 'jet_CamKt12LCTopo_eta', 'jet_CamKt12LCTopo_phi', 'jet_CamKt12LCTopo_m']
     for a in to_append:
         if a not in branches_pruned:
             branches_pruned.append(a)
+
+    # list any variables that you do not want to cut on/ add to the cutstring
+    donotcut = ['averageIntPerXing']
+    plotranges = {key: value for key, value in plotranges.items() if key not in donotcut}
+
+    # update cutstring to keep all variables within range specified in plotconfig
+    for p in plotranges.keys():
+        prefix = "jet_"+Algorithm
+        if not p.startswith("_"):
+            prefix += "_"
+        cutstring += "*(" +prefix+p+">="+str(plotranges[p][0])+ ")*(" +prefix+p+"<="+str(plotranges[p][1]) + ")"
 
     # read the signal and background files
     for typename in ['sig','bkg']:
@@ -442,7 +460,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*numpydata['evt_nEvts'][i] for i in xrange(0,len(numpydata['evt_xsec']))]
         else:
             numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
-        print list(numpydata)
+        #print list(numpydata)
         
 
         if typename == 'sig': 

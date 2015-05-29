@@ -40,7 +40,7 @@ def getMassWindow(massfile):
     max_mass, min_mass
     '''
     f = open(massfile)
-    print massfile
+    #print massfile
     m_max = 0.0
     m_min = 0.0
     for l in f:
@@ -632,11 +632,8 @@ def main(args):
     ROOT.gROOT.LoadMacro("NEvents.C")
 
     # declare the dictionaries for trees, input files, weights and run numbers
-    trees,files,pthists,weights,runs = ( {} for i in range(5) ) 
+    trees,files,pthists = ( {} for i in range(3) ) 
 
-    # set event weights and run numbers
-    fn.setweights(weights)
-    fn.setrunnumbers(runs)
     # read in config file
     fn.readXML(config_f)
 
@@ -834,6 +831,11 @@ def main(args):
     plotconfig['pt'][MINX] = ptrange[0]
     plotconfig['pt'][MAXX] = ptrange[1]
 
+    # dictionary containing the plotting ranges, using the stub as the key
+    plotranges = {}
+    for p in plotconfig.keys():
+        plotranges[plotconfig[p][0]] = [plotconfig[p][MINX],plotconfig[p][MAXX]]
+
     # get extra variables to be used for selection from tree
     # this is a dictionary with [variable]= [stub, jetvariable flag]
     AlgBranchStubs = fn.getBranches() 
@@ -916,7 +918,6 @@ def main(args):
     maxrejvar = ''
     maxrejm_min = 0
     maxrejm_max = 0
-    print plotbranches
 
     for m in masses:
 
@@ -939,7 +940,7 @@ def main(args):
                 maxrejm_min = m_min
                 maxrejm_max = m_max
         else:
-            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, massPtFunctions.getPtWeightsFile())
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, massPtFunctions.getPtWeightsFile(), plotranges)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
     # close all of the tfiles

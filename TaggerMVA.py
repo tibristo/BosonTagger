@@ -26,7 +26,7 @@ def plotVars(algorithm):
         #data[v].diff().hist(bins=20)
         plt.xlabel(v)
         #plt.show()
-        plt.savefig(str(v+'.png'))
+        plt.savefig(str(algorithm+'_'+v+'.png'))
         plt.close()
         #raw_input()
 
@@ -75,7 +75,8 @@ def pca(algorithm):
 
 def main():
     
-    Algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_v1_1000_1500'
+    Algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500'
+    #pca(Algorithm)
     plotVars(Algorithm)
     return
     #Algorithm = sys.argv[1]
