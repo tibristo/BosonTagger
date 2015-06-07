@@ -469,7 +469,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             
         else: 
             numpydata['label']=0 
-            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv',mode='a',header=False)
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')#,mode='a',header=False)
 
         file_in.Close()
             

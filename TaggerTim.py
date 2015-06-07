@@ -930,7 +930,7 @@ def main(args):
         records = 'logs/TaggerOpt'+Algorithm+fileid+'_'+str(m_max)+'_'+str(m_min)+'_.out'
 
         # run the analysis for mass range
-        masses = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
+        mass_cut = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
         if not writecsv:
             rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
 
@@ -940,7 +940,8 @@ def main(args):
                 maxrejm_min = m_min
                 maxrejm_max = m_max
         else:
-            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+masses, treename, Algorithm, fileid, massPtFunctions.getPtWeightsFile(), plotranges)
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid+'_nomw', massPtFunctions.getPtWeightsFile(), plotranges)
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+mass_cut, treename, Algorithm, fileid+'_mw', massPtFunctions.getPtWeightsFile(), plotranges)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
     # close all of the tfiles
