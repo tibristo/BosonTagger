@@ -14,7 +14,7 @@ from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
 
 #import cv_fold
-def persist_cv_splits(X, y, w, n_cv_iter=5, name='data',\
+def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
                       suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True):
     """Materialize randomized train test splits of a dataset."""
     cv = StratifiedKFold(y,n_cv_iter)
@@ -34,7 +34,7 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data',\
         else:
             #fold = cv_fold.cv_fold(X[train], y[train], w[train], X[test], y[test], w[test])
             fold = (X[train], y[train], w[train], X[test], y[test], w[test])
-        cv_split_filename = name + suffix % i
+        cv_split_filename = prefix+name + suffix % i
         cv_split_filename = os.path.abspath(cv_split_filename)
         joblib.dump(fold, cv_split_filename)
         cv_split_filenames.append(cv_split_filename)
@@ -59,10 +59,10 @@ def compute_evaluation(cv_split_filename, model, params, weighted=True):
     model.set_params(**params)
     if weighted:
         model.fit(X_train, y_train, w_train)
-        validation_score = model.score(X_validation, y_validation, w_validation)
+        #validation_score = model.score(X_validation, y_validation, w_validation)
     else:
         model.fit(X_train, y_train)
-        validation_score = model.score(X_validation, y_validation)
+    validation_score = model.score(X_validation, y_validation)
         
     return validation_score
 
@@ -126,8 +126,8 @@ from IPython.parallel import Client
 from collections import OrderedDict
 
 client = Client()
-with client[:].sync_imports():
-    import cv_fold
+#with client[:].sync_imports():
+#    import cv_fold
 lb_view = client.load_balanced_view()
 model = AdaBoostClassifier()
 base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]
@@ -141,7 +141,8 @@ algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_
 trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
 
 import pandas as pd
-data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+#data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
 
 filenames = cross_validation(data, model, params, 2, trainvars)
