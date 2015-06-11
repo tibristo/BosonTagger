@@ -457,7 +457,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
         numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm+'_',''), inplace=True)
 
         if typename == 'bkg':
-            numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*numpydata['evt_nEvts'][i] for i in xrange(0,len(numpydata['evt_xsec']))]
+            numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*(1./numpydata['evt_nEvts'][i]) for i in xrange(0,len(numpydata['evt_xsec']))]
         else:
             numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
         #print list(numpydata)
