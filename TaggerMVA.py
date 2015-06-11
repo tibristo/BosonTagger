@@ -13,7 +13,8 @@ from sklearn.metrics import roc_curve, auc
 import itertools
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 
-trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
+#trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
+trainvars = ['Tau1','m','EEC_C2_1','pt','EEC_C2_2','phi','TauWTA2TauWTA1','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','eta','TauWTA1']
 #trainvars = trainvars[::-1]
 
 def svd(algorithm):
@@ -93,53 +94,45 @@ def plotVars(algorithm):
         #raw_input()
 
 def pca(algorithm):
-    data = pd.read_csv('csv/'+algorithm+'_bkg.csv')
+    plt.rcParams['figure.figsize'] = 10, 7.5
+    plt.rcParams['axes.grid'] = True
+    plt.gray()
+    data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
     print trainvars
-    #print data[trainvars]
-    #cov = np.cov(data['Aplanarity'],data['ThrustMin'],data['Tau1'],data['Sphericity'],data['m'],data['FoxWolfram20'],data['Tau21'],data['ThrustMaj'],data['EEC_C2_1'],data['pt'],data['EEC_C2_2'],data['Dip12'],data['phi'],data['SPLIT12'],data['TauWTA2TauWTA1'],data['EEC_D2_1'],data['YFilt'],data['Mu12'],data['TauWTA2'],data['Angularity'],data['ZCUT12'],data['Tau2'],data['EEC_D2_2'],data['eta'],data['TauWTA1'],data['PlanarFlow'])
     datatrain = data[trainvars]
-    print datatrain.shape
-    #print datatrain.keys()
-    #print datatrain
-    datatrain = (datatrain - np.mean(datatrain, 0))/np.std(datatrain,0)
-    #print datatrain
+    # standardise the data
+    datatrain = (datatrain - np.mean(datatrain))/np.std(datatrain)
+    y = data['label'].values
+    from sklearn.decomposition import RandomizedPCA
+    #pca = PCA().fit(datatrain, datalabels)
+    pca = RandomizedPCA(n_components=2)
+    x_pca = pca.fit_transform(datatrain)
+    print x_pca.shape
+    from itertools import cycle
 
-    #ec = EmpiricalCovariance().fit(datatrain)
-    ec = MinCovDet().fit(datatrain)
-    #print ec.covariance_
-    # get the eigenvectors/values from the covariance matrix.
-    eig_val_cov, eig_vec_cov = np.linalg.eig(ec.covariance_)
-    
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
-    for i in range(len(eig_val_cov)):
-        eigvec_cov = eig_vec_cov[:,i].reshape(1,26).T
-        #print('Eigenvector {}: \n{}'.format(trainvars[i], eigvec_cov))
-        print('Eigenvalue {} from covariance matrix: {}'.format(trainvars[i], eig_val_cov[i]))
-        print(40 * '-')
+    markers = ['+', 'o', '^', 'v', '<', '>', 'D', 'h', 's']
+    for i, c, m in zip(np.unique(y), cycle(colors), cycle(markers)):
+        plt.scatter(x_pca[y == i, 0], x_pca[y == i, 1],c=c, marker=m, label=i, alpha=0.5)
+        
+    _ = plt.legend(loc='best')
+    plt.show()
 
-    # check that the eigenvalues and vectors are correction: covmatrix.eigenvec = eigenval.eigenvector
-    for i in range(len(eig_val_cov)):
-        eigv = eig_vec_cov[:,i].reshape(1,26).T
-        np.testing.assert_array_almost_equal(ec.covariance_.dot(eigv),\
-                                                 eig_val_cov[i] * eigv, decimal=2,\
-                                                 err_msg='', verbose=True)
-
-    # list of eigenval/vec tuples
-    eig_pairs = [(np.abs(eig_val_cov[i]), eig_vec_cov[:,i]) for i in range(len(eig_val_cov))]
-    
-    eig_pairs, trainvars_eig = (list(t) for t in zip(*sorted(zip(eig_pairs, trainvars))))
-    #eig_pairs.sort()
-    #eig_pairs.reverse()
-
-    for i in zip(trainvars_eig, eig_pairs):
-        print i[0]+':' + str(i[1][0])
+    from sklearn.decomposition import PCA
+    pca_big = PCA().fit(datatrain, y)
+    plt.title("Explained Variance")
+    plt.ylabel("Percentage of explained variance")
+    plt.xlabel("PCA Components")
+    plt.plot(pca_big.explained_variance_ratio_);
+    plt.show()
 
 def main():
     
     Algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500'
-    #pca(Algorithm)
+    pca(Algorithm)
     #plotVars(Algorithm)
-    #return
+    return
     #Algorithm = sys.argv[1]
     #Algorithm = 'CamKt12LCTopoSplitFilteredMu100SmallR30YCut414tev_350_500_vxp_0_99'
     print 'Loading training data ...'
