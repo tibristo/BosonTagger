@@ -607,7 +607,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             sys.exit()
             
     #artificially set the first point to (1,1) to avoid overflow issues
-    gr.SetPoint(0, 1.0, 1.0)
+    gr.SetPoint(0, 0.0, 1.0)
     gr.SetPointError(0, 0.0, 0.0)
             
     ctest = TCanvas("ctest","ctest",400,400)
@@ -627,3 +627,50 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
     bkgRejPower = gr
     print "RETURNING from Single sided ROC calculation"
     return gr,hsigreg50,hcutval50,hsigreg25,hcutval25
+
+
+def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
+
+    
+    n = bkg.GetNbinsX()
+    #print "NBins",n
+
+    # normalise hists
+    if sig.Integral()!=0:
+        sig.Scale(1.0/sig.Integral());
+    if(bkg.Integral()!=0):
+        bkg.Scale(1.0/bkg.Integral());
+
+    totalBerr=Double()
+    totalSerr=Double()
+    totalB = bkg.IntegralAndError(0,n,totalBerr)
+    totalS = sig.IntegralAndError(0,n,totalSerr)
+
+
+    gr = TGraphErrors(n)
+    for i in range(1,n+1):
+        myS = 0.
+        myB = 0.
+
+        myBerr=Double()
+        mySerr=Double()
+        myB = bkg.IntegralAndError(1,i,myBerr)
+        myS = sig.IntegralAndError(1,i,mySerr)
+
+        gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+        gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            
+    #artificially set the first point to (1,1) to avoid overflow issues
+    gr.SetPoint(0, 1.0, 1.0)
+    gr.SetPointError(0, 0.0, 0.0)
+            
+    ctest = TCanvas("ctest","ctest",400,400)
+    gr.SetMinimum(0.0)
+    gr.SetMaximum(1.0)
+    gr.GetXaxis().SetRangeUser(0.0,1.0)
+    gr.Draw("AE3")
+    
+    curve = gr
+    bkgRejPower = gr
+    print "RETURNING from Single sided ROC calculation"
+    return gr

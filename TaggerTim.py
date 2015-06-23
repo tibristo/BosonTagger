@@ -211,7 +211,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
     return hist
         
 
-def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, recreate=True):
+def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw={}, rocs_rejection_scores={},recreate=True):
     '''
     Write plots to a ROOT file instead of png/pdf
     Keyword args:
@@ -230,8 +230,16 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, recreate=
             hist[h].Write()
     for r in rocs.keys():
         rocs[r].Write('roc_'+r)
+    for r in rocs_nomw.keys():
+        rocs_nomw[r].Write('roc_nomw_'+r)
     for r in rocs_rejpow.keys():
         rocs_rejpow[r].Write('bkgrejroc_'+r)
+
+    for s in rocs_rejection_scores.keys():
+        info = s+'_'+str(rocs_rejection_scores[s])
+        n = TNamed(info,info)
+        n.Write()
+        
     fo.Close()
 
 def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "0.0", mass_max = "1200000.0", scaleLumi = 1):
@@ -280,13 +288,14 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     global totalrejection
     # dict containing all of the ROC curves
     roc={}
-    #roc_errUp = {}
-    #roc_errDo = {}
-    # dict containing the bkgRejPower curves
-    bkgRejROC = {}
+    roc_nomw = {}
+    bkgRejROC= {}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
     # hist added to the roc is empty
     writeROC = False
+
+    # dictionary containing the 50% signal eff bkg rejection power
+    roc_rejection_scores = {}
 
     # dictionary holding all of the histograms without a mass cut
     hist_nomw = {}
@@ -307,17 +316,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         roc[branchname] = TGraphErrors()
         roc[branchname].SetTitle(branchname)
         roc[branchname].SetName('roc_'+branchname)
-        # add error rocs as well
-        #roc_errUp[branchname] = TGraph()
-        #roc_errUp[branchname].SetTitle(branchname+'_err_up')
-        #roc_errUp[branchname].SetName('roc_'+branchname+'_err_up')
-        #roc_errDo[branchname] = TGraph()
-        #roc_errDo[branchname].SetTitle(branchname+'_err_do')
-        #roc_errDo[branchname].SetName('roc_'+branchname+'_err_do')
+        roc_nomw[branchname] = TGraphErrors()
+        roc_nomw[branchname].SetTitle(branchname)
+        roc_nomw[branchname].SetName('roc_nomw_'+branchname)
         # add bkg rej power dictionary entry
         bkgRejROC[branchname] = TGraphErrors()
         bkgRejROC[branchname].SetTitle(branchname)
-        bkgRejROC[branchname].SetName('bkgrejroc_'+branchname)
+        bkgRejROC[branchname].SetName('bkgrej_roc_'+branchname)
         # new canvas
         canv1.cd(index+1)
 
@@ -471,7 +476,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             bkgrej = 1/(1-eval_roc)
         else:
             bkgrej = -1
-
+        
+        roc_rejection_scores[branchname] = bkgrej
 
         if (eval_rocup != 1):
             bkgrej_errUp = abs(bkgrej-1/(1-eval_rocup))
@@ -497,6 +503,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
         hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
         if saveNoMassWindowPlots:
+            roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+            canv1.cd(index+1)
+            #roc_nomw[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
+            #roc_nomw[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
             hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); 
             hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);  
 
@@ -557,10 +567,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     if savePlots:
         #write out the plots after cuts
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
-        writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC)
+        writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC, roc_nomw, roc_rejection_scores, recreate=True)
         #responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
         #responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi, applyMassWindow=False)
-        writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
+        #writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
 
     # write out event counts for mass window cuts (not weighted)
     cutflow.write('Signal:\njet selection no mass window: '+'pt' +' '+ str(hist_nomw['sig_jet_'+Algorithm+'_pt_full'].GetEntries())+'\n')

@@ -6,18 +6,19 @@
 # Probability distributions
 import numpy as np
 from sklearn.externals import joblib
-from sklearn.cross_validation import ShuffleSplit, StratifiedKFold
+from sklearn.cross_validation import ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit
 import os, sys, time
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
+        
 
 #import cv_fold
 def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
                       suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True):
     """Materialize randomized train test splits of a dataset."""
-    cv = StratifiedKFold(y,n_cv_iter)
+    cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
@@ -42,9 +43,18 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
     return cv_split_filenames
 
 
-def compute_evaluation(cv_split_filename, model, params, weighted=True):
+def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm=''):
     """Function executed by a worker to evaluate a model on a CV split"""
     from sklearn.externals import joblib
+    import numpy as np
+    from sklearn.metrics import roc_curve, auc
+    import modelEvaluation as me
+
+    from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
+    import numpy as np
+    from root_numpy import fill_hist
+    #from functions import RocCurve_SingleSided_WithUncer
+
     #import cv_fold
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         cv_split_filename, mmap_mode='c')
@@ -63,11 +73,79 @@ def compute_evaluation(cv_split_filename, model, params, weighted=True):
     else:
         model.fit(X_train, y_train)
     validation_score = model.score(X_validation, y_validation)
+    prob_predict_valid = model.predict_proba(X_validation)[:,1]
+    fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid)
+    #roc = RocCurve_SingleSided(y_validation,prob_predict_valid,1,1)
+    # find 0.5 tpr
+    idx = (np.abs(tpr-0.5)).argmin()
+    fpr_05 = fpr[idx]
+    rej = 1-fpr_05
+    if rej != 1:
+        bkgrej = 1/(1-rej)
+    else:
+        bkgrej = -1
+
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm)
+    sig_idx = y_validation == 1
+    bkg_idx = y_validation == 0
+    m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
+    '''
+    matrix = np.vstack((tpr, 1-fpr)).T
+    labelstring = ' And '.join(t for t in taggers)
+    hist = TH2D(algorithm,labelstring, 100, 0, 1, 100, 0, 1)
+    fill_hist(hist, matrix)
+    fo = TFile.Open("ROC/SK"+str(job_id)+'.root','RECREATE')
+    hist.Write()
+    
+    info = 'Rejection_power_'+str(bkgrej)
+    tn = TNamed(info,info)
+    tn.Write()
+    bins = 100
+    discriminant_bins = np.linspace(np.min(prob_predict_valid), np.max(prob_predict_valid), 100)
+    
+    hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(prob_predict_valid), np.max(prob_predict_valid))
+    hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(prob_predict_valid), np.max(prob_predict_valid))
+    fill_hist(hist_bkg,prob_predict_valid[bkg_idx])
+    if hist_bkg.Integral() != 0:
+        hist_bkg.Scale(1/hist_bkg.Integral())
+        fill_hist(hist_sig,prob_predict_valid[signal_idx])
+    if hist_sig.Integral() != 0:
+        hist_sig.Scale(1/hist_sig.Integral())
         
-    return validation_score
+    hist_sig.SetLineColor(4)
+    hist_bkg.SetLineColor(2)
+    hist_sig.SetFillStyle(3004)
+    hist_bkg.SetFillStyle(3005)
+    hist_sig.Write()
+    hist_bkg.Write()
+    c = TCanvas()
+    hist_sig.Draw('hist')
+    hist_bkg.Draw('histsame')
+    c.Write()
+    
+    fo.Close()
+    del hist_bkg
+    del hist_sig
+    del hist
+    del tn
+    '''
+    #m.toROOT(sig_idx, bkg_idx, prob_predict_valid)
+    f_name = 'evaluationObjects/'+job_id+'.pickle'
+    # save the model for later
+    import pickle 
+    try:
+        with open(f_name,'w') as d:
+            pickle.dump(m, d)
+    except:
+        msg = 'unable to dump object'
+        with open(f_name,'w') as d:
+            pickle.dump(msg, d)
+        print 'unable to dump object'
+
+    return bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -78,7 +156,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid):
         
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+'cvID_'+str(j), taggers=variables, algorithm=algo)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -91,17 +169,23 @@ def progress(tasks):
                                  for task in task_group])
 
 
-def find_bests(all_parameters, all_tasks, n_top=5):
+def find_bests(all_parameters, all_tasks, n_top=5, save=False):
     """Compute the mean score of the completed tasks"""
     mean_scores = []
-    
+    param_id = 0
     for param, task_group in zip(all_parameters, all_tasks):
         scores = [t.get() for t in task_group if t.ready()]
         if len(scores) == 0:
             continue
-        mean_scores.append((np.mean(scores), param))
-                   
-    return sorted(mean_scores, reverse=True, key=lambda x: x[0])[:n_top]
+        mean_scores.append((np.mean(scores), param, param_id))
+        param_id+=1
+    bests = sorted(mean_scores, reverse=True, key=lambda x: x[0])[:n_top]        
+    if save:
+        f = open('bests/bests.txt','w')
+        for b in bests:
+            f.write('mean_score: ' + str(b[0]) + ' params: ' + str(b[1]) + ' param id: ' + str(b[2])+'\n')
+        f.close()
+    return bests
 
 
 def cross_validation(data, model, params, iterations, variables):
@@ -144,19 +228,19 @@ import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
+trainvars_iterations = [trainvars]
 
-filenames = cross_validation(data, model, params, 2, trainvars)
-allparms, alltasks = grid_search(
-    lb_view, model, filenames, params)
+for t in trainvars_iterations:
+    filenames = cross_validation(data, model, params, 2, t)
+    allparms, alltasks = grid_search(
+        lb_view, model, filenames, params, t, algorithm)
 
 
-#allparms, alltasks = cross_validation(data, model, params, 2, trainvars)
-
-prog = printProgress(alltasks)
-while prog < 1:
-    time.sleep(10)
     prog = printProgress(alltasks)
-    pprint(find_bests(allparms,alltasks))
+    while prog < 1:
+        time.sleep(10)
+        prog = printProgress(alltasks)
+        pprint(find_bests(allparms,alltasks))
 
 
-pprint(find_bests(allparms,alltasks))
+    pprint(find_bests(allparms,alltasks,len(allparms), True))
