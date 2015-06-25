@@ -88,7 +88,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm)
     sig_idx = y_validation == 1
     bkg_idx = y_validation == 0
-    m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
+    m.setProbas(sig_idx, bkg_idx, prob_predict_valid)
     '''
     matrix = np.vstack((tpr, 1-fpr)).T
     labelstring = ' And '.join(t for t in taggers)

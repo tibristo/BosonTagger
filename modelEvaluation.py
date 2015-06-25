@@ -33,14 +33,20 @@ class modelEvaluation:
         self.sig_idx = signal_idx
         self.bkg_idx = bkg_idx
         
-    def toROOT(self, signal_idx, bkg_idx, discriminant):
+    def plotDiscriminant(self, signal_idx, bkg_idx, discriminant):
+        import ROOT as root
         from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
         import numpy as np
         from root_numpy import fill_hist
-        matrix = np.vstack((self.tpr, 1-self.fpr)).T
+
+        root.gROOT.SetBatch(True)
+        matrix = np.vstack((self.tpr, 1-self.fpr)).T.astype(float)
+
         labelstring = ' And '.join(t for t in self.taggers)
         hist = TH2D(self.Algorithm,labelstring, 100, 0, 1, 100, 0, 1)
+
         fill_hist(hist, matrix)
+
         fo = TFile.Open("ROC/SK"+str(self.job_id)+'.root','RECREATE')
         hist.Write()
 
@@ -76,7 +82,8 @@ class modelEvaluation:
 
 
     def toROOT(self):
-        if self.discriminant:
-            self.toROOT(self.sig_idx, self.bkg_idx, self.discriminant)
+        if self.discriminant is not None:
+            #self.plotDiscriminant(self.sig_idx, self.bkg_idx, self.discriminant)
+            self.plotDiscriminant(self.discriminant, self.sig_idx, self.bkg_idx)
         else:
             return
