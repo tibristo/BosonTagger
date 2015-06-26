@@ -16,9 +16,13 @@ from pprint import pprint
 
 #import cv_fold
 def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
-                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True):
+                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True):
     """Materialize randomized train test splits of a dataset."""
-    cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
+    import os.path
+    from root_numpy import array2root
+    import numpy.lib.recfunctions as nf
+    cv = StratifiedKFold(y,n_cv_iter)
+    #cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
@@ -26,6 +30,13 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
     #scale the data
     
     for i, (train, test) in enumerate(cv):
+        cv_split_filename = prefix+name + suffix % i
+        cv_split_filename = os.path.abspath(cv_split_filename)
+        cv_split_filenames.append(cv_split_filename)
+
+        if os.path.isfile(cv_split_filename) and overwrite == False:
+            continue
+
         if scale:
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X[train])
@@ -35,10 +46,12 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
         else:
             #fold = cv_fold.cv_fold(X[train], y[train], w[train], X[test], y[test], w[test])
             fold = (X[train], y[train], w[train], X[test], y[test], w[test])
-        cv_split_filename = prefix+name + suffix % i
-        cv_split_filename = os.path.abspath(cv_split_filename)
+
         joblib.dump(fold, cv_split_filename)
-        cv_split_filenames.append(cv_split_filename)
+        rectrain = nf.append_fields(X[train], names='label', data=y[train], usemask=False)#, dtypes=int)#, usemask=False)
+        array2root(rectrain, cv_split_filename.replace('.pkl','.root'), 'outputTree','recreate')
+        rectest = nf.append_fields(X[test], names='label', data=y[test], usemask=False)#, dtypes=int)#, usemask=False)
+        array2root(rectest, cv_split_filename.replace('.pkl','.root'), 'outputTree','recreate')
     
     return cv_split_filenames
 
@@ -50,11 +63,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     from sklearn.metrics import roc_curve, auc
     import modelEvaluation as me
 
-    from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
     import numpy as np
-    from root_numpy import fill_hist
-    #from functions import RocCurve_SingleSided_WithUncer
-
     #import cv_fold
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         cv_split_filename, mmap_mode='c')
@@ -85,50 +94,11 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     else:
         bkgrej = -1
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm)
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
     sig_idx = y_validation == 1
     bkg_idx = y_validation == 0
-    m.setProbas(sig_idx, bkg_idx, prob_predict_valid)
-    '''
-    matrix = np.vstack((tpr, 1-fpr)).T
-    labelstring = ' And '.join(t for t in taggers)
-    hist = TH2D(algorithm,labelstring, 100, 0, 1, 100, 0, 1)
-    fill_hist(hist, matrix)
-    fo = TFile.Open("ROC/SK"+str(job_id)+'.root','RECREATE')
-    hist.Write()
-    
-    info = 'Rejection_power_'+str(bkgrej)
-    tn = TNamed(info,info)
-    tn.Write()
-    bins = 100
-    discriminant_bins = np.linspace(np.min(prob_predict_valid), np.max(prob_predict_valid), 100)
-    
-    hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(prob_predict_valid), np.max(prob_predict_valid))
-    hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(prob_predict_valid), np.max(prob_predict_valid))
-    fill_hist(hist_bkg,prob_predict_valid[bkg_idx])
-    if hist_bkg.Integral() != 0:
-        hist_bkg.Scale(1/hist_bkg.Integral())
-        fill_hist(hist_sig,prob_predict_valid[signal_idx])
-    if hist_sig.Integral() != 0:
-        hist_sig.Scale(1/hist_sig.Integral())
-        
-    hist_sig.SetLineColor(4)
-    hist_bkg.SetLineColor(2)
-    hist_sig.SetFillStyle(3004)
-    hist_bkg.SetFillStyle(3005)
-    hist_sig.Write()
-    hist_bkg.Write()
-    c = TCanvas()
-    hist_sig.Draw('hist')
-    hist_bkg.Draw('histsame')
-    c.Write()
-    
-    fo.Close()
-    del hist_bkg
-    del hist_sig
-    del hist
-    del tn
-    '''
+    m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
+
     #m.toROOT(sig_idx, bkg_idx, prob_predict_valid)
     f_name = 'evaluationObjects/'+job_id+'.pickle'
     # save the model for later
@@ -188,12 +158,12 @@ def find_bests(all_parameters, all_tasks, n_top=5, save=False):
     return bests
 
 
-def cross_validation(data, model, params, iterations, variables):
+def cross_validation(data, model, params, iterations, variables, ovwrite=True):
     X = data[variables].values
     y = data['label'].values
     w = data['weight'].values
 
-    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_cv_%03d.pkl", test_size=0.25, random_state=None)
+    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, overwrite=ovwrite)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -231,7 +201,7 @@ data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 trainvars_iterations = [trainvars]
 
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 2, t)
+    filenames = cross_validation(data, model, params, 2, t, ovwrite=False)
     allparms, alltasks = grid_search(
         lb_view, model, filenames, params, t, algorithm)
 

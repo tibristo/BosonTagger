@@ -1,6 +1,6 @@
 
 class modelEvaluation:
-    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm):
+    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm, score, train_file):
         import numpy as np
         self.fpr = fpr
         self.tpr = tpr
@@ -12,6 +12,8 @@ class modelEvaluation:
         self.job_id = job_id
         self.taggers = taggers
         self.Algorithm = Algorithm
+        self.score = score
+        self.train_file = train_file
         
     def plot(self):
         import matplotlib.pyplot as plt
@@ -33,7 +35,7 @@ class modelEvaluation:
         self.sig_idx = signal_idx
         self.bkg_idx = bkg_idx
         
-    def plotDiscriminant(self, signal_idx, bkg_idx, discriminant):
+    def plotDiscriminant(self, discriminant, signal_idx, bkg_idx):
         import ROOT as root
         from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
         import numpy as np
