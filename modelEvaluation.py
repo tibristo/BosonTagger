@@ -40,6 +40,7 @@ class modelEvaluation:
         from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
         import numpy as np
         from root_numpy import fill_hist
+        import functions as fn
 
         root.gROOT.SetBatch(True)
         matrix = np.vstack((self.tpr, 1-self.fpr)).T.astype(float)
@@ -58,14 +59,18 @@ class modelEvaluation:
         bins = 100
         discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), 100)
 
-        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, 1-np.min(discriminant), 1-np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
-        fill_hist(hist_bkg,discriminant[bkg_idx])
+        discr_rej = 1-discriminant[bkg_idx]
+        # TODO: 27/06/2015 right now this is not working!!!!
+        fill_hist(hist_bkg,discr_rej)
         if hist_bkg.Integral() != 0:
             hist_bkg.Scale(1/hist_bkg.Integral())
         fill_hist(hist_sig,discriminant[signal_idx])
         if hist_sig.Integral() != 0:
             hist_sig.Scale(1/hist_sig.Integral())
+
+
 
         hist_sig.SetLineColor(4)
         hist_bkg.SetLineColor(2)
@@ -79,6 +84,9 @@ class modelEvaluation:
         hist_sig.Draw('hist')
         hist_bkg.Draw('histsame')
         c.Write()
+
+        roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1,1)
+        roc_graph.Write()
         
         fo.Close()
 

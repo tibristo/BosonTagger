@@ -643,26 +643,26 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
 
     totalBerr=Double()
     totalSerr=Double()
-    totalB = bkg.IntegralAndError(0,n,totalBerr)
-    totalS = sig.IntegralAndError(0,n,totalSerr)
+    totalB = bkg.Integral()
+    totalS = sig.Integral()
 
 
-    gr = TGraphErrors(n)
+    gr = TGraph(n)
     for i in range(1,n+1):
         myS = 0.
         myB = 0.
 
         myBerr=Double()
         mySerr=Double()
-        myB = bkg.IntegralAndError(1,i,myBerr)
-        myS = sig.IntegralAndError(1,i,mySerr)
+        myB = bkg.Integral(1,i)
+        myS = sig.Integral(1,i)
 
-        gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
-        gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+        gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+        #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkg_eff)
             
     #artificially set the first point to (1,1) to avoid overflow issues
-    gr.SetPoint(0, 1.0, 1.0)
-    gr.SetPointError(0, 0.0, 0.0)
+    #gr.SetPoint(0, 1.0, 1.0)
+    
             
     ctest = TCanvas("ctest","ctest",400,400)
     gr.SetMinimum(0.0)
