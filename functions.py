@@ -636,15 +636,15 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
     #print "NBins",n
 
     # normalise hists
-    if sig.Integral()!=0:
-        sig.Scale(1.0/sig.Integral());
-    if(bkg.Integral()!=0):
-        bkg.Scale(1.0/bkg.Integral());
+    #if sig.Integral()!=0:
+    #    sig.Scale(1.0/sig.Integral());
+    #if(bkg.Integral()!=0):
+    #    bkg.Scale(1.0/bkg.Integral());
 
     totalBerr=Double()
     totalSerr=Double()
-    totalB = bkg.Integral()
-    totalS = sig.Integral()
+    totalB = bkg.Integral(0,n)
+    totalS = sig.Integral(0,n)
 
 
     gr = TGraph(n)
@@ -656,7 +656,8 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
         mySerr=Double()
         myB = bkg.Integral(1,i)
         myS = sig.Integral(1,i)
-
+        print 'myS: ' + str(myS)
+        print 'myB: ' + str(myB)
         gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
         #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkg_eff)
             

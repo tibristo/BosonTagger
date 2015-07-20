@@ -57,13 +57,13 @@ class modelEvaluation:
         tn = TNamed(info,info)
         tn.Write()
         bins = 100
-        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), 100)
+        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
 
-        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, 1-np.min(discriminant), 1-np.max(discriminant))
+        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         discr_rej = 1-discriminant[bkg_idx]
         # TODO: 27/06/2015 right now this is not working!!!!
-        fill_hist(hist_bkg,discr_rej)
+        fill_hist(hist_bkg,discriminant[bkg_idx])
         if hist_bkg.Integral() != 0:
             hist_bkg.Scale(1/hist_bkg.Integral())
         fill_hist(hist_sig,discriminant[signal_idx])
