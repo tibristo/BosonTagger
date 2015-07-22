@@ -252,6 +252,17 @@ def readXML(configfile):
         lumi = float(l.get('name'))
 
 def addLatex(algo, algosettings, ptrange, E, nvtxrange):
+    '''
+    Method to add Latex text to a plot.  The canvas is already set before this method
+    is called, so that when this is run it is already on that canvas.
+    
+    Key args:
+    algo --- Algorithm name
+    algosettings --- Any additional settings that were used.
+    ptrange --- The pT range that this is plotted in.
+    E --- Energy of the simulations
+    nvtxrange --- The cuts on the number of vertices.
+    '''
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
@@ -295,6 +306,10 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000))#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
 def drawHists(hist1, hist2):
+    '''
+    Draw two histograms on the same canvas (with errors).  The canvas must be created before this method is called.
+    '''
+
     hist1.SetMaximum(hist1.GetMaximum()*1.2)
     hist1.Draw("e")
     hist1.Draw("hist same")
@@ -629,7 +644,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
     return gr,hsigreg50,hcutval50,hsigreg25,hcutval25
 
 
-def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
+def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
 
     
     n = bkg.GetNbinsX()
@@ -654,12 +669,27 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
 
         myBerr=Double()
         mySerr=Double()
-        myB = bkg.Integral(1,i)
-        myS = sig.Integral(1,i)
-        print 'myS: ' + str(myS)
-        print 'myB: ' + str(myB)
-        gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+        #myB = bkg.Integral(1,i)
+        #myS = sig.Integral(1,i)
+        #print 'myS: ' + str(myS)
+        #print 'myB: ' + str(myB)
+        #gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
         #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkg_eff)
+        if cutside=="R":
+            #loop from i to end
+            myB = bkg.Integral(i,n)
+            myS = sig.Integral(i,n)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+            #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+        elif cutside=="L":
+            #loop from 0 to i
+            myB = bkg.Integral(1,i)
+            myS = sig.Integral(1,i)
+            #print i,"  myS=",myS,"  myB=",myB
+            gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+            #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            
             
     #artificially set the first point to (1,1) to avoid overflow issues
     #gr.SetPoint(0, 1.0, 1.0)
@@ -675,3 +705,47 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff):
     bkgRejPower = gr
     print "RETURNING from Single sided ROC calculation"
     return gr
+
+
+def median(hist):
+    '''
+    Calculate the median of a histogram.  Use GetQuantiles() with a probability of 0.5.
+    '''
+    
+    import array as arr
+    # The GetQuantiles method takes a Double_t * as the 2nd and 3rd args
+    median = arr.array('d',[-1])
+    prob = arr.array('d',[0.5])
+    # median gets filled with the actual median
+    hist.GetQuantiles(1, median, prob)
+    
+    return median[0]
+
+def getEfficiencies(roc):
+    '''
+    Method to return a numpy array of the signal and background efficiency from a ROC curve.
+    
+    Key args:
+    roc -- The input ROC curve in the form of a TGraph
+
+    Returns:
+    sig_eff --- the signal efficiency
+    bkg_rej --- the background rejection (1 - eff)
+    '''
+    import ROOT as rt
+    import numpy as np
+
+    # number of points in the TGraph
+    n_points = roc.GetN()
+    sig_eff = np.zeros(n_points)
+    bkg_rej = np.zeros(n_points)
+    
+    for i in range(n_points):
+        sig_i = rt.Double(0)
+        bkg_i = rt.Double(0)
+        # the signal and background values are set by ref.
+        roc.GetPoint(i, sig_i, bkg_i)
+        sig_eff[i] = float(sig_i)
+        bkg_rej[i] = float(bkg_i)
+
+    return sig_eff, bkg_rej

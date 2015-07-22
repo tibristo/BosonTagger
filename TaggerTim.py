@@ -439,10 +439,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
+            if singleSidedROC == 'M':
+                # check where the median is so we can correctly choose L or R cut.
+                sig_median = fn.median(hist['sig_'+branchname])
+                bkg_median = fn.median(hist['bkg_'+branchname])
 
-            if singleSidedROC == 'L' or singleSidedROC == 'R':
+                if sig_median > bkg_median:
+                    side = 'R'
+                else:
+                    side = 'L'
+                    
+                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
+                bkgRejROC[branchname] = roc[branchname]
+
+            elif singleSidedROC == 'L' or singleSidedROC == 'R':
                 roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
                 bkgRejROC[branchname] = roc[branchname]
+
             else:
                 MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname], signal_eff, bkg_eff)
             writeROC = True
@@ -503,7 +516,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
         hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
         if saveNoMassWindowPlots:
-            roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+            if singleSidedROC == 'M':
+                # check where the median is so we can correctly choose L or R cut.
+                sig_median = fn.median(hist_nomw['sig_'+branchname+'_full'])
+                bkg_median = fn.median(hist_nomw['bkg_'+branchname+'_full'])
+
+                if sig_median > bkg_median:
+                    side = 'R'
+                else:
+                    side = 'L'
+                    
+                roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
+
+            elif singleSidedROC == 'L' or singleSidedROC == 'R':
+                roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+
+            else:
+                MakeROCBen(1, hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], roc_nomw[branchname], TGraphErrors(), signal_eff, bkg_eff)
             canv1.cd(index+1)
             #roc_nomw[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
             #roc_nomw[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
@@ -758,7 +787,7 @@ def main(args):
 
     global singleSidedROC
     if args.ROCside:
-        if args.ROCside == 'L' or args.ROCside == 'R':
+        if args.ROCside == 'L' or args.ROCside == 'R' or args.ROCside = 'M':
             singleSidedROC = args.ROCside
 
     # lumi scaling

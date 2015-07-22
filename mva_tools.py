@@ -106,10 +106,12 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     try:
         with open(f_name,'w') as d:
             pickle.dump(m, d)
+        d.close()
     except:
         msg = 'unable to dump object'
         with open(f_name,'w') as d:
             pickle.dump(msg, d)
+        d.close()
         print 'unable to dump object'
 
     return bkgrej#validation_score
@@ -184,12 +186,25 @@ client = Client()
 #    import cv_fold
 lb_view = client.load_balanced_view()
 model = AdaBoostClassifier()
+'''
 base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]
 params = OrderedDict([
     ('base_estimator', base_estimators),
     ('n_estimators', np.linspace(5, 20, 10, dtype=np.int)),
     ('learning_rate', np.linspace(0.1, 1, 10))
 ])
+'''
+
+base_estimators = [DecisionTreeClassifier(max_depth=5)]
+params = OrderedDict([
+        ('base_estimator', base_estimators),
+        ('n_estimators', [20]),
+        ('learning_rate', [0.7])
+        ])
+#{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
+#            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
+#            min_samples_split=2, min_weight_fraction_leaf=0.0,
+#            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_nomw'
 trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']

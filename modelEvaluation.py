@@ -85,7 +85,16 @@ class modelEvaluation:
         hist_bkg.Draw('histsame')
         c.Write()
 
-        roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1,1)
+        # before deciding whether to do a left or right cut for the roc curve we have to find the median.
+        sig_median = np.median(discriminant[signal_idx])
+        bkg_median = np.median(discriminant[bkg_idx])
+
+        if sig_median > bkg_median:
+            roc_cut = 'R'
+        else:
+            roc_cut = 'L'
+        
+        roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, 1,1, roc_cut)
         roc_graph.Write()
         
         fo.Close()
