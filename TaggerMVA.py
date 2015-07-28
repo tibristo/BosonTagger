@@ -14,7 +14,8 @@ import itertools
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
-trainvars = ['Tau1','m','EEC_C2_1','pt','EEC_C2_2','phi','TauWTA2TauWTA1','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','eta','TauWTA1']
+#trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','TauWTA2TauWTA1','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
+trainvars = ['EEC_D2_1', 'EEC_C2_1', 'TauWTA2TauWTA1']
 #trainvars = trainvars[::-1]
 
 def svd(algorithm):
@@ -97,14 +98,16 @@ def pca(algorithm):
     plt.rcParams['figure.figsize'] = 10, 7.5
     plt.rcParams['axes.grid'] = True
     plt.gray()
-    data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+    #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+    data = pd.read_csv('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_mw_merged.csv')
     print trainvars
     datatrain = data[trainvars]
     # standardise the data
     datatrain = (datatrain - np.mean(datatrain))/np.std(datatrain)
     y = data['label'].values
     from sklearn.decomposition import RandomizedPCA
-    #pca = PCA().fit(datatrain, datalabels)
+    from sklearn.decomposition import PCA
+    #pca = PCA().fit(datatrain, y)
     pca = RandomizedPCA(n_components=2)
     x_pca = pca.fit_transform(datatrain)
     print x_pca.shape
@@ -119,13 +122,28 @@ def pca(algorithm):
     _ = plt.legend(loc='best')
     plt.show()
 
-    from sklearn.decomposition import PCA
+    
     pca_big = PCA().fit(datatrain, y)
     plt.title("Explained Variance")
     plt.ylabel("Percentage of explained variance")
     plt.xlabel("PCA Components")
     plt.plot(pca_big.explained_variance_ratio_);
     plt.show()
+
+    from sklearn.decomposition import FastICA
+    ica = FastICA(n_components=2)
+    x_ica = ica.fit_transform(datatrain)
+    print x_ica.shape
+
+
+    plt.title("ICA")
+    for i, c, m in zip(np.unique(y), cycle(colors), cycle(markers)):
+        plt.scatter(x_ica[y == i, 0], x_ica[y == i, 1],c=c, marker=m, label=i, alpha=0.5)
+        
+    _ = plt.legend(loc='best')
+    plt.show()
+
+
 
 def main():
     

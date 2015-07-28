@@ -695,12 +695,12 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
     #gr.SetPoint(0, 1.0, 1.0)
     
             
-    ctest = TCanvas("ctest","ctest",400,400)
+    #ctest = TCanvas("ctest","ctest",400,400)
     gr.SetMinimum(0.0)
     gr.SetMaximum(1.0)
     gr.GetXaxis().SetRangeUser(0.0,1.0)
-    gr.Draw("AE3")
-    
+    #gr.Draw("AE3")
+    #ctest.SaveAs("ctest.png")
     curve = gr
     bkgRejPower = gr
     print "RETURNING from Single sided ROC calculation"
