@@ -1,6 +1,6 @@
 
 class modelEvaluation:
-    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm, score, train_file):
+    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm, score, train_file, features):
         import numpy as np
         self.fpr = fpr
         self.tpr = tpr
@@ -16,6 +16,18 @@ class modelEvaluation:
         self.train_file = train_file
         self.max_eff = 1.0
         self.min_eff = 0.0
+        self.ROC_rej_power_05 = -1
+        self.sortedFeatures()
+
+
+    def sortedFeatures(self):
+        import numpy as np
+        feature_importance = self.feature_importances
+        # make importances relative to max importance
+        #feature_importance = 100.0 * (feature_importance / feature_importance.max())
+        self.features_sorted_idx = np.argsort(feature_importance)[::-1]
+        # now to access most important feature's name use
+        # self.taggers[self.features_sorted_idx[0]]
         
     def plot(self):
         '''

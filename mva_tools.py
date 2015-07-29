@@ -94,7 +94,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     else:
         bkgrej = -1
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename, trainvars)
     sig_idx = y_validation == 1
     bkg_idx = y_validation == 0
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
@@ -121,7 +121,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     return roc_bkg_rej#bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv'):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -132,7 +132,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo)
         
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+'cvID_'+str(j), taggers=variables, algorithm=algo)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, algorithm=algo)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -145,7 +145,7 @@ def progress(tasks):
                                  for task in task_group])
 
 
-def find_bests(all_parameters, all_tasks, n_top=5, save=False):
+def find_bests(all_parameters, all_tasks, n_top=5, save=False, bests_tag='cv'):
     """Compute the mean score of the completed tasks"""
     mean_scores = []
     param_id = 0
@@ -157,19 +157,19 @@ def find_bests(all_parameters, all_tasks, n_top=5, save=False):
         param_id+=1
     bests = sorted(mean_scores, reverse=True, key=lambda x: x[0])[:n_top]        
     if save:
-        f = open('bests/bests.txt','w')
+        f = open('bests/bests'+bests_tag+'.txt','w')
         for b in bests:
             f.write('mean_score: ' + str(b[0]) + ' params: ' + str(b[1]) + ' param id: ' + str(b[2])+'\n')
         f.close()
     return bests
 
 
-def cross_validation(data, model, params, iterations, variables, ovwrite=True):
+def cross_validation(data, model, params, iterations, variables, ovwrite=True, suffix_tag = 'cv'):
     X = data[variables].values
     y = data['label'].values
     w = data['weight'].values
 
-    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, overwrite=ovwrite)
+    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, random_state=None, overwrite=ovwrite)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -213,18 +213,23 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
+#trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
+
+trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
 
 import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
+test_case = 'features'
+#test_case = 'cv'
+
 trainvars_iterations = [trainvars]
 
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 2, t, ovwrite=False)
+    filenames = cross_validation(data, model, params, 5, t, ovwrite=False, suffix_tag=test_case)
     allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm)
+        lb_view, model, filenames, params, t, algorithm, id_tag=test_case)
 
 
     prog = printProgress(alltasks)
