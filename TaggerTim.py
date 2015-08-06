@@ -787,7 +787,7 @@ def main(args):
 
     global singleSidedROC
     if args.ROCside:
-        if args.ROCside == 'L' or args.ROCside == 'R' or args.ROCside = 'M':
+        if args.ROCside == 'L' or args.ROCside == 'R' or args.ROCside == 'M':
             singleSidedROC = args.ROCside
 
     # lumi scaling

@@ -1,6 +1,6 @@
 
 class modelEvaluation:
-    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm, score, train_file, features):
+    def __init__(self, fpr, tpr, thresholds, model, params, rejection, feature_importances, job_id, taggers, Algorithm, score, train_file):
         import numpy as np
         self.fpr = fpr
         self.tpr = tpr

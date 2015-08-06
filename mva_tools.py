@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
-        
+from collections import OrderedDict        
 
 #import cv_fold
 def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
@@ -21,8 +21,8 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
     import os.path
     from root_numpy import array2root
     import numpy.lib.recfunctions as nf
-    cv = StratifiedKFold(y,n_cv_iter)
-    #cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
+    #cv = StratifiedKFold(y,n_cv_iter)
+    cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
@@ -38,6 +38,7 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
             continue
 
         if scale:
+            # should we scale the signal and background separately??? I think so!
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X[train])
             X_test_scaled = scaler.transform(X[test])
@@ -56,6 +57,33 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
     return cv_split_filenames
 
 
+def plotSamples(cv_split_filename, taggers, job_id=''):
+    import os.path
+    import matplotlib.pylab as plt
+    
+    from sklearn.externals import joblib
+    import numpy as np
+    from sklearn.metrics import roc_curve, auc
+
+    if not os.path.exists('fold_plots'):
+        os.makedirs('fold_plots')
+    import numpy as np
+
+    X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
+        cv_split_filename, mmap_mode='c')
+    
+    # normalise the data first? should have been standardised....
+    for i, t in enumerate(taggers):
+        plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5)
+        plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5)
+        plt.xlabel(t)
+        plt.ylabel('#events')
+        plt.title(t)
+        plt.legend()
+        plt.savefig('fold_plots/'+job_id+t+'.pdf')
+        plt.clf()
+
+
 def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm=''):
     """Function executed by a worker to evaluate a model on a CV split"""
     from sklearn.externals import joblib
@@ -68,14 +96,28 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         cv_split_filename, mmap_mode='c')
 
-    #fold = joblib.load(cv_split_filename)
-    #X_train, y_train, w_train, X_validation, y_validation, w_validation = fold.returnDatasets()
+    # get the indices in the validation sample
+    sig_idx = y_validation == 1
+    bkg_idx = y_validation == 0
+    # get the indices in the training sample
+    sig_tr_idx = y_train == 1
+    bkg_tr_idx = y_train == 0
 
-    # get the scaler - if we need it!
-    #if fold.hasScaler():
-    #    scaler = fold.returnScaler()
-    
+    # set up the model
     model.set_params(**params)
+    # if we are weighting I think that we need to have both the MC weights (or weights we have from our physics knowledge)
+    # and the normalisation weights.
+    # think that the correct way to do it would be to apply your weights as you would normally. You want to apply the weights so that you can correctly (according to our physics knowledge) represent the data.  I think that after that you can apply the normalisation.  This keeps the shape of the distribution the same, it just gives the bdt a better way of classifying the signal.  I mean I think you could get the same performance more or less if you had enough signal anyway.
+    # this means that we then have to adjust the w_train sample so that we have w_train[sig_tr_idx] *= 1/np.count_nonzero(sig_tr_idx) and w_train[bkg_tr_idx] *= 1/np.count_nonzero(bkg_tr_idx)
+    # set up array with the scaling factors
+    sig_count = (1/float(np.count_nonzero(sig_tr_idx)))
+    bkg_count = (1/float(np.count_nonzero(bkg_tr_idx)))
+    sig_scaling = sig_tr_idx*sig_count
+    bkg_scaling = bkg_tr_idx*bkg_count
+    tot_scaling = sig_scaling+bkg_scaling
+
+    w_train = w_train*tot_scaling
+
     if weighted:
         model.fit(X_train, y_train, w_train)
         #validation_score = model.score(X_validation, y_validation, w_validation)
@@ -94,9 +136,10 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     else:
         bkgrej = -1
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename, trainvars)
-    sig_idx = y_validation == 1
-    bkg_idx = y_validation == 0
+    print model.feature_importances_
+    print taggers
+
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
 
     # create the output root file for this.
@@ -129,7 +172,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
     
     for i, params in enumerate(all_parameters):
         task_for_params = []
-        
+       
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
                 compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, algorithm=algo)
@@ -180,15 +223,32 @@ def printProgress(tasks):
     print("Tasks completed: {0}%".format(100 * prog))
     return prog
 
+
+
+
+def runTest(cv_split_filename, model, trainvars, algo):
+    base_estimators = [DecisionTreeClassifier(max_depth=5)]
+    params = OrderedDict([
+            ('base_estimator', base_estimators),
+            ('n_estimators', [20]),
+            ('learning_rate', [0.7])
+            ])
+
+    from sklearn.grid_search import ParameterGrid
+    all_parameters = list(ParameterGrid(params))
+    
+    for i, params in enumerate(all_parameters):
+        compute_evaluation(cv_split_filename, model, params, job_id = 'test', taggers = trainvars, weighted=True, algorithm=algo)
+        plotSamples(cv_split_filename, trainvars, 'test')
+        
+
+
+
 print os.getcwd()
 from sklearn.svm import SVC
-from IPython.parallel import Client
-from collections import OrderedDict
 
-client = Client()
-#with client[:].sync_imports():
 #    import cv_fold
-lb_view = client.load_balanced_view()
+
 model = AdaBoostClassifier()
 
 base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]
@@ -199,12 +259,6 @@ params = OrderedDict([
 ])
 
 
-#base_estimators = [DecisionTreeClassifier(max_depth=5)]
-#params = OrderedDict([
-#        ('base_estimator', base_estimators),
-#        ('n_estimators', [20]),
-#        ('learning_rate', [0.7])
-#        ])
 
 
 #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
@@ -212,22 +266,37 @@ params = OrderedDict([
 #            min_samples_split=2, min_weight_fraction_leaf=0.0,
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
+#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_350_500_mw'
 #trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
 
-trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
+#trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
+#trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']
+trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','ZCUT12','Tau2','EEC_D2_2']
 
 import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
-test_case = 'features'
+test_case = 'features_35_50'
 #test_case = 'cv'
 
 trainvars_iterations = [trainvars]
 
+
+runTest('persist/data_features_35_50_001.pkl', model, trainvars, algorithm)
+sys.exit(0)
+#raw_input()
+
+from IPython.parallel import Client
+
+
+client = Client()
+#with client[:].sync_imports():
+lb_view = client.load_balanced_view()
+
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 5, t, ovwrite=False, suffix_tag=test_case)
+    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case)
     allparms, alltasks = grid_search(
         lb_view, model, filenames, params, t, algorithm, id_tag=test_case)
 
