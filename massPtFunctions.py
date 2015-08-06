@@ -266,7 +266,8 @@ def Qw(histo, frac=0.68):
         width = histo.GetBinCenter(imax) - histo.GetBinCenter(i);
         # by applying this we say that the window we have just calculate MUST have at least 68%.
         #if tempFrac >= frac and width<minWidth:
-        if tempFrac >= frac and imax != Nbins and width<minWidth:
+        #if tempFrac >= frac and 
+        if imax != Nbins and width<minWidth:
             # set up the best found mass window variables
             minWidth = width;
             topEdge = histo.GetBinCenter(imax);

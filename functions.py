@@ -143,7 +143,7 @@ def pruneBranches(file_branches):
         del plotbranches[d]
 
 
-def readXML(configfile):
+def readXML(configfile, pt_range="default"):
     """Read in the variable names and histogram limits froms the config xml file."""
     # TODO: add try catch statements incase values are not well defined (for example floats being ill-defined as a string)
  
@@ -176,9 +176,16 @@ def readXML(configfile):
         #    varName = function+'('+varName+')'
         branches[varName] = [stub, jetVariable, function]
         if child.find('plot').text == "True":
-            maxV = float(child.find('maxValue').text)
-            minV = float(child.find('minValue').text)
-            nbins = 100
+            # now find the pt range that we're in.
+            if child.find("./range/.[@name='"+pt_range+"']") is not None:
+                maxV = float(child.find("./range/.[@name='"+pt_range+"']").find("maxValue").text)
+                minV = float(child.find("./range/.[@name='"+pt_range+"']").find("minValue").text)
+            else:
+                #print child.find("./range/.[@name='default']").find("maxValue").text
+                maxV = float(child.find("./range/.[@name='default']").find("maxValue").text)
+                minV = float(child.find("./range/.[@name='default']").find("minValue").text)
+            nbins = 200
+
             if child.find('bins') is not None:
                 nbins = int(child.find('bins').text)
             plotbranches[varName] = [stub,jetVariable,minV,maxV,nbins,function]
@@ -749,3 +756,28 @@ def getEfficiencies(roc):
         bkg_rej[i] = float(bkg_i)
 
     return sig_eff, bkg_rej
+
+
+def getMassWindow(massfile):
+    '''
+    Get the mass window limits from the input file. Input file will have the lines 'top edge: MAX' and 'bottom edge: MIN' in it somewhere.
+    Keyword args:
+    massfile -- input file
+    
+    returns:
+    max_mass, min_mass
+    '''
+    f = open(massfile)
+    #print massfile
+    m_max = 0.0
+    m_min = 0.0
+    for l in f:
+        # find the correct lines
+        if l.startswith('top edge'):
+            # convert the last element after splitting to a float.
+            m_max = float(l.strip().split()[-1])
+        elif l.startswith('bottom edge'):
+            # convert the last element after splitting to a float.
+            m_min = float(l.strip().split()[-1])
+    f.close()
+    return m_max, m_min

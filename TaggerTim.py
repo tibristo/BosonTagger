@@ -674,8 +674,10 @@ def main(args):
     trees,files,pthists = ( {} for i in range(3) ) 
 
     # read in config file
-    fn.readXML(config_f)
-
+    if args.ptlow:
+        fn.readXML(config_f,str(args.ptlow))
+    else:
+        fn.readXML(config_f,"default")
     # set the treename for the input file
     treename = ''
     if not args.tree:
