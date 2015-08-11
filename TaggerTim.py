@@ -468,18 +468,20 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         # However, if we want the background rejection power for the mass variable we do not want to take 50% as we already have made
         # a cut on the mass to get it to 68%.
         # calculate error on this as well -> deltaX = X*(deltaY/Y)
-        eval_roc = 1
+        eval_roc = 1.0
         err_up = 1
         err_do = 1
         if not branchname.endswith("_m"):
-            eval_roc = roc[branchname].Eval(0.5)
+            #eval_roc = roc[branchname].Eval(0.5)
+            eval_roc = fn.GetBGRej50(roc[branchname])
             # get the bin for this point so that we can find the associated error in roc error tgraphs
             #rocBin = fn.findYValue(roc[branchname],Double(0.5), pY, 0.01, True, True)
             bin = roc[branchname].GetXaxis().FindBin(0.5)#roc_errUp[branchname].Eval(0.5)
             eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
             eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin)
         else:
-            eval_roc = roc[branchname].Eval(0.68)
+            #eval_roc = roc[branchname].Eval(0.68)
+            eval_roc = fn.GetBGRej(roc[branchname], 0.68)
             #rocBin = fn.findYValue(roc[branchname],Double(0.68), pY, 0.01, True, True)
             bin = roc[branchname].GetXaxis().FindBin(0.68)#roc_errUp[branchname].Eval(0.5)
             eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
@@ -513,8 +515,10 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             maxrej = bkgrej
             maxrejvar = branchname
 
-        hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); 
-        hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  
+        # once the background rejection power has been calculated using the 200 bins the histograms can be rebinned.
+            
+        hist['sig_'+branchname].SetFillColor(4); hist['sig_'+branchname].SetLineColor(4); hist['sig_'+branchname].SetMarkerColor(4); hist['sig_'+branchname].Rebin(4);
+        hist['bkg_'+branchname].SetFillColor(2); hist['bkg_'+branchname].SetLineColor(2);  hist['bkg_'+branchname].SetMarkerColor(2);  hist['bkg_'+branchname].Rebin(4);
         if saveNoMassWindowPlots:
             if singleSidedROC == 'M':
                 # check where the median is so we can correctly choose L or R cut.
@@ -971,7 +975,7 @@ def main(args):
         records = 'logs/TaggerOpt'+Algorithm+fileid+'_'+str(m_max)+'_'+str(m_min)+'_.out'
 
         # run the analysis for mass range
-        mass_cut = " * (jet_" +Algorithm + "_m < " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
+        mass_cut = " * (jet_" +Algorithm + "_m <= " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
         if not writecsv:
             rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
 

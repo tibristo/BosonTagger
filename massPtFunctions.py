@@ -240,6 +240,9 @@ def Qw(histo, frac=0.68):
     integral = histo.Integral();
     if integral == 0:# no div/0
         integral = 1
+    else:
+        histo.Scale(1./float(integral))
+        integral = histo.Integral();
     closestWindow = 100
     closestFrac = 0.0
     closestTop = 0.0
@@ -249,7 +252,7 @@ def Qw(histo, frac=0.68):
     numberWindows = 0
 
     # loop through each bin of the histogram
-    for i in xrange(0,Nbins):
+    for i in range(Nbins):
 
         tempFrac = 0.0
         # want to make sure we don't change i when changing imax
@@ -259,8 +262,8 @@ def Qw(histo, frac=0.68):
         # but making sure not to go out of range.                                                                                                                                             
         prevFrac = 0.0
         while(tempFrac<frac and imax != Nbins):
-            tempFrac+=histo.GetBinContent(imax)/integral;
-            prevFrac = histo.GetBinContent(imax)/integral
+            tempFrac+=histo.GetBinContent(imax)/float(integral);
+            prevFrac = histo.GetBinContent(imax)/float(integral)
             imax+=1;
 
         width = histo.GetBinCenter(imax) - histo.GetBinCenter(i);

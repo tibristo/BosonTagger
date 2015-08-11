@@ -2,7 +2,7 @@ import ROOT
 import cPickle as pickle
 import operator
 import sys
-
+import os.path
 ROOT.gStyle.SetPaintTextFormat("4.1f")
 
 def abbreviate(in_str):
@@ -172,7 +172,10 @@ def plotMatrix(version):
     p.SetTextSize(0.035);
     p.SetTextColor(ROOT.kBlack);
     p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
-    tc.SaveAs("matrixinv_"+version+".pdf")
+    # check that the matrix folder exists, if not, create it
+    if not os.path.exists('matrix'):
+        os.makedirs('matrix')
+    tc.SaveAs("matrix/matrixinv_"+version+".pdf")
 
     
     #print rejectionmatrix

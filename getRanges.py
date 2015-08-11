@@ -2,6 +2,7 @@ import sys
 from ROOT import *
 import os
 import functions as fn
+import massPtFunctions
 from AtlasStyle import *
 gROOT.SetBatch(True)
 algorithmsdir = sys.argv[1]
@@ -12,11 +13,13 @@ algorithms = open(algorithmsfile)
 variables = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
 
 pt  = [[200,350],[350,500],[500,1000],[1000,1500],[1500,2000],[2000,3000]]
+#pt  = [[200,350],[350,500]]#,[500,1000],[1000,1500],[1500,2000],[2000,3000]]
 
 class minmaxVals():
     pt_slices = {}
     def __init__(self, sample):
         self.pt_slices = {}
+        self.histos = {}
         self.sample = sample
 
     def setMax(self, pt_slice, variable, max_value, min_value):
@@ -29,7 +32,18 @@ class minmaxVals():
     def getMaxMin(self, pt_slice, variable):
         print self.pt_slices
         return self.pt_slices[pt_slice][variable]
-        
+
+
+    def setHistogram(self,pt_slice, variable, histo):
+        if pt_slice in self.histos.keys():
+            self.histos[pt_slice][variable] = histo.Clone()
+        else:
+            self.histos[pt_slice] = {}
+            self.histos[pt_slice][variable] = histo.Clone()
+
+    def getHistogram(self, pt_slice, variable):
+        return self.histos[pt_slice][variable]
+            
 SetAtlasStyle()
 ROOT.gROOT.LoadMacro("SignalPtWeight3.C")
 
@@ -94,8 +108,21 @@ for a in algorithms:
                     massWinFile = algorithmsdir+a+'/'+m
 
             if massWinFile =='':
-                print 'can not find the mass window files!!!! Exiting'
-                sys.exit()
+                print 'can not find the mass window files!!!! Trying to create'
+                sigtfile = TFile(algorithmsdir+a+'/'+sigfile)
+                ptsig = sigtfile.Get('pt_reweightsig')
+                ptsig.SetDirectory(0)
+                bkgtfile = TFile(algorithmsdir+a+'/'+bkgfile)
+                ptbkg = sigtfile.Get('pt_reweightbkg')
+                ptbkg.SetDirectory(0)
+                ptweightsHists = None
+                massPtFunctions.setPtWeightFile(ptsig, ptbkg)
+                massPtFunctions.run(sigfile, algorithm, 'outputTree', ptweightsHist, float(ptrange[0]), float(ptrange[1]))
+                if massPtFunctions.success_m:
+                    massWinFile = massPtFunctions.filename_m
+                else:
+                    print 'could not create mass window file, exiting.'
+                    sys.exit()
 
             mass_max, mass_min = fn.getMassWindow(massWinFile)
 
@@ -119,16 +146,22 @@ for a in algorithms:
                 varexp = varname+">>" + histname
                 tc.Draw(varexp, cutstring)
                 hist = ROOT.gDirectory.Get(histname)
+                # normalise
+                if hist.Integral() != 0:
+                    hist.Scale(1./hist.Integral())
                 hist.Draw()
                 c.SaveAs("ranges/"+algorithm+'_'+varname+'_'+str(ptrange[0])+'_'+str(ptrange[1])+'_'+sample+".png")
-                rangefile.write(varname+'\n')
+                #rangefile.write(varname+'\n')
                 if (sample=='sig'):
                     signalValues.setMax(str(ptrange[0]), v, str(hist.GetXaxis().GetXmax()), str(hist.GetXaxis().GetXmin()))
+                    signalValues.setHistogram(str(ptrange[0]), v, hist)
                 else:
                     bkgValues.setMax(str(ptrange[0]), v, str(hist.GetXaxis().GetXmax()), str(hist.GetXaxis().GetXmin()))
-                rangefile.write('max: ' + str(hist.GetXaxis().GetXmax())+'\n')
-                rangefile.write('max: ' + str(hist.GetXaxis().GetXmin())+'\n')
-                rangefile.write('*********************************************\n')
+                    bkgValues.setHistogram(str(ptrange[0]), v, hist)
+                rangefile.write(varname+',' + str(hist.GetXaxis().GetXmin()) +',' +str(hist.GetXaxis().GetXmax())+'\n')
+                #rangefile.write('max: ' + str(hist.GetXaxis().GetXmax())+'\n')
+                #rangefile.write('min: ' + str(hist.GetXaxis().GetXmin())+'\n')
+                #rangefile.write('*********************************************\n')
 
     # now that we have the maximum values for the background and signal sep
     # we want to combine the two.  This is done for each pt range.
@@ -140,10 +173,19 @@ for a in algorithms:
         for v in variables:
             s_max, s_min = signalValues.getMaxMin(str(ptrange[0]), v)
             b_max, b_min = bkgValues.getMaxMin(str(ptrange[0]), v)
-            rangefilecombined.write('variable: ' + v+'\n')
-            rangefilecombined.write("max: " + str(max(s_max, b_max))+'\n')
-            rangefilecombined.write("min: " + str(max(s_min, b_min))+'\n')
-
+            #rangefilecombined.write('variable: ' + v+'\n')
+            #rangefilecombined.write("max: " + str(max(s_max, b_max))+'\n')
+            #rangefilecombined.write("min: " + str(max(s_min, b_min))+'\n')
+            rangefilecombined.write(v+"," + str(max(s_min, b_min))+','+str(max(s_max, b_max))+'\n')
+            sighist = signalValues.getHistogram(str(ptrange[0]), v)
+            sighist.SetLineStyle(1); sighist.SetFillColor(4); sighist.SetLineColor(4), sighist.SetMarkerColor(4)
+            sighist.Draw('hist')
+            #sighist.Draw('hist same')
+            bkghist = bkgValues.getHistogram(str(ptrange[0]), v)
+            bkghist.SetLineStyle(1); bkghist.SetFillColor(2); bkghist.SetLineColor(2), bkghist.SetMarkerColor(2)
+            #bkghist.Draw('e same')
+            bkghist.Draw('hist same')
+            c.SaveAs("ranges/"+algorithm+'_'+v+'_'+str(ptrange[0])+'_'+str(ptrange[1])+"_combined.png")
         rangefilecombined.write('*********************************************\n')
 
     rangefilecombined.close()

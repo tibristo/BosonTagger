@@ -116,7 +116,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     bkg_scaling = bkg_tr_idx*bkg_count
     tot_scaling = sig_scaling+bkg_scaling
 
-    w_train = w_train*tot_scaling
+    #w_train = w_train*tot_scaling
 
     if weighted:
         model.fit(X_train, y_train, w_train)
@@ -136,8 +136,11 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     else:
         bkgrej = -1
 
-    print model.feature_importances_
-    print taggers
+    # print the feature importances in descending order
+    feature_importances = model.feature_importances_
+    sorted_idx = np.argsort(feature_importances)[::-1]
+    for f in range(len(feature_importances)):
+        print("%d. feature %s (%f)" % (f + 1, taggers[sorted_idx[f]], feature_importances[sorted_idx[f]]))
 
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
@@ -164,7 +167,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     return roc_bkg_rej#bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv'):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -175,7 +178,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
        
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, algorithm=algo)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -207,12 +210,12 @@ def find_bests(all_parameters, all_tasks, n_top=5, save=False, bests_tag='cv'):
     return bests
 
 
-def cross_validation(data, model, params, iterations, variables, ovwrite=True, suffix_tag = 'cv'):
+def cross_validation(data, model, params, iterations, variables, ovwrite=True, suffix_tag = 'cv', scale=True):
     X = data[variables].values
     y = data['label'].values
     w = data['weight'].values
 
-    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, random_state=None, overwrite=ovwrite)
+    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -230,8 +233,8 @@ def runTest(cv_split_filename, model, trainvars, algo):
     base_estimators = [DecisionTreeClassifier(max_depth=5)]
     params = OrderedDict([
             ('base_estimator', base_estimators),
-            ('n_estimators', [20]),
-            ('learning_rate', [0.7])
+            ('n_estimators', [50]),
+            ('learning_rate', [1.0])
             ])
 
     from sklearn.grid_search import ParameterGrid
@@ -240,6 +243,7 @@ def runTest(cv_split_filename, model, trainvars, algo):
     for i, params in enumerate(all_parameters):
         compute_evaluation(cv_split_filename, model, params, job_id = 'test', taggers = trainvars, weighted=True, algorithm=algo)
         plotSamples(cv_split_filename, trainvars, 'test')
+        return
         
 
 
@@ -254,7 +258,7 @@ model = AdaBoostClassifier()
 base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]
 params = OrderedDict([
     ('base_estimator', base_estimators),
-    ('n_estimators', np.linspace(5, 20, 10, dtype=np.int)),
+    ('n_estimators', np.linspace(20, 40, 10, dtype=np.int)),
     ('learning_rate', np.linspace(0.1, 1, 10))
 ])
 
@@ -267,25 +271,25 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_350_500_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_v2_500_1000_mw'
 #trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
-#trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']
-trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','ZCUT12','Tau2','EEC_D2_2']
+trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']
+#trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','ZCUT12','Tau2','EEC_D2_2']
 
 import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
-test_case = 'features_35_50'
+test_case = 'features_5_10_'
 #test_case = 'cv'
 
 trainvars_iterations = [trainvars]
 
 
-runTest('persist/data_features_35_50_001.pkl', model, trainvars, algorithm)
-sys.exit(0)
+#runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
+#sys.exit(0)
 #raw_input()
 
 from IPython.parallel import Client
@@ -296,9 +300,9 @@ client = Client()
 lb_view = client.load_balanced_view()
 
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case)
+    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case, scale=True)
     allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm, id_tag=test_case)
+        lb_view, model, filenames, params, t, algorithm, id_tag=test_case, weighted=True)
 
 
     prog = printProgress(alltasks)

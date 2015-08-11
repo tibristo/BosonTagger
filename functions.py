@@ -178,6 +178,7 @@ def readXML(configfile, pt_range="default"):
         if child.find('plot').text == "True":
             # now find the pt range that we're in.
             if child.find("./range/.[@name='"+pt_range+"']") is not None:
+                #print 'NOT USING DEFAULT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
                 maxV = float(child.find("./range/.[@name='"+pt_range+"']").find("maxValue").text)
                 minV = float(child.find("./range/.[@name='"+pt_range+"']").find("minValue").text)
             else:
@@ -781,3 +782,162 @@ def getMassWindow(massfile):
             m_min = float(l.strip().split()[-1])
     f.close()
     return m_max, m_min
+
+
+def GetBGRej50(gr, targetseff=0.5, debug=0):
+    '''Get BG rejection at fixed targetseff.
+
+    Taken from Sam's code.'''
+
+    n = gr.GetN()
+
+    xinit  = Double(1)
+    yinit  = Double(1)
+    mindistance=10.0
+    foundseff=1.0
+    foundbgeff=1.0
+    itarget=1
+
+    for ipoint in range(n):
+
+        gr.GetPoint(ipoint,xinit,yinit)
+
+        distance = abs(targetseff-xinit)
+
+        if distance<mindistance:
+            mindistance = distance
+            foundseff   = xinit
+            foundbgeff  = float(yinit)
+            itarget     = ipoint
+
+    #if debug:
+    #    print itarget,"  ",mindistance,"  ",foundseff,"  ",foundbgeff<<"\n"
+
+    return foundbgeff
+
+
+def GetBGRej( gr, targetseff ):
+    '''
+    Almost the same as the above GetBGRej method, but this is for any target efficiency, not just 50%.
+
+    Taken from Sam's code.
+    '''
+    n = gr.GetN();
+
+    xinit       = Double(1)
+    yinit       = Double(1)
+    mindistance = 10.0
+    foundseff   = 1.0
+    foundbgeff=1.0
+    itarget=1
+
+    for i in range(n):
+        gr.GetPoint(i,xinit,yinit)
+        distance = abs(targetseff-xinit)
+        #print "FindBR: ",i," ",xinit," ",yinit," ",distance,"   -   ",foundseff,"  ",foundbgeff
+
+
+        #print distance,"   -  ",mindistance
+        if distance<mindistance:
+            #print "SWITCH"
+            mindistance = distance
+            #Tricky - need to cast them as floats or pyroot treats them as pointer references
+            foundseff   = float(xinit)
+            foundbgeff  = float(yinit)
+            itarget     = i
+
+
+
+    #print itarget,"  ",mindistance,"  ",foundseff,"  ",foundbgeff
+
+    #return foundseff,foundbgeff
+    return foundbgeff
+
+
+def RocCurve_SoverBOrdered(sig, bg, debug=0):
+    '''
+    Make ROC curve using S over B ordering
+    
+
+    Taken from Sam's code.
+    '''
+    
+    binnum=[]
+    s=[]
+    b=[]
+    r=[]
+
+    for i in range(1,sig.GetNbinsX()+1):
+        #print "bin ",i
+
+        binnumtemp = i
+        stemp = sig.GetBinContent(i)
+        btemp = bg.GetBinContent(i)
+
+        if btemp==0:
+            rtemp=0.0
+        else:
+            rtemp = stemp/btemp
+
+        binnum.append(binnumtemp)
+        s.append(stemp)
+        b.append(btemp)
+        r.append(rtemp)
+
+    for i in range(len(s)):
+        ifix = len(s)-i
+        #print ifix
+        for j in range(0,ifix-1):
+            if r[j]<r[j+1]:
+                tbinnum=binnum[j]
+                tr=r[j]
+                tb=b[j]
+                ts=s[j]
+
+                binnum[j]=binnum[j+1]
+                r[j] = r[j+1]
+                b[j] = b[j+1]
+                s[j] = s[j+1]
+
+                binnum[j+1]=tbinnum
+                r[j+1] = tr
+                b[j+1] = tb
+                s[j+1] = ts
+
+
+
+    totalB = sum(b)
+    totalS = sum(s)
+
+    n = len(s)
+    print n
+    
+    hsigout = TH1F("hsigout","hsigout",n,0,1)
+    hsigout.SetDirectory(0)
+    hbkgout = TH1F("hbkgout","hbkgout",n,0,1)
+    hbkgout.SetDirectory(0)
+    
+    siglow  = sig.GetXaxis().GetXmin()
+    sighigh = sig.GetXaxis().GetXmax()
+    h1 = TH1F("h1","h1",n,siglow,sighigh)
+    h1.SetDirectory(0)
+    
+    print "Npoints: ",n
+    gr = TGraph(n)
+    for i in range(0,n):
+    
+
+
+        #fill roc points
+        gr.SetPoint(i, myS, (1-myB))
+
+        #fill signal regions histogram        
+        if myS<=0.73:
+            h1.SetBinContent(binnum[i], s[i])
+        
+        
+    #get histograms that are colored for signal efficiency at 50%
+    
+    
+
+    return gr,hsigout,hbkgout,h1

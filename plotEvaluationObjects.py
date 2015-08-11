@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 
 
-job_id = 'features_35'
+job_id = 'features_5_10'
 
 
 files = [f for f in os.listdir('evaluationObjects/') if f.find(job_id)!=-1]
