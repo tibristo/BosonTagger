@@ -12,7 +12,7 @@ algorithms = open(algorithmsfile)
 
 variables = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
 
-pt  = [[200,350],[350,500],[500,1000],[1000,1500],[1500,2000],[2000,3000]]
+pt  = [[200,1000],[200,350],[350,500],[500,1000]]#,[1000,1500],[1500,2000],[2000,3000]]
 #pt  = [[200,350],[350,500]]#,[500,1000],[1000,1500],[1500,2000],[2000,3000]]
 
 class minmaxVals():

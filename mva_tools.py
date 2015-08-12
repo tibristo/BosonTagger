@@ -15,7 +15,7 @@ from pprint import pprint
 from collections import OrderedDict        
 
 #import cv_fold
-def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
+def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
                       suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True):
     """Materialize randomized train test splits of a dataset."""
     import os.path
@@ -49,10 +49,19 @@ def persist_cv_splits(X, y, w, n_cv_iter=5, name='data', prefix='persist/',\
             fold = (X[train], y[train], w[train], X[test], y[test], w[test])
 
         joblib.dump(fold, cv_split_filename)
-        rectrain = nf.append_fields(X[train], names='label', data=y[train], usemask=False)#, dtypes=int)#, usemask=False)
-        array2root(rectrain, cv_split_filename.replace('.pkl','.root'), 'outputTree','recreate')
-        rectest = nf.append_fields(X[test], names='label', data=y[test], usemask=False)#, dtypes=int)#, usemask=False)
-        array2root(rectest, cv_split_filename.replace('.pkl','.root'), 'outputTree','recreate')
+        cv_split_train = os.path.abspath(prefix+name+'train'+suffix%i)
+        cv_split_test = os.path.abspath(prefix+name+'test'+suffix%i)
+
+        # have to do this annoying .copy() to be able to add the dtype.names to any
+        # arrays that come from a slice.
+        XX = X.copy().view(dtype=[(n, np.float64) for n in variables]).reshape(len(X))
+
+        # we want to add the weights as well        
+        # add the label to the array
+        rectrain = nf.append_fields(XX[train], names=['label','weight'], data=[y[train],w[train]], usemask=False)
+        array2root(rectrain, cv_split_train.replace('.pkl','.root'), 'outputTree','recreate')
+        rectest = nf.append_fields(XX[test], names=['label','weight'], data=[y[test],w[test]], usemask=False)
+        array2root(rectest, cv_split_test.replace('.pkl','.root'), 'outputTree','recreate')
     
     return cv_split_filenames
 
@@ -215,7 +224,7 @@ def cross_validation(data, model, params, iterations, variables, ovwrite=True, s
     y = data['label'].values
     w = data['weight'].values
 
-    filenames = persist_cv_splits(X, y, w, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite)
+    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -271,7 +280,7 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_v2_500_1000_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
 #trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
@@ -282,8 +291,9 @@ import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
-test_case = 'features_5_10_'
+#test_case = 'features_l_2_10_'
 #test_case = 'cv'
+test_case = 'testroot'
 
 trainvars_iterations = [trainvars]
 
@@ -299,6 +309,14 @@ client = Client()
 #with client[:].sync_imports():
 lb_view = client.load_balanced_view()
 
+# just create the folds
+createFoldsOnly = True
+if createFoldsOnly:
+    # we need to add some extra variables that might not get used for training, but we want in there anyway!
+    filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, suffix_tag=test_case, scale=True)
+    sys.exit()
+
+    
 for t in trainvars_iterations:
     filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case, scale=True)
     allparms, alltasks = grid_search(
