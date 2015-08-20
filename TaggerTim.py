@@ -985,8 +985,11 @@ def main(args):
                 maxrejm_min = m_min
                 maxrejm_max = m_max
         else:
-            fn.writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid+'_nomw', massPtFunctions.getPtWeightsFile(), plotranges)
-            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+mass_cut, treename, Algorithm, fileid+'_mw', massPtFunctions.getPtWeightsFile(), plotranges)
+            # the last argument here is whether to create a csv or root file. Both = csvroot
+            sigevents, bkgevents = fn.writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid+'_nomw', massPtFunctions.getPtWeightsFile(), plotranges,'root')
+            # now use the number of signal and background events to calculate the efficiency of the
+            # the mass window cut
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+mass_cut, treename, Algorithm, fileid+'_mw', massPtFunctions.getPtWeightsFile(), plotranges,'root', sigevents, bkgevents)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
     # close all of the tfiles

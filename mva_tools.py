@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
-                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True):
+                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True, signal_eff=1.0, bkg_eff=1.0):
     """Materialize randomized train test splits of a dataset."""
     import os.path
     from root_numpy import array2root
@@ -27,6 +27,13 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
 
+    # persist the original files as well.
+    # first check if the file exists already
+    full_fname = os.path.abspath(prefix+name+suffix % 100)
+    if overwrite or not os.path.isfile(full_fname):
+        full_set = (X,y,w,[signal_eff,bkg_eff])
+        joblib.dump(full_set,full_fname)
+    
     #scale the data
     
     for i, (train, test) in enumerate(cv):
@@ -132,34 +139,20 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
         #validation_score = model.score(X_validation, y_validation, w_validation)
     else:
         model.fit(X_train, y_train)
+
+    # we want to do this for both the validation sample AND the full sample so that we
+    # can compare it with the cut-based tagger.
     validation_score = model.score(X_validation, y_validation)
     prob_predict_valid = model.predict_proba(X_validation)[:,1]
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid)
-    #roc = RocCurve_SingleSided(y_validation,prob_predict_valid,1,1)
-    # find 0.5 tpr
-    idx = (np.abs(tpr-0.5)).argmin()
-    fpr_05 = fpr[idx]
-    rej = 1-fpr_05
-    if rej != 1:
-        bkgrej = 1/(1-rej)
-    else:
-        bkgrej = -1
 
-    # print the feature importances in descending order
-    feature_importances = model.feature_importances_
-    sorted_idx = np.argsort(feature_importances)[::-1]
-    for f in range(len(feature_importances)):
-        print("%d. feature %s (%f)" % (f + 1, taggers[sorted_idx[f]], feature_importances[sorted_idx[f]]))
-
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, bkgrej, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
-
     # create the output root file for this.
     m.toROOT()
+    # score to return
     roc_bkg_rej = m.getRejPower()
 
-    #m.toROOT(sig_idx, bkg_idx, prob_predict_valid)
-    f_name = 'evaluationObjects/'+job_id+'.pickle'
     # save the model for later
     import pickle 
     try:
@@ -171,6 +164,48 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
         with open(f_name,'w') as d:
             pickle.dump(msg, d)
         d.close()
+
+    
+    # do this for the full dataset
+    # try reading in the memmap file
+    # the easiest way to find the name of the file is to take the cv_split_filename
+    # and then search backwards to find an underscore. The number between this underscore
+    # and the file extension, pkl, should be 100 for this file. It is written this
+    # way in the persist_cv_ method in this file.
+    underscore_idx = cv_split_filename.rfind('_')
+    if underscore_idx == -1:
+        print 'could not locate the full dataset'
+        # return the rejection on the validation set anyway
+        return roc_bkg_rej
+    file_full = cv_split_filename[:underscore_idx]+'100.pkl'
+    # check that this file exists
+    if not os.path.isfile(file_full):
+        print 'could not locate the full dataset'
+        return roc_bkg_rej
+    
+    X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
+    full_score = model.score(X_full, y_full)
+    prob_predict_full = model.predict_prob(X_full)[;,1]
+    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
+    # need to set the maximum efficiencies for signal and bkg
+    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, model.feature_importances_, job_id+'_full', taggers, algorithm, full_score, cv_split_filename)
+    m_full.setSigEff(efficiencies[0])
+    m_full.setBkgEff(efficiencies[1])
+    m_full.setProbas(prob_predict_full, sig_idx, bkg_idx)
+    m_full.toROOT()
+
+    f_name = 'evaluationObjects/'+job_id+'.pickle'
+    f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
+    
+    try:
+        with open(f_name_full,'w') as d2:
+            pickle.dump(m_full, d2)
+        d2.close()
+    except:
+        msg = 'unable to dump object'
+        with open(f_name_full,'w') as d2:
+            pickle.dump(msg, d2)
+        d2.close()
         print 'unable to dump object'
 
     return roc_bkg_rej#bkgrej#validation_score
@@ -224,7 +259,11 @@ def cross_validation(data, model, params, iterations, variables, ovwrite=True, s
     y = data['label'].values
     w = data['weight'].values
 
-    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite)
+    # find the efficiency for both signal and bkg
+    signal_eff = data.loc[data['label']==1]['eff'][0]
+    bkg_eff = data.loc[data['label']==0]['eff'][0]
+
+    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, signal_eff, bkg_eff)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames

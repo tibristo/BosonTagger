@@ -423,7 +423,7 @@ def getFiles(InputDir, signalFile, backgroundFile, massWinFile, ptrange):
     return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, massWinFile
 
 
-def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights, plotranges):
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights, plotranges, file_type='csv', signal_events=-1.0, background_events=-1.0):
     '''
     Create csv files of the signal and background ntuples.
     Keyword args:
@@ -435,6 +435,8 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
     fileid -- File identifier that gets used in the output file names
     ptweights -- pt weight file (bkg/signal pt)
     plotranges --- Dictionary of the ranges for different variables. This is the stub variable from Tagger, so it has a leading _
+    file_type --- if it should write out a csv or a root file or both (csvroot)
+    signal/background_events --- Number of events without a mass window cut applied.  This doesn't have to be set, but if it is, signal/bkg efficiency is calculated.
     '''
 
     import copy    
@@ -459,6 +461,10 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             prefix += "_"
         cutstring += "*(" +prefix+p+">="+str(plotranges[p][0])+ ")*(" +prefix+p+"<="+str(plotranges[p][1]) + ")"
 
+    # store the number of events
+    sig_count = -1.0
+    bkg_count = -1.0
+        
     # read the signal and background files
     for typename in ['sig','bkg']:
         if typename == 'sig':
@@ -473,8 +479,11 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
         # write the tree out in csv format to use again later
         # need to add some entries to branches to store the event weights
         numpydata = root_numpy.root2array(filename,treename,branches_pruned,cutstring)
-
-        # need to add single entry per event with full weight -> mc*pt*rest
+        if typename == 'sig':
+            sig_count = float(len(numpydata['evt_xsec']))
+        else:
+            bkg_count = float(len(numpydata['evt_xsec']))
+            # need to add single entry per event with full weight -> mc*pt*rest
         # see https://stackoverflow.com/questions/12555323/adding-new-column-to-existing-dataframe-in-python-pandas
         numpydata = pd.DataFrame(numpydata)
         numpydata.rename(columns=lambda x: x.replace('jet_' + Algorithm+'_',''), inplace=True)
@@ -486,16 +495,35 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
         #print list(numpydata)
         
 
-        if typename == 'sig': 
-            numpydata['label']=1 
+        if typename == 'sig':
+            # if we know the number of events we can calculate an efficiency
+            if signal_events != -1:
+                numpydata['eff'] = float(sig_count/signal_events)
+            else:
+                numpydata['eff'] = 1.0
+            numpydata['label']=1
+            #if file_type.find('csv')!=-1:
             numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')
+            #if file_type.find('root')!=-1:
+                #create a root file
+                
+            #    root_numpy.array2root(numpydata.values, 'root/'+ Algorithm + fileid + '_' + typename + '.root', 'outputTree')
+        else:
             
-        else: 
-            numpydata['label']=0 
+            if background_events != -1.0:
+                numpydata['eff'] = float(bkg_count/background_events)
+            else:
+                numpydata['eff'] = 1.0
+            numpydata['label']=0
+            #if file_type.find('csv')!=-1:
             numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')#,mode='a',header=False)
+            #if file_type.find('root')!=-1:
+            #    root_numpy.array2root(numpydata.values, 'root/'+ Algorithm + fileid + '_' + typename + '.root', 'outputTree')
 
         file_in.Close()
-            
+    return sig_count, bkg_count
+
+
 
 
 def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
