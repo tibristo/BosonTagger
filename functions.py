@@ -526,7 +526,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
 
 
 
-def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
+def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside='R', rejection = True):
     '''
     Method taken from Sam's code:
     svn+ssh://svn.cern.ch/reps/atlasperf/CombPerf/JetETMiss/JetSubstructure2012/BoostedBosonTagging/code/meehan/PostAnalysis
@@ -545,6 +545,7 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
     curve -- The roc curve we are filling
     bkgRejPower -- The background rejection power curve
     cutside -- L or R
+    rejection -- Whether to calculate background rejection or background power -> 1-eff or 1/eff
 
     Returns:
     gr -- the TGraph with the ROC curve
@@ -601,7 +602,10 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
         extrema25 = -100000
 
     gr = TGraphErrors(n)
-    for i in range(1,n+1):
+    # this was from 1->n+1, but if we are using gr.SetPoint() it starts from 0, whereas
+    # the hist.Integral(x,y) starts from 1. So i is now 0 <= i < n+1, and hist integral is
+    # i+1 -> n or n-> i+1 and then gr.SetPoint(i,x,y)
+    for i in range(0,n+1):
         myS = 0.
         myB = 0.
 
@@ -609,21 +613,26 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             #loop from i to end
             myBerr=Double()
             mySerr=Double()
-            myB = bkg.IntegralAndError(i,n,myBerr)
-            myS = sig.IntegralAndError(i,n,mySerr)
+            myB = bkg.IntegralAndError(i+1,n,myBerr)
+            myS = sig.IntegralAndError(i+1,n,mySerr)
             #print i,"  myS=",myS,"  myB=",myB
-            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            if rejection:
+                gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            elif myB*bkgeff != 0.0:
+                gr.SetPoint(i, myS*sigeff, 1./(myB*bkgeff))
+            else:
+                gr.SetPoint(i, myS*sigeff, 10e6)
             gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
             if myS<=0.73:
-                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
-                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                hsigreg50.SetBinContent(i+1, sig.GetBinContent(i+1))
+                tempex=sig.GetXaxis().GetBinLowEdge(i+1)
                 #print tempex,extrema50
                 if tempex<extrema50:
                     extrema50 = tempex
                     #print "found extrema R: ",extrema50
             if myS<=0.36:
-                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
-                tempex=sig.GetXaxis().GetBinLowEdge(i)
+                hsigreg25.SetBinContent(i+1, sig.GetBinContent(i+1))
+                tempex=sig.GetXaxis().GetBinLowEdge(i+1)
                 #print tempex,extrema25
                 if tempex<extrema25:
                     extrema25 = tempex
@@ -632,21 +641,26 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             #loop from 0 to i
             myBerr=Double()
             mySerr=Double()
-            myB = bkg.IntegralAndError(1,i,myBerr)
-            myS = sig.IntegralAndError(1,i,mySerr)
+            myB = bkg.IntegralAndError(1,i+1,myBerr)
+            myS = sig.IntegralAndError(1,i+1,mySerr)
             #print i,"  myS=",myS,"  myB=",myB
-            gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            if rejection:
+                gr.SetPoint(i, myS*sigeff, (1-myB*bkgeff))
+            elif myB*bkgeff != 0.0:
+                gr.SetPoint(i, myS*sigeff, 1./(myB*bkgeff))
+            else:
+                gr.SetPoint(i, myS*sigeff, 10e6)
             gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
             if myS<=0.73:
-                hsigreg50.SetBinContent(i, sig.GetBinContent(i))
-                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                hsigreg50.SetBinContent(i+1, sig.GetBinContent(i+1))
+                tempex=sig.GetXaxis().GetBinLowEdge(i+1)+sig.GetXaxis().GetBinWidth(i+1)
                 #print tempex,extrema50
                 if tempex>extrema50:
                     extrema50 = tempex
                     #print "found extrema L: ",extrema50
             if myS<=0.36:
-                hsigreg25.SetBinContent(i, sig.GetBinContent(i))
-                tempex=sig.GetXaxis().GetBinLowEdge(i)+sig.GetXaxis().GetBinWidth(i)
+                hsigreg25.SetBinContent(i+1, sig.GetBinContent(i+1))
+                tempex=sig.GetXaxis().GetBinLowEdge(i+1)+sig.GetXaxis().GetBinWidth(i+1)
                 #print tempex,extrema25
                 if tempex>extrema25:
                     extrema25 = tempex
@@ -658,10 +672,15 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
             sys.exit()
             
     #artificially set the first point to (1,1) to avoid overflow issues
-    gr.SetPoint(0, 0.0, 1.0)
-    gr.SetPointError(0, 0.0, 0.0)
+    #gr.SetPoint(0, 0.0, 1.0)
+    #gr.SetPointError(0, 0.0, 0.0)
             
     ctest = TCanvas("ctest","ctest",400,400)
+    if not rejection:
+        gr.GetYaxis().SetRangeUser(0.0,300)
+        gr.GetYaxis().SetTitle('Background Power: 1/eff')
+    else:
+        gr.GetYaxis().SetTitle('Background Rejection: 1-eff')
     gr.SetMinimum(0.0)
     gr.SetMaximum(1.0)
     gr.GetXaxis().SetRangeUser(0.0,1.0)
@@ -680,8 +699,16 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside=''):
     return gr,hsigreg50,hcutval50,hsigreg25,hcutval25
 
 
-def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
-
+def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True):
+    '''
+    Produce a single sided roc curve.  
+    
+    Keyword arguments:
+    sig and bkg -- are the signal and background histograms
+    sig/bkg_eff -- the signal and background efficiencies (for example, if a mass window cut has been applied the efficiency is already < 1)
+    cutside -- L or R, depending on the median of the sig and bkg
+    rejection -- Whether to calculate the background rejection or power (1-eff or 1/eff).
+    '''
     
     n = bkg.GetNbinsX()
     #print "NBins",n
@@ -699,7 +726,10 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
 
 
     gr = TGraph(n)
-    for i in range(1,n+1):
+    # this was from 1->n+1, but if we are using gr.SetPoint() it starts from 0, whereas
+    # the hist.Integral(x,y) starts from 1. So i is now 0 <= i < n+1, and hist integral is
+    # i+1 -> n or n-> i+1 and then gr.SetPoint(i,x,y)
+    for i in range(0,n+1):
         myS = 0.
         myB = 0.
 
@@ -713,18 +743,29 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
         #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkg_eff)
         if cutside=="R":
             #loop from i to end
-            myB = bkg.Integral(i,n)
-            myS = sig.Integral(i,n)
+            myB = bkg.Integral(i+1,n)
+            myS = sig.Integral(i+1,n)
             #print i,"  myS=",myS,"  myB=",myB
-            gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
-            #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if rejection:
+                gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+                #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            elif myB*bkg_eff != 0.0:
+                gr.SetPoint(i, myS*sig_eff, 1./(myB*bkg_eff))
+            else:
+                gr.SetPoint(i, myS*sig_eff, 10e6)
         elif cutside=="L":
             #loop from 0 to i
-            myB = bkg.Integral(1,i)
-            myS = sig.Integral(1,i)
+            myB = bkg.Integral(1,i+1)
+            myS = sig.Integral(1,i+1)
             #print i,"  myS=",myS,"  myB=",myB
-            gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
-            #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            if rejection:
+                gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+                #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
+            elif myB*bkg_eff != 0.0:
+                gr.SetPoint(i, myS*sig_eff, 1./(myB*bkg_eff))
+            else:
+                gr.SetPoint(i, myS*sig_eff, 10e6)
+                #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
             
             
     #artificially set the first point to (1,1) to avoid overflow issues
@@ -732,9 +773,15 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L'):
     
             
     #ctest = TCanvas("ctest","ctest",400,400)
+    if not rejection:
+        gr.GetYaxis().SetRangeUser(0.0,300)
+        gr.GetYaxis().SetTitle('Background Power: 1/eff')
+    else:
+        gr.GetYaxis().SetTitle('Background Rejection: 1-eff')
     gr.SetMinimum(0.0)
     gr.SetMaximum(1.0)
     gr.GetXaxis().SetRangeUser(0.0,1.0)
+    gr.GetXaxis().SetTitle('Signal Efficiency')
     #gr.Draw("AE3")
     #ctest.SaveAs("ctest.png")
     curve = gr
@@ -894,13 +941,15 @@ def RocCurve_SoverBOrdered(sig, bg, debug=0):
     s=[]
     b=[]
     r=[]
-
-    for i in range(1,sig.GetNbinsX()+1):
+    # this was from 1->n+1, but if we are using gr.SetPoint() it starts from 0, whereas
+    # the hist.Integral(x,y) starts from 1. So i is now 0 <= i < n+1, and hist integral is
+    # i+1 -> n or n-> i+1 and then gr.SetPoint(i,x,y)
+    for i in range(0,sig.GetNbinsX()+1):
         #print "bin ",i
 
-        binnumtemp = i
-        stemp = sig.GetBinContent(i)
-        btemp = bg.GetBinContent(i)
+        binnumtemp = i+1
+        stemp = sig.GetBinContent(i+1)
+        btemp = bg.GetBinContent(i+1)
 
         if btemp==0:
             rtemp=0.0

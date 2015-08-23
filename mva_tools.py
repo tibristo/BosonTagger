@@ -30,6 +30,7 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     # persist the original files as well.
     # first check if the file exists already
     full_fname = os.path.abspath(prefix+name+suffix % 100)
+    print full_fname
     if overwrite or not os.path.isfile(full_fname):
         full_set = (X,y,w,[signal_eff,bkg_eff])
         joblib.dump(full_set,full_fname)
@@ -102,13 +103,16 @@ def plotSamples(cv_split_filename, taggers, job_id=''):
 
 def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm=''):
     """Function executed by a worker to evaluate a model on a CV split"""
+    import os
     from sklearn.externals import joblib
     import numpy as np
     from sklearn.metrics import roc_curve, auc
     import modelEvaluation as me
+    import sys
 
     import numpy as np
     #import cv_fold
+    print cv_split_filename
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         cv_split_filename, mmap_mode='c')
 
@@ -154,13 +158,14 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     roc_bkg_rej = m.getRejPower()
 
     # save the model for later
+    f_name = 'evaluationObjects/'+job_id+'.pickle'
     import pickle 
     try:
         with open(f_name,'w') as d:
             pickle.dump(m, d)
         d.close()
     except:
-        msg = 'unable to dump object'
+        msg = 'unable to dump '+job_id+ ' object'
         with open(f_name,'w') as d:
             pickle.dump(msg, d)
         d.close()
@@ -177,37 +182,40 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
         print 'could not locate the full dataset'
         # return the rejection on the validation set anyway
         return roc_bkg_rej
-    file_full = cv_split_filename[:underscore_idx]+'100.pkl'
+    file_full = cv_split_filename[:underscore_idx+1]+'100.pkl'
     # check that this file exists
     if not os.path.isfile(file_full):
         print 'could not locate the full dataset'
         return roc_bkg_rej
-    
+
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
     full_score = model.score(X_full, y_full)
-    prob_predict_full = model.predict_prob(X_full)[;,1]
+    prob_predict_full = model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, model.feature_importances_, job_id+'_full', taggers, algorithm, full_score, cv_split_filename)
+    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, model.feature_importances_, job_id+'_full', taggers, algorithm, full_score, file_full)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
-    m_full.setProbas(prob_predict_full, sig_idx, bkg_idx)
+    # get the indices in the full sample
+    sig_full_idx = y_full == 1
+    bkg_full_idx = y_full == 0
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
     m_full.toROOT()
 
-    f_name = 'evaluationObjects/'+job_id+'.pickle'
     f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
-    
+
     try:
         with open(f_name_full,'w') as d2:
             pickle.dump(m_full, d2)
         d2.close()
+    
     except:
-        msg = 'unable to dump object'
+        msg = 'unable to dump '+job_id+ '_full object'
         with open(f_name_full,'w') as d2:
             pickle.dump(msg, d2)
         d2.close()
-        print 'unable to dump object'
-
+        print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
+    
     return roc_bkg_rej#bkgrej#validation_score
 
 
@@ -260,10 +268,12 @@ def cross_validation(data, model, params, iterations, variables, ovwrite=True, s
     w = data['weight'].values
 
     # find the efficiency for both signal and bkg
-    signal_eff = data.loc[data['label']==1]['eff'][0]
-    bkg_eff = data.loc[data['label']==0]['eff'][0]
+    #print data.loc[data['label']==1]['eff'].values[0]
+    signal_eff = data.loc[data['label']==1]['eff'].values[0]
+    #print data.loc[data['label']==0]['eff'].values[0]
+    bkg_eff = data.loc[data['label']==0]['eff'].values[0]
 
-    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, signal_eff, bkg_eff)
+    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, signal_eff=signal_eff, bkg_eff=bkg_eff)
     #all_parameters, all_tasks = grid_search(
      #   lb_view, model, filenames, params)
     return filenames
@@ -330,14 +340,16 @@ import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
-#test_case = 'features_l_2_10_'
+#test_case = 'features_l_2_10'
 #test_case = 'cv'
-test_case = 'testroot'
+test_case = 'test_tgraph'
 
 trainvars_iterations = [trainvars]
 
 
 #runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
+#runTest('persist/data_features_l_2_10_001.pkl', model, trainvars, algorithm)
+
 #sys.exit(0)
 #raw_input()
 
@@ -349,7 +361,7 @@ client = Client()
 lb_view = client.load_balanced_view()
 
 # just create the folds
-createFoldsOnly = True
+createFoldsOnly = False
 if createFoldsOnly:
     # we need to add some extra variables that might not get used for training, but we want in there anyway!
     filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, suffix_tag=test_case, scale=True)
@@ -357,7 +369,7 @@ if createFoldsOnly:
 
     
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case, scale=True)
+    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, suffix_tag=test_case, scale=False)
     allparms, alltasks = grid_search(
         lb_view, model, filenames, params, t, algorithm, id_tag=test_case, weighted=True)
 

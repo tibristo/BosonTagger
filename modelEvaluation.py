@@ -1,7 +1,12 @@
 
 class modelEvaluation:
     def __init__(self, fpr, tpr, thresholds, model, params, feature_importances, job_id, taggers, Algorithm, score, train_file):
-        import numpy as np
+        # this would be a really nice way of doing it, but Python has a problem
+        # creating pickle objects of modules that have modules as an attribute
+        #import numpy as np
+        #self.np = np
+        #import functions as fn
+        #self.fn = fn
         self.fpr = fpr
         self.tpr = tpr
         self.thresholds = thresholds
@@ -23,7 +28,8 @@ class modelEvaluation:
     def rejFromTPR(self):
         # this is here to calculate the 50% eff from the fpr and tpr
         # find 0.5 tpr
-        idx = (np.abs(self.tpr-0.5)).argmin()
+        import numpy as np
+        idx = (self.np.abs(self.tpr-0.5)).argmin()
         fpr_05 = self.fpr[idx]
         rej = 1-fpr_05
         if rej != 1:
@@ -72,7 +78,7 @@ class modelEvaluation:
         self.sig_idx = signal_idx
         self.bkg_idx = bkg_idx
         
-    def plotDiscriminant(self, discriminant, signal_idx, bkg_idx, save_disc = True):
+    def plotDiscriminant(self, discriminant, signal_idx, bkg_idx, save_disc = True, rejection_power=True):
         '''
         Plot the discriminants and the resulting ROC curve derived from them.
 
@@ -81,6 +87,7 @@ class modelEvaluation:
         signal_idx --- The true indices of all signal events
         bkg_idx ---The true indices of all background events
         save_disc --- Flag indicating if the discriminant plots should be saved.
+        rejection_power --- Whether or not to calculate bkg power: 1/eff in addtion to 1-eff
         '''
         import ROOT as root
         from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
@@ -88,6 +95,7 @@ class modelEvaluation:
         from root_numpy import fill_hist
         import functions as fn
         import os
+        
 
         # stop showing plots to screen
         root.gROOT.SetBatch(True)
@@ -143,6 +151,8 @@ class modelEvaluation:
             roc_cut = 'L'
         
         self.roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, self.sig_eff,self.bkg_eff, roc_cut)
+        self.roc_graph.SetName('BackgroundRejection')
+        self.roc_graph.SetTitle('BackgroundRejection')
         self.roc_graph.Write()
         
         # get teh background rejection power at 50% signal efficiency
@@ -154,6 +164,15 @@ class modelEvaluation:
         rej_n = TNamed(rej_string,rej_string)
         rej_n.Write()
 
+
+        if rejection_power:
+            c.SetLogy()
+            self.roc_graph_power = fn.RocCurve_SingleSided(hist_sig, hist_bkg, self.sig_eff,self.bkg_eff, roc_cut, rejection=False)
+            self.roc_graph_power.SetName('BackgroundPower')
+            self.roc_graph_power.SetTitle('BackgroundPower')
+            self.roc_graph_power.Write()
+
+        
         fo.Close()
 
     def setMaxEff(self, eff):
@@ -186,6 +205,7 @@ class modelEvaluation:
         the ROC curve calculated in plotDiscriminant from RocCurve_SingleSided call.
         '''        
         import numpy as np
+        import functions as fn
         # first check that all of these have been created
         if not hasattr(self, 'ROC_sig_efficiency'):
             # check if the roc_graph has been calculated
