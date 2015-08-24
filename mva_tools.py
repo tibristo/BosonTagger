@@ -149,8 +149,9 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     validation_score = model.score(X_validation, y_validation)
     prob_predict_valid = model.predict_proba(X_validation)[:,1]
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid)
+    
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, model.feature_importances_, job_id, taggers, algorithm, validation_score, cv_split_filename)
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, , job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_fuction=model.decision_function(X_validation))
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
     # create the output root file for this.
     m.toROOT()
@@ -193,7 +194,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     prob_predict_full = model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, model.feature_importances_, job_id+'_full', taggers, algorithm, full_score, file_full)
+    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, job_id+'_full', taggers, algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_fuction=model.decision_function(X_validation))
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
     # get the indices in the full sample

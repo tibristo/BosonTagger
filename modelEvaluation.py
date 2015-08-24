@@ -1,6 +1,6 @@
 
 class modelEvaluation:
-    def __init__(self, fpr, tpr, thresholds, model, params, feature_importances, job_id, taggers, Algorithm, score, train_file):
+    def __init__(self, fpr, tpr, thresholds, model, params, job_id, taggers, Algorithm, score, train_file, feature_importances=[], decision_function=[]): # add in the decision_function
         # this would be a really nice way of doing it, but Python has a problem
         # creating pickle objects of modules that have modules as an attribute
         #import numpy as np
@@ -24,6 +24,14 @@ class modelEvaluation:
         self.sortedFeatures()
         self.sig_eff = 1.0
         self.bkg_eff = 1.0
+        self.output_path = 'ROC'
+        self.output_prefix = 'SK'
+
+    def setOutputPath(self, path):
+        self.output_path = path
+
+    def setOutputPrefix(self, prefix):
+        self.output_prefix = prefix
 
     def rejFromTPR(self):
         # this is here to calculate the 50% eff from the fpr and tpr
@@ -100,15 +108,10 @@ class modelEvaluation:
         # stop showing plots to screen
         root.gROOT.SetBatch(True)
 
-        if not os.path.exists('ROC'):
-            os.makedirs('ROC')
-        fo = TFile.Open("ROC/SK"+str(self.job_id)+'.root','RECREATE')
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
+        fo = TFile.Open(self.output_path+"/"+self.output_prefix+str(self.job_id)+'.root','RECREATE')
 
-        '''
-        info = 'Rejection_power_'+str(self.rejection)
-        tn = TNamed(info,info)
-        tn.Write()
-        '''
         bins = 100
         # when creating the plots do it over the range of all probas (scores)
         discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
@@ -171,7 +174,8 @@ class modelEvaluation:
             self.roc_graph_power.SetName('BackgroundPower')
             self.roc_graph_power.SetTitle('BackgroundPower')
             self.roc_graph_power.Write()
-
+        self.hist_sig = hist_sig.Clone(); self.hist_sig.SetDirectory(0)
+        self.hist_bkg = hist_bkg.Clone(); self.hist_bkg.SetDirectory(0)
         
         fo.Close()
 
@@ -231,6 +235,38 @@ class modelEvaluation:
 
         return self.ROC_rej_power_05
 
+    def plotDecisionFunction(self):
+        import numpy as np
+        import matplotlib.pyplot as plt
+        # check that the decision function output was set
+        if len(self.decision_function) == 0:
+            return
+        # Plot the two-class decision scores
+        plot_colors = "br"
+        plot_step = 0.02
+        class_names = ["Signal","Background"]
+
+        plt.figure(figsize=(10, 5))
+        # get the range
+        plot_range = (self.decision_function.min(), self.decision_function.max())
+        # fill in the histogram
+        for i, n, c in zip(range(2), class_names, plot_colors):
+                plt.hist(self.decision_function[y == i],
+                                      bins=10,
+                                      range=plot_range,
+                                      facecolor=c,
+                                      label='Class %s' % n,
+                                      alpha=.5)
+        x1, x2, y1, y2 = plt.axis()
+        # set the axis ranges
+        plt.axis((x1, x2, y1, y2 * 1.2))
+        plt.legend(loc='upper right')
+        plt.ylabel('Samples')
+        plt.xlabel('Score')
+        plt.title('Decision Scores')
+        plt.savefig('disc_plots/'+str(self.job_id)+'decision_function.pdf')
+        #plt.show()
+    
     def getRejPower(self):
         return self.ROC_rej_power_05
 
