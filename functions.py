@@ -423,7 +423,7 @@ def getFiles(InputDir, signalFile, backgroundFile, massWinFile, ptrange):
     return signalFile, backgroundFile, eventsFileSig, eventsFileBkg, massWinFile
 
 
-def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights, plotranges, file_type='csv', signal_events=-1.0, background_events=-1.0):
+def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid, ptweights, plotranges, file_type='csv', signal_events=-1.0, background_events=-1.0, clean=True):
     '''
     Create csv files of the signal and background ntuples.
     Keyword args:
@@ -437,6 +437,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
     plotranges --- Dictionary of the ranges for different variables. This is the stub variable from Tagger, so it has a leading _
     file_type --- if it should write out a csv or a root file or both (csvroot)
     signal/background_events --- Number of events without a mass window cut applied.  This doesn't have to be set, but if it is, signal/bkg efficiency is calculated.
+    clean --- Whether or not to clean the data by only looking at events in the regions where all regions in the plot config file overlap
     '''
 
     import copy    
@@ -455,11 +456,12 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
     plotranges = {key: value for key, value in plotranges.items() if key not in donotcut}
 
     # update cutstring to keep all variables within range specified in plotconfig
-    for p in plotranges.keys():
-        prefix = "jet_"+Algorithm
-        if not p.startswith("_"):
-            prefix += "_"
-        cutstring += "*(" +prefix+p+">="+str(plotranges[p][0])+ ")*(" +prefix+p+"<="+str(plotranges[p][1]) + ")"
+    if clean:
+        for p in plotranges.keys():
+            prefix = "jet_"+Algorithm
+            if not p.startswith("_"):
+                prefix += "_"
+            cutstring += "*(" +prefix+p+">="+str(plotranges[p][0])+ ")*(" +prefix+p+"<="+str(plotranges[p][1]) + ")"
 
     # store the number of events
     sig_count = -1.0
@@ -479,10 +481,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
         # write the tree out in csv format to use again later
         # need to add some entries to branches to store the event weights
         numpydata = root_numpy.root2array(filename,treename,branches_pruned,cutstring)
-        if typename == 'sig':
-            sig_count = float(len(numpydata['evt_xsec']))
-        else:
-            bkg_count = float(len(numpydata['evt_xsec']))
+
             # need to add single entry per event with full weight -> mc*pt*rest
         # see https://stackoverflow.com/questions/12555323/adding-new-column-to-existing-dataframe-in-python-pandas
         numpydata = pd.DataFrame(numpydata)
@@ -492,8 +491,11 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*(1./numpydata['evt_nEvts'][i]) for i in xrange(0,len(numpydata['evt_xsec']))]
         else:
             numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
-        #print list(numpydata)
-        
+
+        if typename == 'sig':
+            sig_count = numpydata['weight'].sum()#float(len(numpydata['evt_xsec']))
+        else:
+            bkg_count = numpydata['weight'].sum()#float(len(numpydata['evt_xsec']))        
 
         if typename == 'sig':
             # if we know the number of events we can calculate an efficiency
@@ -773,13 +775,17 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True
     
             
     #ctest = TCanvas("ctest","ctest",400,400)
+    #gr.Draw("AC")
     if not rejection:
-        gr.GetYaxis().SetRangeUser(0.0,300)
+        gr.GetYaxis().SetRangeUser(0.0,400)
         gr.GetYaxis().SetTitle('Background Power: 1/eff')
+        gr.SetMinimum(8.0)
+        gr.SetMaximum(400.0)
     else:
         gr.GetYaxis().SetTitle('Background Rejection: 1-eff')
-    gr.SetMinimum(0.0)
-    gr.SetMaximum(1.0)
+        gr.SetMinimum(0.0)
+        gr.SetMaximum(1.0)
+    gr.GetXaxis().SetLimits(0.0,1.0)
     gr.GetXaxis().SetRangeUser(0.0,1.0)
     gr.GetXaxis().SetTitle('Signal Efficiency')
     #gr.Draw("AE3")

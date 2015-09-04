@@ -12,7 +12,7 @@ from sklearn import preprocessing
 # - Overfitting via Model Selection and the **Development / Evaluation set split**
 
 # In[1]:
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','m','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','pt','EEC_C2_2','Dip12','phi','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','eta','TauWTA1','PlanarFlow']
 trainvars = ['Tau1','EEC_C2_1','EEC_C2_2','EEC_D2_1','TauWTA2','Tau2','EEC_D2_2','TauWTA1']
@@ -32,7 +32,7 @@ plt.gray()
 
 # In[2]:
 import pandas as pd
-data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+data = pd.read_csv('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_merged.csv')
 
 # In[4]:
 from sklearn.preprocessing import StandardScaler
@@ -71,9 +71,6 @@ def plot_gallery(data, name):
 
 # In[13]:
 
-from sklearn.svm import SVC
-#SVC().fit(X, y).score(X, y)
-
 
 # Did we really learn a perfect model that can recognize the correct digit class 100% of the time? **Without new data it's impossible to tell.**
 # 
@@ -92,9 +89,24 @@ print("test data shape: %r, test target shape: %r, test weights shape: %r"
       % (X_test.shape, y_test.shape, w_test.shape))
 
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
+means = np.mean(X_train)
+std = np.std(X_train)
+print means[0]
+scaler.mean_ = np.zeros(len(means))
+scaler.std_ = np.ones(len(means))
+for i in range(len(means)):
+    scaler.mean_[i] = means[i]
+    scaler.std_[i] = std[i]
+print scaler.mean_
+#scaler.mean_ = 
+#X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
+
+print scaler.get_params(deep=True)
+print scaler.mean_
+print scaler.std_
+sys.exit()
 # Let's retrain a new model on the first subset call the **training set**:
 
 # In[15]:

@@ -211,7 +211,7 @@ def writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweig
     return hist
         
 
-def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw={}, rocs_rejection_scores={},recreate=True):
+def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw={}, rocs_rejection_scores={},recreate=True, power_curves={}):
     '''
     Write plots to a ROOT file instead of png/pdf
     Keyword args:
@@ -233,7 +233,9 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw
     for r in rocs_nomw.keys():
         rocs_nomw[r].Write('roc_nomw_'+r)
     for r in rocs_rejpow.keys():
-        rocs_rejpow[r].Write('bkgrejroc_'+r)
+        rocs_rejpow[r].Write('bkgrej_roc_'+r)
+    for r in power_curves.keys():
+        power_curves[r].Write('bkgpower_roc_'+r)
 
     for s in rocs_rejection_scores.keys():
         info = s+'_'+str(rocs_rejection_scores[s])
@@ -290,6 +292,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     roc={}
     roc_nomw = {}
     bkgRejROC= {}
+    bkgPowerROC = {}
     # bool that is set to false if no ROC curves are drawn - this will happen if any 
     # hist added to the roc is empty
     writeROC = False
@@ -313,16 +316,19 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     # loop through the indices and branchnames
     for index, branchname in enumerate(plotbranches):
         # add ROC dictionary entry
-        roc[branchname] = TGraphErrors()
+        roc[branchname] = TGraph()#Errors()
         roc[branchname].SetTitle(branchname)
         roc[branchname].SetName('roc_'+branchname)
-        roc_nomw[branchname] = TGraphErrors()
+        roc_nomw[branchname] = TGraph()#Errors()
         roc_nomw[branchname].SetTitle(branchname)
         roc_nomw[branchname].SetName('roc_nomw_'+branchname)
         # add bkg rej power dictionary entry
-        bkgRejROC[branchname] = TGraphErrors()
+        bkgRejROC[branchname] = TGraph()#Errors()
         bkgRejROC[branchname].SetTitle(branchname)
         bkgRejROC[branchname].SetName('bkgrej_roc_'+branchname)
+        bkgPowerROC[branchname] = TGraph()#Errors()
+        bkgPowerROC[branchname].SetTitle(branchname)
+        bkgPowerROC[branchname].SetName('bkgpower_roc_'+branchname)
         # new canvas
         canv1.cd(index+1)
 
@@ -449,15 +455,20 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                 else:
                     side = 'L'
                     
-                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
+                roc[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
+                #roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
                 bkgRejROC[branchname] = roc[branchname]
+                bkgPowerROC[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side,rejection=False)
 
             elif singleSidedROC == 'L' or singleSidedROC == 'R':
-                roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
+                roc[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
+                #roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
                 bkgRejROC[branchname] = roc[branchname]
+                bkgPowerROC[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC,rejection=False)
 
             else:
                 MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname], signal_eff, bkg_eff)
+                bkgPowerROC[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside='R',rejection=False)
             writeROC = True
 
         canv1.cd(index+1)
@@ -530,10 +541,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                 else:
                     side = 'L'
                     
-                roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
+                #roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
+                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
 
             elif singleSidedROC == 'L' or singleSidedROC == 'R':
-                roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+                #roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
 
             else:
                 MakeROCBen(1, hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], roc_nomw[branchname], TGraphErrors(), signal_eff, bkg_eff)
@@ -586,6 +599,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         canv2.cd()
         roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
         roc[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
+        bkgPowerROC[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
+        bkgPowerROC[branchname].GetYaxis().SetTitle("1/Efficiency_{QCD jets}")
 
         if index==0 and roc[branchname].Integral() != 0:
             roc[branchname].Draw("al")        
@@ -600,7 +615,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     if savePlots:
         #write out the plots after cuts
         writePlots(Algorithm, fileid, canv1, canv2, writeROC)
-        writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC, roc_nomw, roc_rejection_scores, recreate=True)
+        writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC, roc_nomw, roc_rejection_scores, recreate=True, power_curves = bkgPowerROC)
         #responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
         #responseHists = writeResponsePlots(Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi, applyMassWindow=False)
         #writePlotsToROOT(Algorithm, fileid, hist, recreate=False)
@@ -653,6 +668,7 @@ def main(args):
     parser.add_argument('--ROCside', help = 'L or R for left or right sided ROC cut, leave blank for sorted version.')
     parser.add_argument('--massWindowOverwrite', help = 'Overwrite the current mass window file if it exists.')
     parser.add_argument('--writecsv', help = 'Write the data into a csv file, do not run analyse.')
+    parser.add_argument('--clean', help = 'When creating the csv file cuts will be applied on all variables. These are set in functions.py.')
 
     args = parser.parse_args()
 
@@ -806,8 +822,12 @@ def main(args):
 
     # write csv flag
     writecsv = False
+    clean_data = True
     if args.writecsv and args.writecsv.lower() == 'true':
         writecsv = True
+        # only worried about clean_data if writecsv is true
+        if args.clean and args.clean.lower() == 'false':
+            clean_data = False
 
     # default selection string
     cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt <= "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) " + channelcut
@@ -986,10 +1006,10 @@ def main(args):
                 maxrejm_max = m_max
         else:
             # the last argument here is whether to create a csv or root file. Both = csvroot
-            sigevents, bkgevents = fn.writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid+'_nomw', massPtFunctions.getPtWeightsFile(), plotranges,'root')
+            sigevents, bkgevents = fn.writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorithm, fileid+'_nomw', massPtFunctions.getPtWeightsFile(), plotranges,'root', clean=clean_data)
             # now use the number of signal and background events to calculate the efficiency of the
             # the mass window cut
-            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+mass_cut, treename, Algorithm, fileid+'_mw', massPtFunctions.getPtWeightsFile(), plotranges,'root', sigevents, bkgevents)
+            fn.writeCSV(signalFile, backgroundFile, branches, cutstring+mass_cut, treename, Algorithm, fileid+'_mw', massPtFunctions.getPtWeightsFile(), plotranges,'root', sigevents, bkgevents, clean=clean_data)
         #records.write(str(rej) + ' ' + rejvar + ' ' + str(m_min) + ' ' + str(m_max)+'/n')
 
     # close all of the tfiles

@@ -26,6 +26,7 @@ class modelEvaluation:
         self.bkg_eff = 1.0
         self.output_path = 'ROC'
         self.output_prefix = 'SK'
+        self.decision_function = decision_function
 
     def setOutputPath(self, path):
         self.output_path = path
@@ -98,7 +99,7 @@ class modelEvaluation:
         rejection_power --- Whether or not to calculate bkg power: 1/eff in addtion to 1-eff
         '''
         import ROOT as root
-        from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F
+        from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F, TLegend
         import numpy as np
         from root_numpy import fill_hist
         import functions as fn
@@ -136,6 +137,12 @@ class modelEvaluation:
         hist_sig.Write()
         hist_bkg.Write()
         c = TCanvas()
+        leg = TLegend(0.8,0.55,0.9,0.65);leg.SetFillColor(root.kWhite)
+        leg.AddEntry(hist_sig, "Signal","l")
+        leg.AddEntry(hist_bkg, "Background", "l")
+        max_y = max(hist_sig.GetMaximum(), hist_bkg.GetMaximum())
+        hist_sig.SetMaximum(max_y*1.2)
+        hist_bkg.SetMaximum(max_y*1.2)
         hist_sig.Draw('hist')
         hist_bkg.Draw('histsame')
         c.Write()
@@ -171,9 +178,28 @@ class modelEvaluation:
         if rejection_power:
             c.SetLogy()
             self.roc_graph_power = fn.RocCurve_SingleSided(hist_sig, hist_bkg, self.sig_eff,self.bkg_eff, roc_cut, rejection=False)
+            c.cd()
             self.roc_graph_power.SetName('BackgroundPower')
             self.roc_graph_power.SetTitle('BackgroundPower')
             self.roc_graph_power.Write()
+
+        # write the decision function to the root file as well, if it is defined.
+        if len(self.decision_function) > 0:
+            self.decisionFunctionCanvas()
+            # add the legends
+            leg2 = TLegend(0.8,0.55,0.9,0.65);leg2.SetFillColor(root.kWhite)
+            leg2.AddEntry(self.df_sig, "Signal","l")
+            leg2.AddEntry(self.df_bkg, "Background", "l")
+            # canvas to draw them on
+            c2 = TCanvas('Decision Functions')
+            self.df_sig.Draw('hist')
+            self.df_bkg.Draw('histsame')
+            leg2.Draw('same')
+            c2.Write()
+            # now write the df histograms as well
+            self.df_sig.Write()
+            self.df_bkg.Write()
+            
         self.hist_sig = hist_sig.Clone(); self.hist_sig.SetDirectory(0)
         self.hist_bkg = hist_bkg.Clone(); self.hist_bkg.SetDirectory(0)
         
@@ -235,12 +261,46 @@ class modelEvaluation:
 
         return self.ROC_rej_power_05
 
+    def decisionFunctionCanvas(self):
+        '''
+        Create two histograms which are then drawn onto the same canvas.
+
+        This is only really defined for the BDT, not AGILE NN since that doesn't
+        give a "score".
+        '''
+        import ROOT as root
+        from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F, TLegend
+        import numpy as np
+        from root_numpy import fill_hist
+        import functions as fn
+        import os
+        # check that the decision function output was set
+        if len(self.decision_function) == 0:
+            return False
+        df_sig = TH1F("Signal Decision Function", "Score", 100, -1.0, 1.0)
+        df_bkg = TH1F("Background Decision Function", "Score", 100, -1.0, 1.0)
+        # fill the histograms with the df
+        fill_hist(df_sig,self.decision_function[self.sig_idx])
+        fill_hist(df_bkg,self.decision_function[self.bkg_idx])
+        # set up drawing options and colours
+        df_sig.SetLineColor(4); df_sig.SetFillStyle(3004)
+        df_bkg.SetLineColor(2); df_bkg.SetFillStyle(3005)
+        # set the y axis
+        max_y = max(df_sig.GetMaximum(), df_bkg.GetMaximum())
+        df_sig.SetMaximum(max_y*1.2)
+        df_bkg.SetMaximum(max_y*1.2)
+        # clone these things
+        self.df_sig = df_sig.Clone(); self.df_sig.SetDirectory(0)
+        self.df_bkg = df_bkg.Clone(); self.df_bkg.SetDirectory(0)
+        return True
+
+            
     def plotDecisionFunction(self):
         import numpy as np
         import matplotlib.pyplot as plt
         # check that the decision function output was set
         if len(self.decision_function) == 0:
-            return
+            return False
         # Plot the two-class decision scores
         plot_colors = "br"
         plot_step = 0.02
@@ -250,8 +310,8 @@ class modelEvaluation:
         # get the range
         plot_range = (self.decision_function.min(), self.decision_function.max())
         # fill in the histogram
-        for i, n, c in zip(range(2), class_names, plot_colors):
-                plt.hist(self.decision_function[y == i],
+        for i, n, c in zip([self.bkg_idx, self.sig_idx], class_names, plot_colors):
+                plt.hist(self.decision_function[i],
                                       bins=10,
                                       range=plot_range,
                                       facecolor=c,
@@ -266,6 +326,7 @@ class modelEvaluation:
         plt.title('Decision Scores')
         plt.savefig('disc_plots/'+str(self.job_id)+'decision_function.pdf')
         #plt.show()
+        return True
     
     def getRejPower(self):
         return self.ROC_rej_power_05
