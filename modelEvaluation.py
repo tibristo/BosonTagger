@@ -27,6 +27,7 @@ class modelEvaluation:
         self.output_path = 'ROC'
         self.output_prefix = 'SK'
         self.decision_function = decision_function
+        self.ROC_rej_power_05_train = -1
 
     def setOutputPath(self, path):
         self.output_path = path
@@ -205,6 +206,56 @@ class modelEvaluation:
         
         fo.Close()
 
+    def setTrainRejection(self, rej):
+        self.ROC_rej_power_05_train = rej
+
+    def calculateBkgRej(self, discrim, sig_idx, bkg_idx):
+        '''
+        This does essentially the same thing as the plotDiscriminant method, except that it does it for
+        an arbritrary discriminant and doesn't save the histograms. It just calculates the score.
+        '''
+        import ROOT as root
+        from ROOT import TH2D, TCanvas, TFile, TNamed, TH1F, TLegend
+        import numpy as np
+        from root_numpy import fill_hist
+        import functions as fn
+        import os
+        
+
+        # stop showing plots to screen
+        root.gROOT.SetBatch(True)
+
+        bins = 100
+        # when creating the plots do it over the range of all probas (scores)
+        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
+
+        hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+        hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
+
+        # fill the signal and background histograms
+        fill_hist(hist_bkg,discriminant[bkg_idx])
+        if hist_bkg.Integral() != 0:
+            hist_bkg.Scale(1/hist_bkg.Integral())
+        fill_hist(hist_sig,discriminant[signal_idx])
+        if hist_sig.Integral() != 0:
+            hist_sig.Scale(1/hist_sig.Integral())
+
+        # before deciding whether to do a left or right cut for the roc curve we have to find the median.
+        sig_median = np.median(discriminant[signal_idx])
+        bkg_median = np.median(discriminant[bkg_idx])
+        if sig_median > bkg_median:
+            roc_cut = 'R'
+        else:
+            roc_cut = 'L'
+        roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, self.sig_eff,self.bkg_eff, roc_cut)
+        fpr_05 = fn.GetBGRej50(roc_graph)
+
+        if fpr_05 != 1:
+            return float(1/(1-fpr_05))
+
+        return -1.0
+
+
     def setMaxEff(self, eff):
         '''
         Set the maximum efficiency when calculating the background rejection
@@ -327,7 +378,33 @@ class modelEvaluation:
         plt.savefig('disc_plots/'+str(self.job_id)+'decision_function.pdf')
         #plt.show()
         return True
-    
+
+    def setScores(sample='test',accuracy=-1.0, recall = -1.0, precision = -1.0, f1 = -1.0):
+        '''
+        All different metric evaluations.
+        results relative to the true category.
+        \[ {\rm accuracy} \equiv \frac{\rm correct~labels}{\rm total~samples} \]
+        \[ {\rm precision} \equiv \frac{\rm true~positives}{\rm true~positives + false~positives} \]
+        \[ {\rm recall} \equiv \frac{\rm true~positives}{\rm true~positives + false~negatives} \]
+        \[ F_1 \equiv 2 \frac{\rm precision \cdot recall}{\rm precision + recall} \]
+        The accuracy, precision, recall, and f1-score all range from 0 to 1, with 1 being optimal. Here we've used the following definitions:
+        True Positives are those which are labeled 1 which are actually 1
+        False Positives are those which are labeled 1 which are actually 0
+        True Negatives are those which are labeled 0 which are actually 0
+        False Negatives are those which are labeled 0 which are actually 1
+        '''
+        if sample == 'test':
+            self.test_accuracy = accuracy
+            self.test_recall = recall
+            self.test_precision = precision
+            self.test_f1 = f1
+        elif sample == 'train':
+            self.train_accuracy = accuracy
+            self.train_recall = recall
+            self.train_precision = precision
+            self.train_f1 = f1
+
+
     def getRejPower(self):
         return self.ROC_rej_power_05
 

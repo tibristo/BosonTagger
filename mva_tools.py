@@ -106,7 +106,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     import os
     from sklearn.externals import joblib
     import numpy as np
-    from sklearn.metrics import roc_curve, auc
+    from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
     import modelEvaluation as me
     import sys
 
@@ -153,10 +153,20 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
 
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_validation))
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
+    # set all of the scores
+    y_val_pred = m.predict(X_validation)
+    m.setScores(sample='test',accuracy=accuracy_score(y_val_pred, y_validation), precision=precision_score(y_val_pred, y_validation), recall=recall_score(y_val_pred, y_validation), f1=f1_score(y_val_pred, y_validation))
+    y_train_pred = m.predict(X_train)
+    m.setScores(sample='train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
+
     # create the output root file for this.
     m.toROOT()
     # score to return
     roc_bkg_rej = m.getRejPower()
+    # calculate the training score as well
+    prob_predict_train = model.predict_proba(X_train)[:,1]
+    bkg_rej_train = m.calculateBkgRej(prob_predict_train, sig_tr_idx, bkg_tr_idx)
+    m.setTrainRejection(bkg_rej_train)
 
     # save the model for later
     f_name = 'evaluationObjects/'+job_id+'.pickle'
@@ -206,8 +216,14 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
     m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
+    # set the different scores
+    y_pred_full = model.predict(X_full)
+    m_full.setScores(sample='test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
+    m_full.setScores(sample='train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
     # write this into a root file
     m_full.toROOT()
+    # save the train score
+    m_full.setTrainRejection(bkg_rej_train)
 
     f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
 
