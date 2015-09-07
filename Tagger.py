@@ -552,7 +552,7 @@ def main(args):
     config_f = ''
     # if no config file is specified the program exits
     if not args.config:
-        print 'Need more args! usage: python TaggerTim.py config [-i inputfile] [-a algorithm] [-f fileid] [--pthigh=x] [--ptlow=y] [--nvtx=n] [--nvtxlow=l] [--ptreweighting=true/false] [--saveplots=true/false] [--tree=name] [--channelnumber=number] [--lumi=scalefactor] [--massWindowCut=true/false] [-v,--version=versionNumber] [--weightexAOD=true/false] [--ROCside=L,R(default=sorted)] [--massWindowOverwrite=true/false(default=False)]'
+        print 'Need more args! usage: python Tagger.py config [-i inputfile] [-a algorithm] [-f fileid] [--pthigh=x] [--ptlow=y] [--nvtx=n] [--nvtxlow=l] [--ptreweighting=true/false] [--saveplots=true/false] [--tree=name] [--channelnumber=number] [--lumi=scalefactor] [--massWindowCut=true/false] [-v,--version=versionNumber] [--weightexAOD=true/false] [--ROCside=L,R(default=sorted)] [--massWindowOverwrite=true/false(default=False)]'
         sys.exit(0)
     else:
         config_f = args.config

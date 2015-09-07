@@ -10,14 +10,14 @@ from multiprocessing import Pool
 
 def runTag(args):
     '''
-    Driver for TaggerTim.py.  Importing this here rather than globally means that there are no issues with global ROOT variables when running this method multiple times.
+    Driver for Tagger.py.  Importing this here rather than globally means that there are no issues with global ROOT variables when running this method multiple times.
 
     Keyword args:
-    args --- list of all arguments to be given to TaggerTim.
+    args --- list of all arguments to be given to Tagger.
     '''
-    import TaggerTim
-    # TaggerTim has a method, runMain(args) which can be used to run the main method.
-    TaggerTim.runMain(args)
+    import Tagger
+    # Tagger has a method, runMain(args) which can be used to run the main method.
+    Tagger.runMain(args)
 
 def main(args):
     parser = argparse.ArgumentParser(description='scan bkg rejection')
@@ -104,7 +104,7 @@ def main(args):
         counter+=1
         #try:
         # used to have -f f+'_'+args.version
-        args_tag = ['TaggerTim.py',c,'-i',p,'-f', '_'+version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',version+'_idx_'+str(counter)] 
+        args_tag = ['Tagger.py',c,'-i',p,'-f', '_'+version, '--pthigh='+pt_high,'--ptlow='+pt_low,'--nvtx=99','--nvtxlow=0','--ptreweighting=true','--saveplots=true', '-v',version+'_idx_'+str(counter)] 
         if args.treename:
             args_tag.append('--tree='+args.treename)
         else:

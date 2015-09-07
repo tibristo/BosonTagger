@@ -300,7 +300,7 @@ class modelEvaluation:
         # find the entry in rejection matrix that corresponds to 50% efficiency
         idx = (np.abs(self.ROC_sig_efficiency[sel]-0.5)).argmin()
 
-        # in order to have consistency between this, TaggerTim and AGILEPack
+        # in order to have consistency between this, Tagger and AGILEPack
         # we will now use the GetBGRej50() method from Sam.
         fpr_05 = fn.GetBGRej50(self.roc_graph) #self.ROC_bkg_rejection[sel][idx]
         self.ROC_rejection_05 = fpr_05

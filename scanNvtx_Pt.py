@@ -10,16 +10,16 @@ nvtx_cuts = [[0,99]]
 # run 14 TeV
 
 for pt,nvtx in [(pt,nvtx) for pt in pt_values for nvtx in nvtx_cuts]:
-    status = subprocess.call('python TaggerTim.py config/filter_mu100_cut4_14tev.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4ca12_14tev_mu100_cut4_v1/ -f 14tev_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1]) +' --nvtxlow='+str(nvtx[0]), shell=True)
+    status = subprocess.call('python Tagger.py config/filter_mu100_cut4_14tev.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4ca12_14tev_mu100_cut4_v1/ -f 14tev_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1]) +' --nvtxlow='+str(nvtx[0]), shell=True)
 
 sys.exit(0)
 
 # run 8 TeV lily
 for pt,nvtx in [(pt,nvtx) for pt in pt_values for nvtx in nvtx_cuts]:
-    status = subprocess.call('python TaggerTim.py config/filter_mu100_cut4_8tev_l.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4lily_mu100_cut4_v1/ -f 8tev_l_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1])+' --nvtxlow='+str(nvtx[0]), shell=True)
+    status = subprocess.call('python Tagger.py config/filter_mu100_cut4_8tev_l.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4lily_mu100_cut4_v1/ -f 8tev_l_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1])+' --nvtxlow='+str(nvtx[0]), shell=True)
 
 
 # run Note 8 TeV
 for pt,nvtx in [(pt,nvtx) for pt in pt_values for nvtx in nvtx_cuts]:
-    status = subprocess.call('python TaggerTim.py config/filter_mu100_cut4_8tev.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4note_8TeV_mu100_cut4_v1/ -f 8tev_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1])+' --nvtxlow='+str(nvtx[0]), shell=True)
+    status = subprocess.call('python Tagger.py config/filter_mu100_cut4_8tev.xml -i /home/tim/boosted_samples/BoostedBosonMerging/sf_cuts_v3/TopoSplitFilteredMu100SmallR30YCut4note_8TeV_mu100_cut4_v1/ -f 8tev_'+ str(pt[0]) +'_' +str(pt[1])+ '_vxp_'+str(nvtx[0])+ '_'+str(nvtx[1])+' --pthigh='+str(pt[1])+' --ptlow='+str(pt[0]) + ' --nvtx='+str(nvtx[1])+' --nvtxlow='+str(nvtx[0]), shell=True)
 
