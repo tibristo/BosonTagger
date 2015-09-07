@@ -154,10 +154,10 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_validation))
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
     # set all of the scores
-    y_val_pred = m.predict(X_validation)
-    m.setScores(sample='test',accuracy=accuracy_score(y_val_pred, y_validation), precision=precision_score(y_val_pred, y_validation), recall=recall_score(y_val_pred, y_validation), f1=f1_score(y_val_pred, y_validation))
-    y_train_pred = m.predict(X_train)
-    m.setScores(sample='train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
+    y_val_pred = model.predict(X_validation)
+    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation), precision=precision_score(y_val_pred, y_validation), recall=recall_score(y_val_pred, y_validation), f1=f1_score(y_val_pred, y_validation))
+    y_train_pred = model.predict(X_train)
+    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
 
     # create the output root file for this.
     m.toROOT()
@@ -216,10 +216,10 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
     m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
-    # set the different scores
+    # set the different scoresx
     y_pred_full = model.predict(X_full)
-    m_full.setScores(sample='test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
-    m_full.setScores(sample='train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
+    m_full.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
     # write this into a root file
     m_full.toROOT()
     # save the train score
@@ -343,19 +343,19 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
-trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
-#trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
+#trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
+trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
 import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
-full_dataset = 'persist/data_features_nc_2_10_v1_100.pkl'
+full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
 
-test_case = 'features_nc_2_10_v2'
+test_case = 'features_l_2_10_v3'
 #test_case = 'features_nc_2_10_v1'
 #test_case = 'cv'
 #test_case = 'test_tgraph'
@@ -363,13 +363,13 @@ test_case = 'features_nc_2_10_v2'
 trainvars_iterations = [trainvars]
 
 #runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
-#runTest('persist/data_features_l_2_10_v2_001.pkl', model, trainvars, algorithm, full_dataset)
+#runTest('persist/data_features_l_2_10_v3_001.pkl', model, trainvars, algorithm, full_dataset)
 
 #sys.exit(0)
 #raw_input()
 
 # just create the folds
-createFoldsOnly = True
+createFoldsOnly = False
 if createFoldsOnly:
     # we need to add some extra variables that might not get used for training, but we want in there anyway!
     filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=test_case, scale=False)

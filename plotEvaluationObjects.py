@@ -61,8 +61,8 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
 
 
 # set up the job ids
-#key = 'features_l_2_10_v2'
-key = 'features_l_2_10ID'
+key = 'features_l_2_10_v3'
+#key = 'features_l_2_10ID'
 full_dataset = 'persist/data_features_nc_2_10_v2_100.pkl'
 jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1]
 print jobids
@@ -73,53 +73,100 @@ print jobids
 print 'finished creating new full objects'
 #sys.exit()
 #raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('full_v2.pickle')]
+files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full.pickle')]
 
 
-data = []
-for f in files:
-    print 'plotting file: ' + f
-    with open('evaluationObjects/'+f,'r') as p:
-        model = pickle.load(p)
-    # the filename contains the iteration number and the cv number which together form a unique id.
-    #  we have a string like paramID_iternum_key_cvnum[_full].pickle
-    # first number in the filename is the iternum
-    numbers = re.findall(r'\d+', f)
-    iter_num = numbers[0]
-    # last number is the cv number, unless we have _full_v2.pickle
-    if f.find('full_v') != -1:
-        cv_num = numbers[-2]
-    else:
-        cv_num = numbers[-1]
-    # now we want to get max_depth parameter
-    params = model.model.params
-    max_depth = -1
-    for k in params.keys():
-        if k.find('max_depth') != -1:
-            max_depth = int(params[k])
+def createDataframe(key, files):
+    '''
+    create a dataframe containing the info for all of the evaluation objects contained in the files list.
+    '''
+    data = []
+    for f in files:
+        print 'plotting file: ' + f
+        with open('evaluationObjects/'+f,'r') as p:
+            model = pickle.load(p)
+        # the filename contains the iteration number and the cv number which together form a unique id.
+        #  we have a string like paramID_iternum_key_cvnum[_full].pickle
+        # first number in the filename is the iternum
+        numbers = re.findall(r'\d+', f)
+        iter_num = numbers[0]
+        # last number is the cv number, unless we have _full_v2.pickle
+        if f.find('full_v') != -1:
+            cv_num = numbers[-2]
+        else:
+            cv_num = numbers[-1]
+        # now we want to get max_depth parameter
+        params = model.model.get_params()
+        max_depth = -1
+        for k in params.keys():
+            if k.find('max_depth') != -1:
+                max_depth = int(params[k])
 
-    # get the f1 scores
-    f1_train = model.train_f1
-    f1_test = model.test_f1
-    # get the recall scores
-    recall_train = model.train_recall
-    recall_test = model.test_recall
-    # get the accuracy scores
-    accuracy_train = model.train_accuracy
-    accuracy_test = model.test_accuracy
-    # get the precision scores
-    precision_train = model.train_precision
-    precision_test = model.test_precision
-    # get the bkg rejection power scores
-    bkg_rej_train = model.ROC_rej_power_05_train
-    bkg_rej_test = model.ROC_rej_power_05
-    thedict  = {'test_id':iter_num, 'cv_id': cv_num, 'max_depth':max_depth,'f1_train':f1_train,'f1_test':f1_test,'recall_train':recall_train,'recall_test':recall_test,'precision_train':precision_train,'precision_test':precision_test,'accuracy_train':accuracy_train,'accuracy_test':accuracy_test,'bkg_rej_train':bkg_rej_train,'bkg_rej_test':bkg_rej_test,'filename': f}
-    data.append(thedict)
+        # get the f1 scores
+        f1_train = model.train_f1
+        f1_test = model.test_f1
+        # get the recall scores
+        recall_train = model.train_recall
+        recall_test = model.test_recall
+        # get the accuracy scores
+        accuracy_train = model.train_accuracy
+        accuracy_test = model.test_accuracy
+        # get the precision scores
+        precision_train = model.train_precision
+        precision_test = model.test_precision
+        # get the bkg rejection power scores
+        bkg_rej_train = model.ROC_rej_power_05_train
+        bkg_rej_test = model.ROC_rej_power_05
+        thedict  = {'test_id':iter_num, 'cv_id': cv_num, 'max_depth':max_depth,'f1_train':f1_train,'f1_test':f1_test,'recall_train':recall_train,'recall_test':recall_test,'precision_train':precision_train,'precision_test':precision_test,'accuracy_train':accuracy_train,'accuracy_test':accuracy_test,'bkg_rej_train':bkg_rej_train,'bkg_rej_test':bkg_rej_test,'filename': f}
+        data.append(thedict)
+        
+    return data
 
-# now create a dataframe out of the data
-df = pd.DataFrame(data)
-# now we want to be able to sort on a number of criteria and create meaningful stats
+recreate_csv = True
 
+if recreate_csv:
+    #get a dict of the data
+    data_dict = createDataframe(key, files)
+    # now create a dataframe out of the data
+    df = pd.DataFrame(data_dict)
+    # save it as a csv so that we don't have to do this all over again every time.
+    #if save_csv:
+    csv_file = open('data_'+key+'.csv','w')
+    for i,d in enumerate(data_dict):
+        # write the keys to the file if it is the first one
+        num_keys = len(d.keys())
+        if i != 0:
+            for j,k in enumerate(d.keys()):
+                csv_file.write(str(d[k]))
+                if j != num_keys:
+                    csv_file.write(',')
+                else:
+                    csv_file.write('\n')
+        else:
+            for j,k in enumerate(d.keys()):
+                csv_file.write(str(d[k]))
+                if j != num_keys:
+                    csv_file.write(',')
+                else:
+                    csv_file.write('\n')
+    csv_file.close()
+
+else:
+    # we can read it in from the csv file
+    # check that the file exists
+    filefound = False
+    fname = 'data_'+key+'.csv'
+    while not filefound:
+        if not os.path.isfile():
+            print "file "+fname+" doesn't exist! Enter another name to try"
+            fname = raw_input()
+            continue
+        filefound = True
+        
+    df = pd.read_csv(fname)
+    
+# now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
+# easiest to run in interactive mode first.
 
 
 def getTaggerScores(files):
@@ -165,7 +212,7 @@ def getTaggerScores(files):
     # write to file
     f = open('scores'+key+'.txt','w')
     for s in sorted_scores:
-    f.write(s[0] + ': ' + str(s[1]) +'\n')
+        f.write(s[0] + ': ' + str(s[1]) +'\n')
     f.close()
 
     # find median of each

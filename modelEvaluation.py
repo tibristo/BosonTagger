@@ -209,7 +209,7 @@ class modelEvaluation:
     def setTrainRejection(self, rej):
         self.ROC_rej_power_05_train = rej
 
-    def calculateBkgRej(self, discrim, sig_idx, bkg_idx):
+    def calculateBkgRej(self, discriminant, signal_idx, bkg_idx):
         '''
         This does essentially the same thing as the plotDiscriminant method, except that it does it for
         an arbritrary discriminant and doesn't save the histograms. It just calculates the score.
@@ -379,7 +379,7 @@ class modelEvaluation:
         #plt.show()
         return True
 
-    def setScores(sample='test',accuracy=-1.0, recall = -1.0, precision = -1.0, f1 = -1.0):
+    def setScores(self, sample ,accuracy=-1.0, recall = -1.0, precision = -1.0, f1 = -1.0):
         '''
         All different metric evaluations.
         results relative to the true category.
