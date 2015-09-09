@@ -98,9 +98,15 @@ def createDataframe(key, files):
         # now we want to get max_depth parameter
         params = model.model.get_params()
         max_depth = -1
+        learning_rate = -1.0
+        n_estimators = -1
         for k in params.keys():
             if k.find('max_depth') != -1:
                 max_depth = int(params[k])
+            elif k.find('learning_rate') != -1:
+                learning_rate = float(params[k])
+            elif k.find('n_estimators') != -1:
+                n_estimators = int(params[k])
 
         # get the f1 scores
         f1_train = model.train_f1
@@ -117,12 +123,14 @@ def createDataframe(key, files):
         # get the bkg rejection power scores
         bkg_rej_train = model.ROC_rej_power_05_train
         bkg_rej_test = model.ROC_rej_power_05
-        thedict  = {'test_id':iter_num, 'cv_id': cv_num, 'max_depth':max_depth,'f1_train':f1_train,'f1_test':f1_test,'recall_train':recall_train,'recall_test':recall_test,'precision_train':precision_train,'precision_test':precision_test,'accuracy_train':accuracy_train,'accuracy_test':accuracy_test,'bkg_rej_train':bkg_rej_train,'bkg_rej_test':bkg_rej_test,'filename': f}
+        thedict  = {'test_id':int(iter_num), 'cv_id': int(cv_num), 'max_depth':max_depth, 'n_estimators':n_estimators, 'learning_rate':learning_rate,'f1_train':f1_train,'f1_test':f1_test,'recall_train':recall_train,'recall_test':recall_test,'precision_train':precision_train,'precision_test':precision_test,'accuracy_train':accuracy_train,'accuracy_test':accuracy_test,'bkg_rej_train':bkg_rej_train,'bkg_rej_test':bkg_rej_test,'filename': f}
         data.append(thedict)
         
     return data
 
 recreate_csv = True
+columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
+
 
 if recreate_csv:
     #get a dict of the data
@@ -132,23 +140,18 @@ if recreate_csv:
     # save it as a csv so that we don't have to do this all over again every time.
     #if save_csv:
     csv_file = open('data_'+key+'.csv','w')
+    # write the column names to the csv file
+    csv_file.write('test_id,cv_id,max_depth,n_estimators,learning_rate,f1_train,f1_test,recall_train,recall_test,precision_train,precision_test,accuracy_train,accuracy_test,bkg_rej_train,bkg_rej_test,filename\n')
     for i,d in enumerate(data_dict):
         # write the keys to the file if it is the first one
         num_keys = len(d.keys())
-        if i != 0:
-            for j,k in enumerate(d.keys()):
-                csv_file.write(str(d[k]))
-                if j != num_keys:
-                    csv_file.write(',')
-                else:
-                    csv_file.write('\n')
-        else:
-            for j,k in enumerate(d.keys()):
-                csv_file.write(str(d[k]))
-                if j != num_keys:
-                    csv_file.write(',')
-                else:
-                    csv_file.write('\n')
+        #if i != 0:
+        for j,k in enumerate(columns):
+            csv_file.write(str(d[k]))
+            if j != num_keys-1:
+                csv_file.write(',')
+            else:
+                csv_file.write('\n')
     csv_file.close()
 
 else:
@@ -157,17 +160,37 @@ else:
     filefound = False
     fname = 'data_'+key+'.csv'
     while not filefound:
-        if not os.path.isfile():
+        if not os.path.isfile(fname):
             print "file "+fname+" doesn't exist! Enter another name to try"
             fname = raw_input()
             continue
         filefound = True
         
     df = pd.read_csv(fname)
-    
+
 # now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
 # easiest to run in interactive mode first.
+grouped = df.groupby(['learning_rate','n_estimators','max_depth'])
+# get the mean scores
+gmean = grouped.mean()
+# get the index
+idx = gmean.index
+# get the levels - this stores the keys for the different groupby objects
+lvls = idx.levels
+# lrate is lvls[0], n_est is 1, max_depth is 2
+# lvls is a FrozenList with each element being a Frozen64Index
+lrates = lvls[0].values
+n_est = lvls[1].values
+md = lvls[2].values
 
+# now we can get the scores for the different max_depths
+for lr in lrates:
+    for n in n_est:
+        # store the values for all possible depths. this is what we want to plot!
+        for d in md:
+            gmean.loc[lrates,n_est,md]['accuracy_test']
+            gmean.loc[lrates,n_est,md]['accuracy_train']
+        # now we can plot these 
 
 def getTaggerScores(files):
     all_taggers_scores = {}

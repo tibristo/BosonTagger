@@ -28,7 +28,13 @@ class modelEvaluation:
         self.output_prefix = 'SK'
         self.decision_function = decision_function
         self.ROC_rej_power_05_train = -1
+        self.signal_train_events = -1
+        self.bkg_train_events = -1
 
+    def setNumberTrainEvents(self, signal=-1, background=-1):
+        self.signal_train_events = signal
+        self.bkg_train_events = background
+        
     def setOutputPath(self, path):
         self.output_path = path
 
@@ -379,7 +385,7 @@ class modelEvaluation:
         #plt.show()
         return True
 
-    def setScores(self, sample ,accuracy=-1.0, recall = -1.0, precision = -1.0, f1 = -1.0):
+    def setScores(self, sample ,accuracy=-1.0, recall = -1.0, precision = -1.0, f1 = -1.0, cut=-1.0):
         '''
         All different metric evaluations.
         results relative to the true category.
@@ -398,11 +404,13 @@ class modelEvaluation:
             self.test_recall = recall
             self.test_precision = precision
             self.test_f1 = f1
+            self.test_cut = cut
         elif sample == 'train':
             self.train_accuracy = accuracy
             self.train_recall = recall
             self.train_precision = precision
             self.train_f1 = f1
+            self.train_cut = cut
 
 
     def getRejPower(self):
