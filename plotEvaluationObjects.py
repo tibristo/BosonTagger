@@ -8,6 +8,7 @@ from sklearn.externals import joblib
 from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
 import operator
 import re
+import matplotlib.pyplot as plt
 job_id = 'features_l_2_10'
 
 def recreateFull(job_id, full_dataset, suffix = 'v2'):
@@ -128,7 +129,41 @@ def createDataframe(key, files):
         
     return data
 
-recreate_csv = True
+
+def plotValidationCurve(key, parameters, train_scores_mean, test_scores_mean, train_scores_std, test_scores_std, param_range):
+    '''
+    Plot a validation curve. For the moment this does a validation curve for the bdt. A bdt normally depends on the tree depth
+    for over and under-fitting.
+
+    Keyword args:
+    key -- file identifier
+    parameters --- the values for the training parameters: dictionary with learning_rate: lr, n_est: n, max_depth: md
+    mean and std for training and testing scores
+    param_range --- the range of the max_depth variable
+    '''
+
+    # set up the file name
+    fname = "validation_curves/"+key+'_lr_'+str(parameters['learning_rate'])+'_n_'+str(parameters['n_estimators'])+'.png'
+    plt.clf()
+    plt.title("Validation Curve with BDT")
+    plt.xlabel("$Max depth$")
+    plt.ylabel("Accuracy")
+    # find out what the y limits should be
+    y_up = max(np.amax(train_scores_mean), np.amax(test_scores_mean))
+    y_do = min(np.amin(train_scores_mean), np.amin(test_scores_mean))
+    plt.ylim(y_do*0.95, y_up*1.05)
+    plt.plot(param_range, train_scores_mean, label="Training score", color="r")
+    plt.fill_between(param_range, train_scores_mean - train_scores_std,
+                                      train_scores_mean + train_scores_std, alpha=0.2, color="r")
+    plt.plot(param_range, test_scores_mean, label="Cross-validation score",
+                              color="g")
+    plt.fill_between(param_range, test_scores_mean - test_scores_std,
+                                      test_scores_mean + test_scores_std, alpha=0.2, color="g")
+    plt.legend(loc="best")
+    plt.savefig(fname)
+
+
+recreate_csv = False
 columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
 
 
@@ -173,6 +208,7 @@ else:
 grouped = df.groupby(['learning_rate','n_estimators','max_depth'])
 # get the mean scores
 gmean = grouped.mean()
+gstd = grouped.std()
 # get the index
 idx = gmean.index
 # get the levels - this stores the keys for the different groupby objects
@@ -182,15 +218,32 @@ lvls = idx.levels
 lrates = lvls[0].values
 n_est = lvls[1].values
 md = lvls[2].values
-
+training_points = np.zeros(len(md))
+training_std = np.zeros(len(md))
+testing_points = np.zeros(len(md))
+testing_std = np.zeros(len(md))
 # now we can get the scores for the different max_depths
 for lr in lrates:
     for n in n_est:
         # store the values for all possible depths. this is what we want to plot!
-        for d in md:
-            gmean.loc[lrates,n_est,md]['accuracy_test']
-            gmean.loc[lrates,n_est,md]['accuracy_train']
-        # now we can plot these 
+        for i,d in enumerate(md):
+            #print gmean.loc[lr,n,d]['accuracy_test']
+            training_points[i] = gmean.loc[lr,n,d]['accuracy_test']
+            training_std[i] = gstd.loc[lr,n,d]['accuracy_test']
+            testing_points[i] = gmean.loc[lr,n,d]['accuracy_train']
+            testing_std[i] = gstd.loc[lr,n,d]['accuracy_train']
+        # now we can plot these
+        #print training_points
+        plotValidationCurve(key, {'learning_rate':lr, 'n_estimators':n}, training_points, testing_points, training_std, testing_std, md)
+        
+# we also want to know how all of the max_depth values did, for all parameters.
+grouped_md = df.groupby(['max_depth','test_id'])
+md_mean = grouped_md.mean()
+for m in md:
+    md_m = md_mean.loc[m]
+    plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_test'], label=str(m))
+    plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_train'], label=str(m))
+plt.savefig('validation_curves/combined_max_depth.png')
 
 def getTaggerScores(files):
     all_taggers_scores = {}

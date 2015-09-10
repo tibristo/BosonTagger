@@ -74,7 +74,7 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     return cv_split_filenames
 
 
-def plotSamples(cv_split_filename, taggers, job_id=''):
+def plotSamples(cv_split_filename, full_dataset, taggers):
     import os.path
     import matplotlib.pylab as plt
     
@@ -86,10 +86,57 @@ def plotSamples(cv_split_filename, taggers, job_id=''):
         os.makedirs('fold_plots')
     import numpy as np
 
+    # load the cross validation folds
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
-        cv_split_filename, mmap_mode='c')
+        'persist/'+cv_split_filename, mmap_mode='c')
+    # load the full dataset
+    X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
+    # only want the file not the folder
+    stats_fname = os.path.basename(cv_split_filename)
+    stats_fname = stats_fname.replace('pkl','txt')
+    # create a stats file with the std, mean of each variable, number of entries
+    if not os.path.exists('fold_stats'):
+        os.makedirs('fold_stats')
+    stats = open('fold_stats/'+stats_fname,'w')
     
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Training',str(X_train[y_train==1].shape[0]), str(X_train[y_train==0].shape[0]),str(X_train.shape[0]))+'\n')
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid',str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n')
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Full',str(X[y==1].shape[0]), str(X[y==0].shape[0]),str(X.shape[0]))+'\n\n')
+    
+    stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+    for i,t in enumerate(taggers):
+        # training
+        mean_tr = "{0:.4f}".format(float(np.mean(X_train[:,i])))
+        mean_signal_tr = '{0:.4f}'.format(float(np.mean(X_train[y_train==1][:,i])))
+        mean_bkg_tr = '{0:.4f}'.format(float(np.mean(X_train[y_train==0][:,i])))
+        std_tr = '{0:.4f}'.format(float(np.std(X_train[:,i])))
+        std_signal_tr = '{0:.4f}'.format(float(np.std(X_train[y_train==1][:,i])))
+        std_bkg_tr = '{0:.4f}'.format(float(np.std(X_train[y_train==0][:,i])))
+        # validation
+        mean_val = '{0:.4f}'.format(float(np.mean(X_validation[:,i])))
+        mean_signal_val = '{0:.4f}'.format(float(np.mean(X_validation[y_validation==1][:,i])))
+        mean_bkg_val = '{0:.4f}'.format(float(np.mean(X_validation[y_validation==0][:,i])))
+        std_val = '{0:.4f}'.format(float(np.std(X_validation[:,i])))
+        std_signal_val = '{0:.4f}'.format(float(np.std(X_validation[y_validation==1][:,i])))
+        std_bkg_val = '{0:.4f}'.format(float(np.std(X_validation[y_validation==0][:,i])))
+        # full dataset
+        mean = '{0:.4f}'.format(float(np.mean(X[:,i])))
+        mean_signal = '{0:.4f}'.format(float(np.mean(X[y==1][:,i])))
+        mean_bkg = '{0:.4f}'.format(float(np.mean(X[y==0][:,i])))
+        std = '{0:.4f}'.format(float(np.std(X[:,i])))
+        std_signal = '{0:.4f}'.format(float(np.std(X[y==1][:,i])))
+        std_bkg = '{0:.4f}'.format(float(np.std(X[y==0][:,i])))
+
+        result_tr = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))
+        result_val = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))
+        result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean),str(std),str(mean_signal),str(std_signal),str(mean_bkg),str(std_bkg))
+        stats.write(result_tr+'\n'+result_val+'\n'+result+'\n\n')
+
+    stats.close()
     # normalise the data first? should have been standardised....
+    # filename for plots:
+    plt_fname = stats_fname.replace('.txt','')
     for i, t in enumerate(taggers):
         plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5)
         plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5)
@@ -97,7 +144,7 @@ def plotSamples(cv_split_filename, taggers, job_id=''):
         plt.ylabel('#events')
         plt.title(t)
         plt.legend()
-        plt.savefig('fold_plots/'+job_id+t+'.pdf')
+        plt.savefig('fold_plots/'+plt_fname+'_'+t+'.pdf')
         plt.clf()
 
 
@@ -157,8 +204,8 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     y_val_pred = model.predict(X_validation)
     m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation), precision=precision_score(y_val_pred, y_validation), recall=recall_score(y_val_pred, y_validation), f1=f1_score(y_val_pred, y_validation))
     y_train_pred = model.predict(X_train)
-    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
-
+    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train)
+)
     # create the output root file for this.
     m.toROOT()
     # score to return
@@ -320,7 +367,7 @@ def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
     
     for i, params in enumerate(all_parameters):
         compute_evaluation(cv_split_filename, model, params, job_id = 'test', taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset)
-        plotSamples(cv_split_filename, trainvars, 'test')
+        plotSamples(cv_split_filename, trainvars)
         return
         
 print os.getcwd()
@@ -350,17 +397,25 @@ algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_10
 #trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
 trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
-import pandas as pd
-#data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
-data = pd.read_csv('csv/'+algorithm+'_merged.csv')
-full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
-
-test_case = 'features_l_2_10_v3'
+key = 'features_l_2_10_v3'
 #test_case = 'features_nc_2_10_v1'
 #test_case = 'cv'
 #test_case = 'test_tgraph'
 
 trainvars_iterations = [trainvars]
+full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
+
+plotCV = True
+if plotCV:
+    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.pkl')==-1 and f.endswith('pkl')]
+    for f in filenames:
+        plotSamples(f,full_dataset,trainvars)
+    sys.exit()
+
+
+import pandas as pd
+#data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
+data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 
 #runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
 #runTest('persist/data_features_l_2_10_v3_001.pkl', model, trainvars, algorithm, full_dataset)
@@ -372,10 +427,11 @@ trainvars_iterations = [trainvars]
 createFoldsOnly = False
 if createFoldsOnly:
     # we need to add some extra variables that might not get used for training, but we want in there anyway!
-    filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=test_case, scale=False)
+    filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=key, scale=False)
     sys.exit()
 
 
+    
 from IPython.parallel import Client
 
 client = Client()
@@ -385,9 +441,9 @@ lb_view = client.load_balanced_view()
 
     
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, ovwrite_full=False, suffix_tag=test_case, scale=False)
+    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
     allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm, id_tag=test_case, weighted=True, full_dataset=full_dataset)
+        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_dataset)
 
 
     prog = printProgress(alltasks)
@@ -397,4 +453,4 @@ for t in trainvars_iterations:
         pprint(find_bests(allparms,alltasks))
 
 
-    pprint(find_bests(allparms,alltasks,len(allparms), True, test_case))
+    pprint(find_bests(allparms,alltasks,len(allparms), True, key))
