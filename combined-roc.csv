@@ -1,0 +1,12 @@
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/ROC_root/AGILE_config-output-37.root,BackgroundRejection,AGILE W Tagger 37,BackgroundPower,2,1,1
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/ROC_root/AGILE_config-output-9.root,BackgroundRejection,AGILE W Tagger 9,BackgroundPower,2,1,3
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/boosted_framework/WTaggingNN/ROC_root/AGILE_config-output-22.root,BackgroundRejection,AGILE W Tagger 22,BackgroundPower,2,1,7
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_186features_l_2_10ID_1.pickle_full.root,BackgroundRejection,BDT Tagger 186,BackgroundPower,3,2,1
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_257features_l_2_10ID_1.pickle_full.root,BackgroundRejection,BDT Tagger 257,BackgroundPower,3,2,3
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_249features_l_2_10ID_1.pickle_full.root,BackgroundRejection,BDT Tagger 249,BackgroundPower,3,2,7
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_236features_l_2_10_v2ID_1_full_v2.root,BackgroundRejection,BDT Tagger 236 v2,BackgroundPower,4,3,1
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_286features_l_2_10_v2ID_1_full_v2.root,BackgroundRejection,BDT Tagger 286 v2,BackgroundPower,4,3,3
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/ROC/SKparamID_289features_l_2_10_v2ID_1_full_v2.root,BackgroundRejection,BDT Tagger 289 v2,BackgroundPower,4,3,7
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/plots/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_v2_200_1000.root,roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_TauWTA2TauWTA1,TauWTA21,bkgpower_roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_TauWTA2TauWTA1,6,4,1
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/plots/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_v2_200_1000.root,roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_EEC_C2_1,EEC_C2_1,bkgpower_roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_EEC_C2_1,6,4,3
+/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/plots/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_v2_200_1000.root,roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_EEC_D2_1,EEC_D2_1,bkgpower_roc_jet_AntiKt10LCTopoTrimmedPtFrac5SmallR20_EEC_D2_1,6,4,7

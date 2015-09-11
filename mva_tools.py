@@ -74,7 +74,17 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     return cv_split_filenames
 
 
-def plotSamples(cv_split_filename, full_dataset, taggers):
+def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
+    '''
+    Method for plotting the variables in the cv folds.  It also records stats of the cv folds including the number
+    of events and the mean and std of the different taggers.
+
+    cv_split_filename -- cv fold filename
+    full_dataset --- the full dataset from which the cv folds were created
+    taggers --- the variables used in the dataset for training
+    first_tagger --- this is used to create a stats file for all of the cv folds combined. If this is true then it will recreate the file
+    and it will also write the full dataset stats at the top of the file.
+    '''
     import os.path
     import matplotlib.pylab as plt
     
@@ -86,6 +96,11 @@ def plotSamples(cv_split_filename, full_dataset, taggers):
         os.makedirs('fold_plots')
     import numpy as np
 
+    # file mode for tagger_stats and event_count
+    file_mode = 'a'
+    if first_tagger:
+        file_mode = 'w'
+    
     # load the cross validation folds
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         'persist/'+cv_split_filename, mmap_mode='c')
@@ -94,18 +109,31 @@ def plotSamples(cv_split_filename, full_dataset, taggers):
     # only want the file not the folder
     stats_fname = os.path.basename(cv_split_filename)
     stats_fname = stats_fname.replace('pkl','txt')
+    # get the cross validation fold number from the file name.  The file will always end in _XYZ.pkl, where XYZ are integers.
+    cv_num = stats_fname.split('_')[-1].replace('.txt','')
     # create a stats file with the std, mean of each variable, number of entries
     if not os.path.exists('fold_stats'):
         os.makedirs('fold_stats')
     stats = open('fold_stats/'+stats_fname,'w')
     
     stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Full',str(X[y==1].shape[0]), str(X[y==0].shape[0]),str(X.shape[0]))+'\n')
     stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Training',str(X_train[y_train==1].shape[0]), str(X_train[y_train==0].shape[0]),str(X_train.shape[0]))+'\n')
-    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid',str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n')
-    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Full',str(X[y==1].shape[0]), str(X[y==0].shape[0]),str(X.shape[0]))+'\n\n')
+    stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid',str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n\n')
+    
+    event_count = open('fold_stats/event_counts.txt',file_mode)
+    if first_tagger:
+        event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Full',str(X[y==1].shape[0]), str(X[y==0].shape[0]),str(X.shape[0]))+'\n')
+    event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Train cv '+cv_num,str(X_train[y_train==1].shape[0]), str(X_train[y_train==0].shape[0]),str(X_train.shape[0]))+'\n')
+    event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid cv '+cv_num,str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n')
+    event_count.close()
     
     stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+
+    
     for i,t in enumerate(taggers):
+        tagger_stats = open('fold_stats/'+t+'.txt',file_mode)
+        stats.write(t+'\n')
         # training
         mean_tr = "{0:.4f}".format(float(np.mean(X_train[:,i])))
         mean_signal_tr = '{0:.4f}'.format(float(np.mean(X_train[y_train==1][:,i])))
@@ -128,10 +156,16 @@ def plotSamples(cv_split_filename, full_dataset, taggers):
         std_signal = '{0:.4f}'.format(float(np.std(X[y==1][:,i])))
         std_bkg = '{0:.4f}'.format(float(np.std(X[y==0][:,i])))
 
-        result_tr = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))
-        result_val = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))
-        result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format(t,str(mean),str(std),str(mean_signal),str(std_signal),str(mean_bkg),str(std_bkg))
-        stats.write(result_tr+'\n'+result_val+'\n'+result+'\n\n')
+        result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Full',str(mean),str(std),str(mean_signal),str(std_signal),str(mean_bkg),str(std_bkg))
+        result_tr = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Train',str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))
+        result_val = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Valid',str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))
+        
+        stats.write(result+'\n'+result_tr+'\n'+result_val+'\n\n')
+        if first_tagger:
+            tagger_stats.write(result+'\n')
+        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Train cv '+cv_num,str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))+'\n')
+        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Valid cv '+cv_num,str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))+'\n')
+        tagger_stats.close()
 
     stats.close()
     # normalise the data first? should have been standardised....
@@ -274,6 +308,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
 
     f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
 
+    # save the model to use later.
     try:
         with open(f_name_full,'w') as d2:
             pickle.dump(m_full, d2)
@@ -403,13 +438,26 @@ key = 'features_l_2_10_v3'
 #test_case = 'test_tgraph'
 
 trainvars_iterations = [trainvars]
-full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
+#full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
+full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
 
 plotCV = True
 if plotCV:
     filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.pkl')==-1 and f.endswith('pkl')]
-    for f in filenames:
-        plotSamples(f,full_dataset,trainvars)
+    for i,f in enumerate(filenames):
+        plotSamples(f,full_dataset,trainvars, i == 0)
+    # create the combined stats file for all taggers and all cv splits
+    combined_stats = open('fold_stats/combined_stats_'+key+'.txt','w')
+    combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
+    with open('fold_stats/event_counts.txt') as infile:
+        combined_stats.write(infile.read())
+    combined_stats.write('\n')
+    combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+    for t in trainvars:
+        combined_stats.write(t+'\n')
+        with open('fold_stats/'+t+'.txt') as tfile:
+            combined_stats.write(tfile.read())
+        combined_stats.write('\n')
     sys.exit()
 
 
