@@ -2,7 +2,7 @@ import sys
 import modelEvaluation as ev
 import os
 import pickle
-import gzip
+import bz2
 import numpy as np
 import pandas as pd
 from sklearn.externals import joblib
@@ -21,8 +21,8 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
         with open('evaluationObjects/'+job_id,'r') as p:
             model = pickle.load(p)
     else:
-        import gzip
-        with gzip.GzipFile('evaluationObjects/'+job_id,'r') as p:
+        import bz2
+        with bz2.BZ2File('evaluationObjects/'+job_id,'r') as p:
             model = pickle.load(p)
         
     file_full = full_dataset
@@ -71,18 +71,18 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
             print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]            
     else:
         if job_id.endswith('pickle'):
-            f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pgz'
+            f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pbz2'
         else:
-            f_name_full = 'evaluationObjects/'+job_id.replace('.pgz','')+'_'+suffix+'.pgz'
+            f_name_full = 'evaluationObjects/'+job_id.replace('.pbz2','')+'_'+suffix+'.pbz2'
         try:
-            with gzip.GzipFile(f_name_full,'w') as d2:
+            with bz2.BZ2File(f_name_full,'w') as d2:
                 pickle.dump(m_full, d2)
             d2.close()
             print 'pickled ' + f_name_full
     
         except:
             msg = 'unable to dump '+job_id+ '_'+suffix+' object'
-            with gzip.GzipFile(f_name_full,'w') as d2:
+            with bz2.BZ2File(f_name_full,'w') as d2:
                 pickle.dump(msg, d2)
             d2.close()
             print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
@@ -93,8 +93,8 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
 key = 'features_l_2_10_v5'
 #key = 'features_l_2_10ID'
 full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
-# are we wanting to use gzip?
-compress_id = 'pgz' # or pickle
+# are we wanting to use bz2?
+compress_id = 'pbz2' # or pickle
 jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith(compress_id)]
 #print jobids
 print 'total number of objects: ' + str(len(jobids))
@@ -124,7 +124,7 @@ def createDataframe(key, files):
                 model = pickle.load(p)
         else:
             
-            with gzip.GzipFile('evaluationObjects/'+f,'r') as p:
+            with bz2.BZ2File('evaluationObjects/'+f,'r') as p:
                 model = pickle.load(p)
         # the filename contains the iteration number and the cv number which together form a unique id.
         #  we have a string like paramID_iternum_key_cvnum[_full].pickle
@@ -318,7 +318,7 @@ def getTaggerScores(files):
             with open('evaluationObjects/'+f,'r') as p:
                 model = pickle.load(p)
         else:
-            with gzip.GzipFile('evaluationObjects/'+f,'r') as p:
+            with bz2.BZ2File('evaluationObjects/'+f,'r') as p:
                 model = pickle.load(p)
         taggers = model.taggers
         

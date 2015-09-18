@@ -13,7 +13,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
 from collections import OrderedDict
-import gzip
+import bz2
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
@@ -272,15 +272,15 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
                 pickle.dump(msg, d)
             d.close()
     else:
-        import gzip
-        f_name = 'evaluationObjects/'+job_id+'.pgz'
+        import bz2
+        f_name = 'evaluationObjects/'+job_id+'.pbz2'
         try:
-            with gzip.GzipFile(f_name,'w') as d:
+            with bz2.BZ2File(f_name,'w') as d:
                 pickle.dump(m, d)
             d.close()
         except:
             msg = 'unable to dump '+job_id+ ' object'
-            with gzip.GzipFile(f_name,'w') as d:
+            with bz2.BZ2File(f_name,'w') as d:
                 pickle.dump(msg, d)
     
     # do this for the full dataset
@@ -343,15 +343,15 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
             d2.close()
             print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
     else:
-        import gzip
-        f_name_full = 'evaluationObjects/'+job_id+'.pgz'
+        import bz2
+        f_name_full = 'evaluationObjects/'+job_id+'.pbz2'
         try:
-            with gzip.GzipFile(f_name_full,'w') as d:
+            with bz2.BZ2File(f_name_full,'w') as d:
                 pickle.dump(m, d)
             d.close()
         except:
             msg = 'unable to dump '+job_id+ ' object'
-            with gzip.GzipFile(f_name_full,'w') as d:
+            with bz2.BZ2File(f_name_full,'w') as d:
                 pickle.dump(msg, d)
             d.close()
         
@@ -471,7 +471,7 @@ key = 'features_l_2_10_v5'
 #test_case = 'test_tgraph'
 
 compress = True
-file_type = 'pgz' # .pickle or .pgz
+file_type = 'pbz2' # .pickle or .pbz2
 
 trainvars_iterations = [trainvars]
 full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
