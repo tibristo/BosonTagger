@@ -2,6 +2,7 @@ import sys
 import modelEvaluation as ev
 import os
 import pickle
+import gzip
 import numpy as np
 import pandas as pd
 from sklearn.externals import joblib
@@ -13,11 +14,16 @@ from math import floor, log10
 
 job_id = 'features_l_2_10'
 
-def recreateFull(job_id, full_dataset, suffix = 'v2'):
+def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
     
     # load the model from the cv model
-    with open('evaluationObjects/'+job_id,'r') as p:
-        model = pickle.load(p)    
+    if job_id.endswith('pickle'):
+        with open('evaluationObjects/'+job_id,'r') as p:
+            model = pickle.load(p)
+    else:
+        import gzip
+        with gzip.GzipFile('evaluationObjects/'+job_id,'r') as p:
+            model = pickle.load(p)
         
     file_full = full_dataset
     # check that this file exists
@@ -49,40 +55,60 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
     m_full.toROOT()
     # save the train score
     m_full.setTrainRejection(model.ROC_rej_power_05)
-    f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pickle'
+    if not compress:
+        f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pickle'
+        try:
+            with open(f_name_full,'w') as d2:
+                pickle.dump(m_full, d2)
+            d2.close()
+            print 'pickled ' + f_name_full
     
-    try:
-        with open(f_name_full,'w') as d2:
-            pickle.dump(m_full, d2)
-        d2.close()
-        print 'pickled ' + f_name_full
+        except:
+            msg = 'unable to dump '+job_id+ '_'+suffix+' object'
+            with open(f_name_full,'w') as d2:
+                pickle.dump(msg, d2)
+            d2.close()
+            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]            
+    else:
+        if job_id.endswith('pickle'):
+            f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pgz'
+        else:
+            f_name_full = 'evaluationObjects/'+job_id.replace('.pgz','')+'_'+suffix+'.pgz'
+        try:
+            with gzip.GzipFile(f_name_full,'w') as d2:
+                pickle.dump(m_full, d2)
+            d2.close()
+            print 'pickled ' + f_name_full
     
-    except:
-        msg = 'unable to dump '+job_id+ '_'+suffix+' object'
-        with open(f_name_full,'w') as d2:
-            pickle.dump(msg, d2)
-        d2.close()
-        print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
+        except:
+            msg = 'unable to dump '+job_id+ '_'+suffix+' object'
+            with gzip.GzipFile(f_name_full,'w') as d2:
+                pickle.dump(msg, d2)
+            d2.close()
+            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
 
+            
 
 # set up the job ids
 key = 'features_l_2_10_v5'
 #key = 'features_l_2_10ID'
 full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
-jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1]
+# are we wanting to use gzip?
+compress_id = 'pgz' # or pickle
+jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith(compress_id)]
 #print jobids
 print 'total number of objects: ' + str(len(jobids))
 total = len(jobids)
 #raw_input()
 #for i, j in enumerate(jobids):
 #    print 'progress: ' + str(float(100.0*i/total))
-#    recreateFull(j,full_dataset, 'full_v2')
+#    recreateFull(j,full_dataset, 'full_v2', compress=True)
 
     
 #print 'finished creating new full objects'
 #sys.exit()
 #raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full_v2.pickle')]
+files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full_v2.'+compress_id) ]
 print files
 raw_input()
 
@@ -93,8 +119,13 @@ def createDataframe(key, files):
     data = []
     for f in files:
         print 'plotting file: ' + f
-        with open('evaluationObjects/'+f,'r') as p:
-            model = pickle.load(p)
+        if f.endswith('pickle'):
+            with open('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
+        else:
+            
+            with gzip.GzipFile('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
         # the filename contains the iteration number and the cv number which together form a unique id.
         #  we have a string like paramID_iternum_key_cvnum[_full].pickle
         # first number in the filename is the iternum
@@ -283,13 +314,19 @@ def getTaggerScores(files):
     max_id = ""
     for f in files:
         print 'plotting file: ' + f
-        with open('evaluationObjects/'+f,'r') as p:
-            model = pickle.load(p)
+        if f.endswith('pickle'):
+            with open('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
+        else:
+            with gzip.GzipFile('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
         taggers = model.taggers
+        
         for t in taggers:
             if t not in all_taggers_scores.keys():
                 all_taggers_scores[t] = []
                 all_taggers_positions[t] = []
+                
         feature_importances = 100.0 * (model.feature_importances / model.feature_importances.max())
 
         #feature_importances = model.feature_importances

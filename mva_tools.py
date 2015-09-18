@@ -12,7 +12,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
-from collections import OrderedDict        
+from collections import OrderedDict
+import gzip
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
@@ -190,7 +191,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.clf()
 
 
-def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset=''):
+def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True):
     """Function executed by a worker to evaluate a model on a CV split"""
     import os
     from sklearn.externals import joblib
@@ -258,18 +259,29 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     m.setTrainRejection(bkg_rej_train)
 
     # save the model for later
-    f_name = 'evaluationObjects/'+job_id+'.pickle'
-    import pickle 
-    try:
-        with open(f_name,'w') as d:
-            pickle.dump(m, d)
-        d.close()
-    except:
-        msg = 'unable to dump '+job_id+ ' object'
-        with open(f_name,'w') as d:
-            pickle.dump(msg, d)
-        d.close()
-
+    import pickle
+    if not compress:
+        f_name = 'evaluationObjects/'+job_id+'.pickle'
+        try:
+            with open(f_name,'w') as d:
+                pickle.dump(m, d)
+            d.close()
+        except:
+            msg = 'unable to dump '+job_id+ ' object'
+            with open(f_name,'w') as d:
+                pickle.dump(msg, d)
+            d.close()
+    else:
+        import gzip
+        f_name = 'evaluationObjects/'+job_id+'.pgz'
+        try:
+            with gzip.GzipFile(f_name,'w') as d:
+                pickle.dump(m, d)
+            d.close()
+        except:
+            msg = 'unable to dump '+job_id+ ' object'
+            with gzip.GzipFile(f_name,'w') as d:
+                pickle.dump(msg, d)
     
     # do this for the full dataset
     # try reading in the memmap file
@@ -314,25 +326,39 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     # save the train score
     m_full.setTrainRejection(bkg_rej_train)
 
-    f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
+
 
     # save the model to use later.
-    try:
-        with open(f_name_full,'w') as d2:
-            pickle.dump(m_full, d2)
-        d2.close()
+    if not compress:
+        f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
+        try:
+            with open(f_name_full,'w') as d2:
+                pickle.dump(m_full, d2)
+            d2.close()
     
-    except:
-        msg = 'unable to dump '+job_id+ '_full object'
-        with open(f_name_full,'w') as d2:
-            pickle.dump(msg, d2)
-        d2.close()
-        print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
-    
+        except:
+            msg = 'unable to dump '+job_id+ '_full object'
+            with open(f_name_full,'w') as d2:
+                pickle.dump(msg, d2)
+            d2.close()
+            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
+    else:
+        import gzip
+        f_name_full = 'evaluationObjects/'+job_id+'.pgz'
+        try:
+            with gzip.GzipFile(f_name_full,'w') as d:
+                pickle.dump(m, d)
+            d.close()
+        except:
+            msg = 'unable to dump '+job_id+ ' object'
+            with gzip.GzipFile(f_name_full,'w') as d:
+                pickle.dump(msg, d)
+            d.close()
+        
     return roc_bkg_rej#bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset=''):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -343,7 +369,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
        
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -431,8 +457,8 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
 #trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
@@ -444,16 +470,19 @@ key = 'features_l_2_10_v5'
 #test_case = 'cv'
 #test_case = 'test_tgraph'
 
+compress = True
+file_type = 'pgz' # .pickle or .pgz
+
 trainvars_iterations = [trainvars]
-#full_dataset = 'persist/data_features_nc_2_10_v3_100.pkl'
-full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
+full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
+#full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
 
 plotCV = True
 weight_plots = True
 weight_flag = '_weighted' if weight_plots else ''
 
 if plotCV:
-    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.pkl')==-1 and f.endswith('pkl')]
+    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith(file_type)]
     for i,f in enumerate(filenames):
         plotSamples(f,full_dataset,trainvars, key = key, first_tagger = i == 0, weight_plots = True)
     # create the combined stats file for all taggers and all cv splits
@@ -482,7 +511,7 @@ data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 #raw_input()
 
 # just create the folds
-createFoldsOnly = True
+createFoldsOnly = False
 if createFoldsOnly:
     # we need to add some extra variables that might not get used for training, but we want in there anyway!
     filenames = cross_validation(data, model, params, 10, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=key, scale=False)
@@ -501,7 +530,7 @@ lb_view = client.load_balanced_view()
 for t in trainvars_iterations:
     filenames = cross_validation(data, model, params, 10, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
     allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_dataset)
+        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_datase,compress=compresst)
 
 
     prog = printProgress(alltasks)
