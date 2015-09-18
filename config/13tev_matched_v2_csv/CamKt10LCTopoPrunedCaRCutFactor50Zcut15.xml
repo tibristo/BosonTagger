@@ -1,0 +1,458 @@
+<?xml version="1.0"?>
+<settings>
+  <cutstring name = "pt">
+    <pt_high name = "310000"></pt_high>
+    <pt_low name = "200000"></pt_low>
+  </cutstring>
+  <Algorithm name = "CamKt10LCTopoPrunedCaRCutFactor50Zcut15">
+    <AlgorithmString>CamKt R=1.0, trimmed jets</AlgorithmString>
+    <AlgorithmSettings>Cut factor 50, Zcut0.15</AlgorithmSettings>
+    <Energy>13</Energy>
+  </Algorithm>
+  <plotTruth name = "False">
+  </plotTruth>
+  <fileid name = "fileid_config_test">
+  </fileid>
+  <ptBins>
+    <bin name = "28"></bin>
+  </ptBins>
+
+  <varName name="pt">
+  <stub>_pt</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>310000.0</maxValue>
+    <minValue>0.0</minValue>
+  </range>
+  </varName>
+
+  <varName name="eta">
+  <stub>_eta</stub>
+  <plot>False</plot>
+  <range name="default">
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="phi">
+  <stub>_phi</stub>
+  <plot>False</plot>
+  <range name="default">
+    <maxValue>5</maxValue>
+    <minValue>-5</minValue>
+    </range>
+  </varName>
+
+  <varName name="Mass (GeV)">
+  <stub>_m</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1200000.0</maxValue>
+    <minValue>0.0</minValue>
+    </range>
+  </varName>			  
+
+  <varName name="#tau_{1} (dimensionless)">
+  <stub>_Tau1</stub>
+  <plot>False</plot>
+  <range name="default">
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.35</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.35</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.35</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.35</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+  <varName name="#tau_{2} (dimensionless)">
+  <stub>_Tau2</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.25</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.2</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="#tau_{21} (dimensionless)">
+  <stub>_Tau21</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1.4</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+  <varName name="Width">
+  <stub>_WIDTH</stub>
+  <plot>False</plot>
+  </varName>
+
+
+  <varName name="#sqrt d_{12} ">
+  <stub>_SPLIT12</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>100.0</maxValue>
+    <minValue>0.0</minValue>
+    </range>
+  </varName>
+
+
+  <varName name="PlanarFlow">
+  <stub>_PlanarFlow</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1.2</maxValue>
+    <minValue>0</minValue>
+  </range>
+  </varName>
+
+
+  <varName name="Angularity #a_{3}">
+  <stub>_Angularity</stub>
+  <plot>False</plot>
+  <range name="default">
+    <maxValue>0.1</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.05</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.05</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.02</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.004</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.002</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.002</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="Mass Drop">
+  <stub>_Mu12</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1.0</maxValue>
+    <minValue>0</minValue>
+    </range>
+  </varName>
+
+
+  <varName name="Momentum Balance">
+  <stub>_YFilt</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>1.0</maxValue>
+    <minValue>0.0</minValue>
+    </range>
+  </varName>
+
+
+
+  <varName name="EEC C2 #beta=1 (dimensionless)">
+  <stub>_EEC_C2_1</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>0.6</maxValue>
+  </range>
+  <range name="200">
+    <minValue>0.0</minValue>
+    <maxValue>0.6</maxValue>
+  </range>
+  <range name="350">
+    <minValue>0.0</minValue>
+    <maxValue>0.4</maxValue>
+  </range>
+  <range name="500">
+    <minValue>0.0</minValue>
+    <maxValue>0.3</maxValue>
+  </range>
+  </varName>
+
+
+  <varName name="EEC C2 #beta=2 (dimensionless)">
+  <stub>_EEC_C2_2</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>0.7</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.7</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.3</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.1</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.1</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.1</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.1</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="EEC D2 #beta=1 (dimensionless)">
+  <stub>_EEC_D2_1</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>6</maxValue>
+  </range>
+  </varName>
+
+
+  <varName name="EEC D2 #beta=2 (dimensionless)">
+  <stub>_EEC_D2_2</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>20.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="FoxWolfram20">
+  <stub>_FoxWolfram20</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Soft Drop Fraction">
+  <stub>_SoftDrop</stub>
+  <plot>False</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>4.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Sphericity">
+  <stub>_Sphericity</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Aplanarity">
+  <stub>_Aplanarity</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>0.4</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Thrust Maj">
+  <stub>_ThrustMaj</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Thrust Min">
+  <stub>_ThrustMin</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="#tau_{WTA1} (dimensionless)">
+  <stub>_TauWTA1</stub>
+  <plot>False</plot>
+  <range name="default">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.35</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="#tau_{WTA2} (dimensionless)">
+  <stub>_TauWTA2</stub>
+  <plot>True</plot>
+  <range name="default">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="200">
+    <maxValue>0.5</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="350">
+    <maxValue>0.2</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="500">
+    <maxValue>0.15</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1000">
+    <maxValue>0.08</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="1500">
+    <maxValue>0.08</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  <range name="2000">
+    <maxValue>0.08</maxValue>
+    <minValue>0.0</minValue>
+   </range>
+  </varName>
+
+
+  <varName name="ZCUT12">
+  <stub>_ZCUT12</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>0.6</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="#tau_{WTA2}/#tau_{WTA1} (dimensionless)">
+  <stub>_TauWTA2TauWTA1</stub>
+  <plot>True</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>1.0</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="Dip12">
+  <stub>_Dip12</stub>
+  <plot>False</plot>
+  <range name="default">
+    <minValue>0.0</minValue>
+    <maxValue>0.25</maxValue>
+    </range>
+  </varName>
+
+
+  <varName name="pileup">
+    <stub>averageIntPerXing</stub>
+    <plot>False</plot>
+    <range name="default">
+    <minValue>0</minValue>
+    <maxValue>100</maxValue>
+    </range>
+    <jetVariable>False</jetVariable>
+    </varName>
+
+</settings>
