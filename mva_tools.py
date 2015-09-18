@@ -22,7 +22,7 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     from root_numpy import array2root
     import numpy.lib.recfunctions as nf
     #cv = StratifiedKFold(y,n_cv_iter)
-    cv = StratifiedShuffleSplit(y, n_cv_iter)#KFold(y,n_cv_iter)
+    cv = StratifiedShuffleSplit(y, n_cv_iter, test_size = test_size)#KFold(y,n_cv_iter)
     #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
     #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
@@ -74,7 +74,7 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     return cv_split_filenames
 
 
-def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
+def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger = False, weight_plots = False):
     '''
     Method for plotting the variables in the cv folds.  It also records stats of the cv folds including the number
     of events and the mean and std of the different taggers.
@@ -84,6 +84,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
     taggers --- the variables used in the dataset for training
     first_tagger --- this is used to create a stats file for all of the cv folds combined. If this is true then it will recreate the file
     and it will also write the full dataset stats at the top of the file.
+    weight_plots --- if the plots should be weighted or not
     '''
     import os.path
     import matplotlib.pylab as plt
@@ -96,10 +97,10 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
         os.makedirs('fold_plots')
     import numpy as np
 
+    weight_flag = '_weighted' if weight_plots else ''
+    
     # file mode for tagger_stats and event_count
-    file_mode = 'a'
-    if first_tagger:
-        file_mode = 'w'
+    file_mode = 'w' if first_tagger else 'w'
     
     # load the cross validation folds
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
@@ -108,12 +109,14 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
     X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
     # only want the file not the folder
     stats_fname = os.path.basename(cv_split_filename)
-    stats_fname = stats_fname.replace('pkl','txt')
+    stats_fname = stats_fname.replace('.pkl','.txt')
     # get the cross validation fold number from the file name.  The file will always end in _XYZ.pkl, where XYZ are integers.
     cv_num = stats_fname.split('_')[-1].replace('.txt','')
     # create a stats file with the std, mean of each variable, number of entries
     if not os.path.exists('fold_stats'):
         os.makedirs('fold_stats')
+    # update stats_fname with the weight flag
+    stats_fname = stats_fname.replace('.txt', weight_flag+'.txt')
     stats = open('fold_stats/'+stats_fname,'w')
     
     stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
@@ -121,7 +124,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
     stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Training',str(X_train[y_train==1].shape[0]), str(X_train[y_train==0].shape[0]),str(X_train.shape[0]))+'\n')
     stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid',str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n\n')
     
-    event_count = open('fold_stats/event_counts.txt',file_mode)
+    event_count = open('fold_stats/event_counts'+weight_flag+'.txt',file_mode)
     if first_tagger:
         event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Full',str(X[y==1].shape[0]), str(X[y==0].shape[0]),str(X.shape[0]))+'\n')
     event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Train cv '+cv_num,str(X_train[y_train==1].shape[0]), str(X_train[y_train==0].shape[0]),str(X_train.shape[0]))+'\n')
@@ -132,7 +135,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
 
     
     for i,t in enumerate(taggers):
-        tagger_stats = open('fold_stats/'+t+'.txt',file_mode)
+        tagger_stats = open('fold_stats/'+t+'_'+key+weight_flag+'.txt',file_mode)
         stats.write(t+'\n')
         # training
         mean_tr = "{0:.4f}".format(float(np.mean(X_train[:,i])))
@@ -170,15 +173,20 @@ def plotSamples(cv_split_filename, full_dataset, taggers, first_tagger = False):
     stats.close()
     # normalise the data first? should have been standardised....
     # filename for plots:
-    plt_fname = stats_fname.replace('.txt','')
+    plt_fname = stats_fname.replace(weight_flag+'.txt','')
+
+    # weights
+    weight_sig = w_train[y_train==1] if weight_plots else None
+    weight_bkg = w_train[y_train==0] if weight_plots else None
+    
     for i, t in enumerate(taggers):
-        plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5)
-        plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5)
+        plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5,weights=weight_sig)
+        plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5,weights=weight_bkg)
         plt.xlabel(t)
         plt.ylabel('#events')
         plt.title(t)
         plt.legend()
-        plt.savefig('fold_plots/'+plt_fname+'_'+t+'.pdf')
+        plt.savefig('fold_plots/'+plt_fname+'_'+t+weight_flag+'.pdf')
         plt.clf()
 
 
@@ -232,7 +240,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid)
     
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_validation))
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
     # set all of the scores
     y_val_pred = model.predict(X_validation)
@@ -289,7 +297,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     prob_predict_full = model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, job_id+'_full', taggers, algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=model.decision_function(X_full))
+    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, job_id+'_full', taggers, algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
     # get the indices in the full sample
@@ -406,8 +414,6 @@ def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
         return
         
 print os.getcwd()
-from sklearn.svm import SVC
-
 #    import cv_fold
 
 model = AdaBoostClassifier()
@@ -425,14 +431,15 @@ params = OrderedDict([
 #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
+#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
 #trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
 trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
-key = 'features_l_2_10_v3'
+#key = 'features_nc_2_10_v5'
+key = 'features_l_2_10_v5'
 #test_case = 'features_nc_2_10_v1'
 #test_case = 'cv'
 #test_case = 'test_tgraph'
@@ -442,20 +449,23 @@ trainvars_iterations = [trainvars]
 full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
 
 plotCV = True
+weight_plots = True
+weight_flag = '_weighted' if weight_plots else ''
+
 if plotCV:
     filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.pkl')==-1 and f.endswith('pkl')]
     for i,f in enumerate(filenames):
-        plotSamples(f,full_dataset,trainvars, i == 0)
+        plotSamples(f,full_dataset,trainvars, key = key, first_tagger = i == 0, weight_plots = True)
     # create the combined stats file for all taggers and all cv splits
-    combined_stats = open('fold_stats/combined_stats_'+key+'.txt','w')
+    combined_stats = open('fold_stats/combined_stats_'+key+weight_flag+'.txt','w')
     combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
-    with open('fold_stats/event_counts.txt') as infile:
+    with open('fold_stats/event_counts'+weight_flag+'.txt') as infile:
         combined_stats.write(infile.read())
     combined_stats.write('\n')
     combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
     for t in trainvars:
         combined_stats.write(t+'\n')
-        with open('fold_stats/'+t+'.txt') as tfile:
+        with open('fold_stats/'+t+'_'+key+weight_flag+'.txt') as tfile:
             combined_stats.write(tfile.read())
         combined_stats.write('\n')
     sys.exit()
@@ -472,14 +482,14 @@ data = pd.read_csv('csv/'+algorithm+'_merged.csv')
 #raw_input()
 
 # just create the folds
-createFoldsOnly = False
+createFoldsOnly = True
 if createFoldsOnly:
     # we need to add some extra variables that might not get used for training, but we want in there anyway!
-    filenames = cross_validation(data, model, params, 3, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=key, scale=False)
+    filenames = cross_validation(data, model, params, 10, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=key, scale=False)
     sys.exit()
 
 
-    
+# do the full grid search    
 from IPython.parallel import Client
 
 client = Client()
@@ -489,7 +499,7 @@ lb_view = client.load_balanced_view()
 
     
 for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 3, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
+    filenames = cross_validation(data, model, params, 10, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
     allparms, alltasks = grid_search(
         lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_dataset)
 

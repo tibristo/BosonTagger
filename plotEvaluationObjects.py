@@ -9,6 +9,8 @@ from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, rec
 import operator
 import re
 import matplotlib.pyplot as plt
+from math import floor, log10
+
 job_id = 'features_l_2_10'
 
 def recreateFull(job_id, full_dataset, suffix = 'v2'):
@@ -16,8 +18,7 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
     # load the model from the cv model
     with open('evaluationObjects/'+job_id,'r') as p:
         model = pickle.load(p)    
-    
-    # do this for the full dataset
+        
     file_full = full_dataset
     # check that this file exists
     if not os.path.isfile(file_full):
@@ -30,7 +31,7 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
     prob_predict_full = model.model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id+'_full', model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.model.decision_function(X_full))
+    m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id+'_full', model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.decision_function, decision_function_sig = model.df_sig_idx, decision_function_bkg = model.df_bkg_idx)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
     # get the indices in the full sample
@@ -38,15 +39,18 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
     m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
-    # set the different scores
-    y_pred_full = model.predict(X_full)
-    m_full.setScores(accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
+    # set the different scoresx
+    y_pred_full = model.model.predict(X_full)
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
 
+    # need to get the train scores!
+    m_full.setScores('train',accuracy=model.train_accuracy, precision=model.train_precision, recall=model.train_recall, f1=model.train_f1)
     # write this into a root file
     m_full.toROOT()
-
-    f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','_')+'_'+suffix+'.pickle'
-
+    # save the train score
+    m_full.setTrainRejection(model.ROC_rej_power_05)
+    f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pickle'
+    
     try:
         with open(f_name_full,'w') as d2:
             pickle.dump(m_full, d2)
@@ -62,20 +66,25 @@ def recreateFull(job_id, full_dataset, suffix = 'v2'):
 
 
 # set up the job ids
-key = 'features_l_2_10_v3'
+key = 'features_l_2_10_v5'
 #key = 'features_l_2_10ID'
-full_dataset = 'persist/data_features_nc_2_10_v2_100.pkl'
+full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
 jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1]
-print jobids
+#print jobids
+print 'total number of objects: ' + str(len(jobids))
+total = len(jobids)
 #raw_input()
-#for j in jobids:
+#for i, j in enumerate(jobids):
+#    print 'progress: ' + str(float(100.0*i/total))
 #    recreateFull(j,full_dataset, 'full_v2')
 
-print 'finished creating new full objects'
+    
+#print 'finished creating new full objects'
 #sys.exit()
 #raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full.pickle')]
-
+files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full_v2.pickle')]
+print files
+raw_input()
 
 def createDataframe(key, files):
     '''
@@ -163,7 +172,7 @@ def plotValidationCurve(key, parameters, train_scores_mean, test_scores_mean, tr
     plt.savefig(fname)
 
 
-recreate_csv = False
+recreate_csv = True
 columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
 
 
@@ -203,6 +212,27 @@ else:
         
     df = pd.read_csv(fname)
 
+
+
+
+grouped_id = df.groupby(['test_id']) # this combines all of the cv folds
+# get the mean scores
+id_mean = grouped_id.mean()
+id_std = grouped_id.std()
+
+# sort the groups based on bkg rej power at 50%
+srt_bkg = id_mean.sort('bkg_rej_test',ascending=False)
+
+# before writing to csv, format it to only use 4 sig digits
+to_round = ['learning_rate','accuracy_test','bkg_rej_test']
+for r in to_round:
+    srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+3) )
+# make sure the max depth and n_estimators are ints
+srt_bkg[['max_depth','n_estimators']] = srt_bkg[['max_depth','n_estimators']].astype(int)
+    
+srt_bkg.to_csv('data_'+key+'_sortedresults.csv',columns=['max_depth','learning_rate','n_estimators','accuracy_test','bkg_rej_test'])
+
+    
 # now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
 # easiest to run in interactive mode first.
 grouped = df.groupby(['learning_rate','n_estimators','max_depth'])

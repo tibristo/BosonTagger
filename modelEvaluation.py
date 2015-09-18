@@ -1,12 +1,7 @@
 
 class modelEvaluation:
-    def __init__(self, fpr, tpr, thresholds, model, params, job_id, taggers, Algorithm, score, train_file, feature_importances=[], decision_function=[]): # add in the decision_function
-        # this would be a really nice way of doing it, but Python has a problem
-        # creating pickle objects of modules that have modules as an attribute
-        #import numpy as np
-        #self.np = np
-        #import functions as fn
-        #self.fn = fn
+    def __init__(self, fpr, tpr, thresholds, model, params, job_id, taggers, Algorithm, score, train_file, feature_importances=[], decision_function=[], decision_function_sig = [], decision_function_bkg = []): # add in the decision_function
+
         self.fpr = fpr
         self.tpr = tpr
         self.thresholds = thresholds
@@ -27,6 +22,8 @@ class modelEvaluation:
         self.output_path = 'ROC'
         self.output_prefix = 'SK'
         self.decision_function = decision_function
+        self.df_sig_idx = decision_function_sig
+        self.df_bkg_idx = decision_function_bkg
         self.ROC_rej_power_05_train = -1
         self.signal_train_events = -1
         self.bkg_train_events = -1
@@ -161,12 +158,12 @@ class modelEvaluation:
         # before deciding whether to do a left or right cut for the roc curve we have to find the median.
         sig_median = np.median(discriminant[signal_idx])
         bkg_median = np.median(discriminant[bkg_idx])
-
         if sig_median > bkg_median:
             roc_cut = 'R'
         else:
             roc_cut = 'L'
-        
+
+        # create the single sided roccurve with the code from Sam
         self.roc_graph = fn.RocCurve_SingleSided(hist_sig, hist_bkg, self.sig_eff,self.bkg_eff, roc_cut)
         self.roc_graph.SetName('BackgroundRejection')
         self.roc_graph.SetTitle('BackgroundRejection')
@@ -337,8 +334,14 @@ class modelEvaluation:
         df_sig = TH1F("Signal Decision Function", "Score", 100, -1.0, 1.0)
         df_bkg = TH1F("Background Decision Function", "Score", 100, -1.0, 1.0)
         # fill the histograms with the df
-        fill_hist(df_sig,self.decision_function[self.sig_idx])
-        fill_hist(df_bkg,self.decision_function[self.bkg_idx])
+        fill_hist(df_sig,self.decision_function[self.df_sig_idx])
+        fill_hist(df_bkg,self.decision_function[self.df_bkg_idx])
+        # normalise
+        if df_sig.Integral() != 0:
+            df_sig.Scale(1./df_sig.Integral())
+        if df_bkg.Integral() != 0:
+            df_bkg.Scale(1./df_bkg.Integral())
+        
         # set up drawing options and colours
         df_sig.SetLineColor(4); df_sig.SetFillStyle(3004)
         df_bkg.SetLineColor(2); df_bkg.SetFillStyle(3005)
@@ -367,7 +370,7 @@ class modelEvaluation:
         # get the range
         plot_range = (self.decision_function.min(), self.decision_function.max())
         # fill in the histogram
-        for i, n, c in zip([self.bkg_idx, self.sig_idx], class_names, plot_colors):
+        for i, n, c in zip([self.df_bkg_idx, self.df_sig_idx], class_names, plot_colors):
                 plt.hist(self.decision_function[i],
                                       bins=10,
                                       range=plot_range,

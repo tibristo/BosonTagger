@@ -259,7 +259,7 @@ def readXML(configfile, pt_range="default"):
     for l in root.findall('lumi'):
         lumi = float(l.get('name'))
 
-def addLatex(algo, algosettings, ptrange, E, nvtxrange):
+def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[]):
     '''
     Method to add Latex text to a plot.  The canvas is already set before this method
     is called, so that when this is run it is already on that canvas.
@@ -270,6 +270,7 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     ptrange --- The pT range that this is plotted in.
     E --- Energy of the simulations
     nvtxrange --- The cuts on the number of vertices.
+    massrange -- The 68% mass window cuts
     '''
     from ROOT import TLatex 
     texw = TLatex();
@@ -311,8 +312,17 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange):
     p3.SetTextFont(42);
     p3.SetTextSize(0.032);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000))#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
+    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000.0))#+', '+str(massrange[0])+'< m <'+str(massrange[1]));#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
+    if len(massrange) > 1:
+        p4 = TLatex();
+        p3.SetNDC();
+        p3.SetTextFont(42);
+        p3.SetTextSize(0.032);
+        p3.SetTextColor(ROOT.kBlack);
+        p3.DrawLatex(0.58,0.40,'68% window: ' + str(massrange[0]/1000.0)+' < m (GeV) < ' + str(massrange[1]/1000.0))
+
+    
 def drawHists(hist1, hist2):
     '''
     Draw two histograms on the same canvas (with errors).  The canvas must be created before this method is called.
@@ -697,11 +707,11 @@ def RocCurve_SingleSided_WithUncer(sig, bkg, sigeff, bkgeff, cutside='R', reject
 
     curve = gr
     bkgRejPower = gr
-    print "RETURNING from Single sided ROC calculation"
+    #print "RETURNING from Single sided ROC calculation"
     return gr,hsigreg50,hcutval50,hsigreg25,hcutval25
 
 
-def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True):
+def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True, debug_flag = True):
     '''
     Produce a single sided roc curve.  
     
@@ -716,16 +726,17 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True
     #print "NBins",n
 
     # normalise hists
-    #if sig.Integral()!=0:
-    #    sig.Scale(1.0/sig.Integral());
-    #if(bkg.Integral()!=0):
-    #    bkg.Scale(1.0/bkg.Integral());
+    if sig.Integral()!=0:
+        sig.Scale(1.0/sig.Integral());
+    if(bkg.Integral()!=0):
+        bkg.Scale(1.0/bkg.Integral());
 
     totalBerr=Double()
     totalSerr=Double()
     totalB = bkg.Integral(0,n)
     totalS = sig.Integral(0,n)
-
+    sigEff = float(sig_eff)
+    bkgEff = float(bkg_eff)
 
     gr = TGraph(n)
     # this was from 1->n+1, but if we are using gr.SetPoint() it starts from 0, whereas
@@ -741,32 +752,32 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True
         #myS = sig.Integral(1,i)
         #print 'myS: ' + str(myS)
         #print 'myB: ' + str(myB)
-        #gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
-        #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkg_eff)
+        #gr.SetPoint(i, myS*sig_eff, (1-myB*bkgEff))
+        #gr.SetPointError(i, mySerr*sig_eff, myBerr*bkgEff)
         if cutside=="R":
             #loop from i to end
             myB = bkg.Integral(i+1,n)
             myS = sig.Integral(i+1,n)
             #print i,"  myS=",myS,"  myB=",myB
             if rejection:
-                gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+                gr.SetPoint(i, myS*sigEff, (1-myB*bkgEff))
                 #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
-            elif myB*bkg_eff != 0.0:
-                gr.SetPoint(i, myS*sig_eff, 1./(myB*bkg_eff))
+            elif myB*bkgEff != 0.0:
+                gr.SetPoint(i, myS*sigEff, 1./(myB*bkgEff))
             else:
-                gr.SetPoint(i, myS*sig_eff, 10e6)
+                gr.SetPoint(i, myS*sigEff, 10e6)
         elif cutside=="L":
             #loop from 0 to i
             myB = bkg.Integral(1,i+1)
             myS = sig.Integral(1,i+1)
             #print i,"  myS=",myS,"  myB=",myB
             if rejection:
-                gr.SetPoint(i, myS*sig_eff, (1-myB*bkg_eff))
+                gr.SetPoint(i, myS*sigEff, (1-myB*bkgEff))
                 #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
-            elif myB*bkg_eff != 0.0:
-                gr.SetPoint(i, myS*sig_eff, 1./(myB*bkg_eff))
+            elif myB*bkgEff != 0.0:
+                gr.SetPoint(i, myS*sigEff, 1./(myB*bkgEff))
             else:
-                gr.SetPoint(i, myS*sig_eff, 10e6)
+                gr.SetPoint(i, myS*sigEff, 10e6)
                 #gr.SetPointError(i, mySerr*sigeff, myBerr*bkgeff)
             
             
@@ -792,8 +803,8 @@ def RocCurve_SingleSided(sig, bkg, sig_eff, bkg_eff, cutside='L', rejection=True
     #ctest.SaveAs("ctest.png")
     curve = gr
     bkgRejPower = gr
-    print "RETURNING from Single sided ROC calculation"
-    return gr
+    #print "RETURNING from Single sided ROC calculation"
+    return gr.Clone()
 
 
 def median(hist):

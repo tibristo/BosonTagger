@@ -60,7 +60,7 @@ def getMassWindow(massfile):
     f.close()
     return m_max, m_min
 
-def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
+def writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc = {}):
     '''
     Write plots of variables and ROCs to file - png/ pdf
     Keyword args:
@@ -86,7 +86,18 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC):
     cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPlot.png'
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
-        
+
+    c = TCanvas("ROC Plots")
+    leg = TLegend(0.2,0.2,0.5,0.4);leg.SetFillColor(kWhite)
+    leg = TLegend()
+    for i,k in enumerate(roc.keys()):
+        if i == 0:
+            roc[k].Draw("al")
+        else:
+            roc[k].Draw("same")
+        leg.AddEntry(roc[k],k,"l");
+    leg.Draw("same")
+    c.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot_indiv.pdf')
 
 def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw={}, rocs_rejection_scores={},recreate=True, power_curves={}):
     '''
@@ -186,6 +197,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     mw_int_pt = {}
     full_int_pt = {}
 
+    # maximum rejection
     maxrej = 0
     maxrejvar = ''
     #set up the cutstring/ selection to cut on the correct jet masses
@@ -197,7 +209,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         roc[branchname].SetTitle(branchname)
         roc[branchname].SetName('roc_'+branchname)
         roc_nomw[branchname] = TGraph()#Errors()
-        roc_nomw[branchname].SetTitle(branchname)
+        roc_nomw[branchname].SetTitle('No mass window ' + branchname)
         roc_nomw[branchname].SetName('roc_nomw_'+branchname)
         # add bkg rej power dictionary entry
         bkgRejROC[branchname] = TGraph()#Errors()
@@ -217,6 +229,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
 
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
+            canv1.cd(index+1)
             histname =  datatype + "_" + branchname
 
             print "plotting " + datatype + branchname
@@ -230,9 +243,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # also make sure that the variable being plotted is within the bounds specified 
             # in the config file (the limits on the histogram)
             if not weightedxAOD:
-                cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
+                cutstringandweight = '*mc_event_weight*1./NEvents(mc_channel_number)'
             else:
-                cutstringandweight = '*mc_event_weight*1./evt_nEvts'#*('+ branchname +'>0)'#+str(minxaxis)+')'#*('+ branchname +'<'+str(maxxaxis)+')' 
+                cutstringandweight = '*mc_event_weight*1./evt_nEvts'
 
             # add the cross section and filter efficiency for the background
             
@@ -247,10 +260,6 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             elif datatype == 'sig':
                 # we only apply pt rw now, so reset the cutstring
                 cutstringandweight=''
-                #if not weightedxAOD:
-                #    cutstringandweight += '*filter_eff'
-                #else:
-                #    cutstringandweight += '*evt_filtereff'
                 # apply pt reweighting to the signal
                 if ptreweight:
                     cutstringandweight +='*SignalPtWeight3(jet_CamKt12Truth_pt)'
@@ -288,7 +297,6 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # need to store the variable in this histogram
             varexpfull = branchname + ' >>' + histname+'_full'
 
-            #trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 300*1000)" + " * (jet_" +Algorithm + "_m > 0)")
             trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)")
 
             # get the integral and normalise
@@ -310,18 +318,18 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
 
             if datatype == 'sig':
                 if full_int !=0:
-                    signal_eff = mw_int/full_int
+                    signal_eff = float(mw_int/full_int)
                 else:
-                    signal_eff = 0
+                    signal_eff = 0.0
             else:
                 if full_int != 0:
-                    bkg_eff = mw_int/full_int
+                    bkg_eff = float(mw_int/full_int)
                 else:
-                    bkg_eff = 0
-
+                    bkg_eff = 0.0
 
         #Make ROC Curves before rebinning, but only if neither of the samples are zero
         if (hist["sig_" +branchname].Integral() != 0 and hist["bkg_" +branchname].Integral() != 0):
+
             if singleSidedROC == 'M':
                 # check where the median is so we can correctly choose L or R cut.
                 sig_median = fn.median(hist['sig_'+branchname])
@@ -331,7 +339,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                     side = 'R'
                 else:
                     side = 'L'
-                    
+
                 roc[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
                 #roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
                 bkgRejROC[branchname] = roc[branchname]
@@ -364,16 +372,16 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             eval_roc = fn.GetBGRej50(roc[branchname])
             # get the bin for this point so that we can find the associated error in roc error tgraphs
             #rocBin = fn.findYValue(roc[branchname],Double(0.5), pY, 0.01, True, True)
-            bin = roc[branchname].GetXaxis().FindBin(0.5)#roc_errUp[branchname].Eval(0.5)
-            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
-            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin)
+            bin_num = roc[branchname].GetXaxis().FindBin(0.5)#roc_errUp[branchname].Eval(0.5)
+            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin_num)
+            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin_num)
         else:
             #eval_roc = roc[branchname].Eval(0.68)
             eval_roc = fn.GetBGRej(roc[branchname], 0.68)
             #rocBin = fn.findYValue(roc[branchname],Double(0.68), pY, 0.01, True, True)
-            bin = roc[branchname].GetXaxis().FindBin(0.68)#roc_errUp[branchname].Eval(0.5)
-            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin)
-            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin)
+            bin_num = roc[branchname].GetXaxis().FindBin(0.68)#roc_errUp[branchname].Eval(0.5)
+            eval_rocup = eval_roc+roc[branchname].GetErrorX(bin_num)
+            eval_rocdo = eval_roc-roc[branchname].GetErrorX(bin_num)
 
         if eval_roc != 1:
             bkgrej = 1/(1-eval_roc)
@@ -419,11 +427,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                     side = 'L'
                     
                 #roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
-                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side)
+                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=side, rejection=True, debug_flag=False)
 
             elif singleSidedROC == 'L' or singleSidedROC == 'R':
                 #roc_nomw[branchname],v1,v2,v3,v4 = fn.RocCurve_SingleSided_WithUncer(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
-                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC)
+                roc_nomw[branchname] = fn.RocCurve_SingleSided(hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], 1,1, cutside=singleSidedROC, rejection=True, debug_flag=False)
 
             else:
                 MakeROCBen(1, hist_nomw["sig_" +branchname+'_full'], hist_nomw["bkg_" +branchname+'_full'], roc_nomw[branchname], TGraphErrors(), signal_eff, bkg_eff)
@@ -442,7 +450,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
         else:
             fn.drawHists(hist['bkg_' + branchname], hist['sig_' + branchname])
-        leg1.Draw()
+        leg1.Draw("same")
 
         # add correctly formatted text to the plot for the ATLAS collab text, energy, etc.
         fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
@@ -460,14 +468,28 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         if saveNoMassWindowPlots:
             tempCanv2 = TCanvas("tempnomw"+branchname)
             tempCanv2.cd()
-
+            y_high = max(hist_nomw['sig_'+branchname+'_full'].GetMaximum(), hist_nomw['bkg_'+branchname+'_full'].GetMaximum())
+            y_low = 0.0 #min(hist_nomw['sig_'+branchname+'_full'].GetMinimum(), hist_nomw['bkg_'+branchname+'_full'].GetMaximum())
             if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
                 fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
             else:
                 fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
             
-            leg1.Draw()
-            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
+            leg1.Draw("same")
+
+            # if we are doing the mass plt we want to indicate the mass window
+            if branchname.find('_m') == -1:
+                mrange = []
+            else:
+                mrange = [float(mass_min), float(mass_max)]
+                # if it is the mass variable then draw lines indicating the mass window
+                line_min = TLine(float(mass_min), y_low, float(mass_min), y_high); line_min.SetLineColor(kBlack);
+                line_max = TLine(float(mass_max), y_low, float(mass_max), y_high); line_max.SetLineColor(kBlack);
+                line_min.Draw()
+                line_max.Draw()
+            # add the latex parts to the plot -> ATLAS, tev range, etc.
+            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], massrange = mrange)
+
             tempCanv2.SaveAs(varpath+branchname+"_noMW.png")
             #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
             del tempCanv2
@@ -486,12 +508,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             roc[branchname].Draw("same")
         # legend for the roc curve
         leg2.AddEntry(roc[branchname],branchname,"l");
-        leg2.Draw()
+        leg2.Draw("same")
+        canv1.cd(index+1)
 
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
         #write out the plots after cuts
-        writePlots(Algorithm, fileid, canv1, canv2, writeROC)
+        writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC, roc_nomw, roc_rejection_scores, recreate=True, power_curves = bkgPowerROC)
         #responseHists = resp.writeResponsePlots(weightedxAOD, Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
         #responseHists = resp.writeResponsePlots(weightedxAOD, Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi, applyMassWindow=False)
