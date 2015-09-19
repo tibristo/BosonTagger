@@ -14,6 +14,8 @@ from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
 from collections import OrderedDict
 import bz2
+label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$"}
+
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
@@ -87,9 +89,12 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
     and it will also write the full dataset stats at the top of the file.
     weight_plots --- if the plots should be weighted or not
     '''
+
+
+    
     import os.path
     import matplotlib.pylab as plt
-    
+    plt.rc('text',usetex=True)
     from sklearn.externals import joblib
     import numpy as np
     from sklearn.metrics import roc_curve, auc
@@ -136,8 +141,11 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
 
     
     for i,t in enumerate(taggers):
+        tagger_label = t
+        if t in label_dict.keys():
+            tagger_label = label_dict[t]
         tagger_stats = open('fold_stats/'+t+'_'+key+weight_flag+'.txt',file_mode)
-        stats.write(t+'\n')
+        stats.write(tagger_label+'\n')
         # training
         mean_tr = "{0:.4f}".format(float(np.mean(X_train[:,i])))
         mean_signal_tr = '{0:.4f}'.format(float(np.mean(X_train[y_train==1][:,i])))
@@ -179,13 +187,19 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
     # weights
     weight_sig = w_train[y_train==1] if weight_plots else None
     weight_bkg = w_train[y_train==0] if weight_plots else None
-    
+    print label_dict
     for i, t in enumerate(taggers):
         plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5,weights=weight_sig)
         plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5,weights=weight_bkg)
-        plt.xlabel(t)
-        plt.ylabel('#events')
-        plt.title(t)
+        print t
+        if t.strip() in label_dict.keys():
+            plt.xlabel(label_dict[t])
+            plt.title(label_dict[t])
+        else:
+            print 'not in dict'
+            plt.xlabel(t.replace('_','\_'))
+            plt.title('Fold number ' + cv_num + ': '+ t.replace('_','\_'))
+        plt.ylabel('Number of events')
         plt.legend()
         plt.savefig('fold_plots/'+plt_fname+'_'+t+weight_flag+'.pdf')
         plt.clf()
@@ -482,7 +496,7 @@ weight_plots = True
 weight_flag = '_weighted' if weight_plots else ''
 
 if plotCV:
-    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith(file_type)]
+    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
     for i,f in enumerate(filenames):
         plotSamples(f,full_dataset,trainvars, key = key, first_tagger = i == 0, weight_plots = True)
     # create the combined stats file for all taggers and all cv splits
@@ -493,7 +507,10 @@ if plotCV:
     combined_stats.write('\n')
     combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
     for t in trainvars:
-        combined_stats.write(t+'\n')
+        label = t
+        if t in label_dict.keys():
+            label = label_dict[t]
+        combined_stats.write(label+'\n')
         with open('fold_stats/'+t+'_'+key+weight_flag+'.txt') as tfile:
             combined_stats.write(tfile.read())
         combined_stats.write('\n')

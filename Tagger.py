@@ -60,7 +60,7 @@ def getMassWindow(massfile):
     f.close()
     return m_max, m_min
 
-def writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc = {}):
+def writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc = {}, power_canvas = None):
     '''
     Write plots of variables and ROCs to file - png/ pdf
     Keyword args:
@@ -87,17 +87,14 @@ def writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc = {}):
     p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.wait()
 
-    c = TCanvas("ROC Plots")
-    leg = TLegend(0.2,0.2,0.5,0.4);leg.SetFillColor(kWhite)
-    leg = TLegend()
-    for i,k in enumerate(roc.keys()):
-        if i == 0:
-            roc[k].Draw("al")
-        else:
-            roc[k].Draw("same")
-        leg.AddEntry(roc[k],k,"l");
-    leg.Draw("same")
-    c.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot_indiv.pdf')
+    if power_canvas is not None:
+        #plot the rocs
+        power_canvas.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPowPlot.pdf')
+        #canv2.SaveAs('plots/' + Algorithm + fileid + '-Tim2-ROCPlot.eps')
+        cmd = 'convert -verbose -density 150 -trim plots/' +  Algorithm + fileid + '-Tim2-ROCPowPlot.pdf -quality 100 -sharpen 0x1.0 plots/' +  Algorithm + fileid +'-Tim2-ROCPowPlot.png'
+        p = subprocess.Popen(cmd , shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait()
+
 
 def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw={}, rocs_rejection_scores={},recreate=True, power_curves={}):
     '''
@@ -164,8 +161,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     # canvas for histogram plots
     canv1 = TCanvas("canv1")
     canv1.Divide(5,5)
-    # canvas for ROC curves
-    canv2 = TCanvas("canv2")
+    # canvas for rejection ROC curves
+    canv2 = TCanvas("canv2", "ROC curves showing 1-background rejection vs signal efficiency")
+    # canvas for power roc curves
+    power_canv = TCanvas('powercurves',"ROC curves showing background rejection power vs signal efficiency")
+    power_canv.SetLogy()
+    power_legend = TLegend(0.7,0.55,0.9,0.85); power_legend.SetFillColor(kWhite);
 
     tempCanv = TCanvas("temp")
     # reset hists
@@ -509,12 +510,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         # legend for the roc curve
         leg2.AddEntry(roc[branchname],branchname,"l");
         leg2.Draw("same")
+
+        # plot the power curves
+        power_canv.cd()
+        if index==0 and bkgPowerROC[branchname].Integral() != 0:
+            bkgPowerROC[branchname].Draw("al")        
+        elif bkgPowerROC[branchname].Integral() != 0:
+            bkgPowerROC[branchname].SetLineColor(index+2)
+            bkgPowerROC[branchname].Draw("same")
+        power_legend.AddEntry(bkgPowerROC[branchname],branchname,'l')
+        power_legend.Draw('same')
+        
         canv1.cd(index+1)
 
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
         #write out the plots after cuts
-        writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc)
+        writePlots(Algorithm, fileid, canv1, canv2, writeROC, roc, power_canv)
         writePlotsToROOT(Algorithm, fileid, hist, roc, bkgRejROC, roc_nomw, roc_rejection_scores, recreate=True, power_curves = bkgPowerROC)
         #responseHists = resp.writeResponsePlots(weightedxAOD, Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi)
         #responseHists = resp.writeResponsePlots(weightedxAOD, Algorithm, plotconfig, trees, cutstring, fileid, ptreweight, varpath, mass_min, mass_max, scaleLumi, applyMassWindow=False)

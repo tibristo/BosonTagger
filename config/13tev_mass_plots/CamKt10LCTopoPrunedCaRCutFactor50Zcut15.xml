@@ -136,7 +136,7 @@
   </varName>
 
 
-  <varName name="#sqrt d_{12} ">
+  <varName name="#sqrt{d_{12}}">
   <stub>_SPLIT12</stub>
   <plot>True</plot>
   <range name="default">
@@ -146,7 +146,7 @@
   </varName>
 
 
-  <varName name="PlanarFlow">
+  <varName name="PlanarFlow #it{P}">
   <stub>_PlanarFlow</stub>
   <plot>True</plot>
   <range name="default">
@@ -156,7 +156,7 @@
   </varName>
 
 
-  <varName name="Angularity #a_{3}">
+  <varName name="Angularity a_{3}">
   <stub>_Angularity</stub>
   <plot>False</plot>
   <range name="default">
@@ -190,7 +190,7 @@
   </varName>
 
 
-  <varName name="Mass Drop">
+  <varName name="Mass Drop #mu_{12}">
   <stub>_Mu12</stub>
   <plot>True</plot>
   <range name="default">
@@ -200,7 +200,7 @@
   </varName>
 
 
-  <varName name="Momentum Balance">
+  <varName name="Momentum Balance #sqrt{y_{12}}">
   <stub>_YFilt</stub>
   <plot>True</plot>
   <range name="default">
@@ -211,7 +211,7 @@
 
 
 
-  <varName name="EEC C2 #beta=1 (dimensionless)">
+  <varName name="C_{2}^{(#beta=1)} (dimensionless)">
   <stub>_EEC_C2_1</stub>
   <plot>True</plot>
   <range name="default">
@@ -233,7 +233,7 @@
   </varName>
 
 
-  <varName name="EEC C2 #beta=2 (dimensionless)">
+  <varName name="C_{2}^{(#beta=2)} (dimensionless)">
   <stub>_EEC_C2_2</stub>
   <plot>True</plot>
   <range name="default">
@@ -267,7 +267,7 @@
   </varName>
 
 
-  <varName name="EEC D2 #beta=1 (dimensionless)">
+  <varName name="D_{2}^{(#beta=1)} (dimensionless)">
   <stub>_EEC_D2_1</stub>
   <plot>True</plot>
   <range name="default">
@@ -277,7 +277,7 @@
   </varName>
 
 
-  <varName name="EEC D2 #beta=2 (dimensionless)">
+  <varName name="D_{2}^{(#beta=2)} (dimensionless)">
   <stub>_EEC_D2_2</stub>
   <plot>True</plot>
   <range name="default">
@@ -307,7 +307,7 @@
   </varName>
 
 
-  <varName name="Sphericity">
+  <varName name="Sphericity #it{S}">
   <stub>_Sphericity</stub>
   <plot>True</plot>
   <range name="default">
@@ -317,7 +317,7 @@
   </varName>
 
 
-  <varName name="Aplanarity">
+  <varName name="Aplanarity #it{A}">
   <stub>_Aplanarity</stub>
   <plot>True</plot>
   <range name="default">
@@ -327,7 +327,7 @@
   </varName>
 
 
-  <varName name="Thrust Maj">
+  <varName name="Thrust Maj #it{T}_{maj}">
   <stub>_ThrustMaj</stub>
   <plot>True</plot>
   <range name="default">
@@ -337,7 +337,7 @@
   </varName>
 
 
-  <varName name="Thrust Min">
+  <varName name="Thrust Min #it{T}_{min}">
   <stub>_ThrustMin</stub>
   <plot>True</plot>
   <range name="default">
@@ -347,7 +347,7 @@
   </varName>
 
 
-  <varName name="#tau_{WTA1} (dimensionless)">
+  <varName name="#tau^{WTA}_{1} (dimensionless)">
   <stub>_TauWTA1</stub>
   <plot>False</plot>
   <range name="default">
@@ -381,7 +381,7 @@
   </varName>
 
 
-  <varName name="#tau_{WTA2} (dimensionless)">
+  <varName name="#tau^{WTA}_{2} (dimensionless)">
   <stub>_TauWTA2</stub>
   <plot>True</plot>
   <range name="default">
@@ -415,7 +415,7 @@
   </varName>
 
 
-  <varName name="ZCUT12">
+  <varName name="#sqrt{z_{12}}">
   <stub>_ZCUT12</stub>
   <plot>True</plot>
   <range name="default">
@@ -425,7 +425,7 @@
   </varName>
 
 
-  <varName name="#tau_{WTA2}/#tau_{WTA1} (dimensionless)">
+  <varName name="#tau^{WTA}_{2}/#tau^{WTA}_{1} (dimensionless)">
   <stub>_TauWTA2TauWTA1</stub>
   <plot>True</plot>
   <range name="default">
