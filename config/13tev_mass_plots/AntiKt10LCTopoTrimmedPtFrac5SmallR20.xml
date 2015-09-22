@@ -49,7 +49,7 @@
   <stub>_m</stub>
   <plot>True</plot>
   <range name="default">
-    <maxValue>1200000.0</maxValue>
+    <maxValue>300000.0</maxValue>
     <minValue>0.0</minValue>
     </range>
   </varName>			  

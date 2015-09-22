@@ -36,6 +36,8 @@ if writeResponse:
     import responsePlots as resp
 
 
+colours = [1,2,3,4,5,6,7,8,9,11,12,20,26,28,30,32,34,38,41,43,46,49]
+
 def getMassWindow(massfile):
     '''
     Get the mass window limits from the input file. Input file will have the lines 'top edge: MAX' and 'bottom edge: MIN' in it somewhere.
@@ -166,7 +168,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     # canvas for power roc curves
     power_canv = TCanvas('powercurves',"ROC curves showing background rejection power vs signal efficiency")
     power_canv.SetLogy()
-    power_legend = TLegend(0.7,0.55,0.9,0.85); power_legend.SetFillColor(kWhite);
+    power_legend = TLegend(0.6,0.5,0.9,0.9); power_legend.SetFillColor(kWhite);
 
     tempCanv = TCanvas("temp")
     # reset hists
@@ -342,9 +344,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                     side = 'L'
 
                 roc[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
+
                 #roc[branchname],hsigreg50,hcutval50,hsigreg25,hcutval25 = fn.RocCurve_SingleSided_WithUncer(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side)
                 bkgRejROC[branchname] = roc[branchname]
                 bkgPowerROC[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=side,rejection=False)
+                
 
             elif singleSidedROC == 'L' or singleSidedROC == 'R':
                 roc[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside=singleSidedROC)
@@ -356,7 +360,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                 MakeROCBen(1, hist["sig_" +branchname], hist["bkg_" +branchname], roc[branchname], bkgRejROC[branchname], signal_eff, bkg_eff)
                 bkgPowerROC[branchname] = fn.RocCurve_SingleSided(hist["sig_" +branchname], hist["bkg_" +branchname], signal_eff, bkg_eff, cutside='R',rejection=False)
             writeROC = True
-
+            
         canv1.cd(index+1)
         pX = Double(0.5)
         pY = Double(0.0)
@@ -495,33 +499,50 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
             del tempCanv2
 
+        
+        canv1.cd(index+1)
+
+    min_roc = 1.0
+    for b in roc.keys():
+        if b.find('_m') == -1 and b.find('_pt') == -1:
+            n = roc[b].GetN()
+            y = roc[b].GetY()
+            locmin = TMath.LocMin(n,y)
+            minval = y[locmin]
+            min_roc = min(min_roc, minval)
+            
+    for branchidx, branchname in enumerate(roc.keys()):
         # plot the ROC curves
         canv2.cd()
         roc[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
         roc[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
+        roc[branchname].SetMinimum(min_roc*0.98)
         bkgPowerROC[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
         bkgPowerROC[branchname].GetYaxis().SetTitle("1/Efficiency_{QCD jets}")
+    
 
-        if index==0 and roc[branchname].Integral() != 0:
-            roc[branchname].Draw("al")        
-        elif roc[branchname].Integral() != 0:
-            roc[branchname].SetLineColor(index+2)
-            roc[branchname].Draw("same")
-        # legend for the roc curve
-        leg2.AddEntry(roc[branchname],branchname,"l");
-        leg2.Draw("same")
+        # only plot the roc and power curves if this is not a mass
+        if branchname.find('_m') == -1 and branchname.find('_pt') == -1:
+            roc[branchname].SetLineStyle(branchidx%10)
+            if branchidx==0 and roc[branchname].Integral() != 0:
+                roc[branchname].Draw("al")        
+            elif roc[branchname].Integral() != 0:
+                roc[branchname].SetLineColor(colours[branchidx])
+                roc[branchname].Draw("same")
+                # legend for the roc curve
+            leg2.AddEntry(roc[branchname],branchname,"l");
+            leg2.Draw("same")
 
-        # plot the power curves
-        power_canv.cd()
-        if index==0 and bkgPowerROC[branchname].Integral() != 0:
-            bkgPowerROC[branchname].Draw("al")        
-        elif bkgPowerROC[branchname].Integral() != 0:
-            bkgPowerROC[branchname].SetLineColor(index+2)
-            bkgPowerROC[branchname].Draw("same")
-        power_legend.AddEntry(bkgPowerROC[branchname],branchname,'l')
-        power_legend.Draw('same')
-        
-        canv1.cd(index+1)
+            # plot the power curves
+            power_canv.cd()
+            bkgPowerROC[branchname].SetLineStyle(branchidx%10)
+            if branchidx==0 and bkgPowerROC[branchname].Integral() != 0:
+                bkgPowerROC[branchname].Draw("al")        
+            elif bkgPowerROC[branchname].Integral() != 0:
+                bkgPowerROC[branchname].SetLineColor(colours[branchidx])
+                bkgPowerROC[branchname].Draw("same")
+            power_legend.AddEntry(bkgPowerROC[branchname],branchname,'l')
+            power_legend.Draw('same')
 
     # write out canv1 and roc curves on one page/ png each
     if savePlots:
@@ -874,7 +895,7 @@ def main(args):
   
     # legends for histograms and roc curves
     leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
-    leg2 = TLegend(0.2,0.2,0.5,0.4);leg2.SetFillColor(kWhite)
+    leg2 = TLegend(0.2,0.2,0.5,0.7);leg2.SetFillColor(kWhite)
 
     # set up the mass window cuts
     mass_max = 1200*1000.;
