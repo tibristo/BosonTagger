@@ -145,11 +145,21 @@ tc_df = rt.TCanvas("Decision Functions")
 tc_proba = rt.TCanvas("Probability")
 tc_power = rt.TCanvas("Background Power")
 tc_power.SetLogy()
-legend = rt.TLegend(0.7,0.55,0.9,0.85);legend.SetFillColor(rt.kWhite)
+legend = rt.TLegend(0.2,0.25,0.5,0.45);legend.SetFillColor(rt.kWhite)
 legend_power = rt.TLegend(0.7,0.55,0.9,0.85);legend_power.SetFillColor(rt.kWhite)
 markers_1 = np.linspace(1,8,8)
 markers_2 = np.linspace(20,34,15)
 markers = np.hstack([markers_1,markers_2])
+
+# find the minimum background rejection
+minrej = 1.0
+for r in roc_entry:
+    n = r.roc.GetN()
+    y = r.roc.GetY()
+    locmin = rt.TMath.LocMin(n, y)
+    minval = y[locmin]
+    minrej = min(minval, minrej)
+
 # first plot the roc curves
 for i, r in enumerate(roc_entry):
     # set the colour
@@ -157,6 +167,7 @@ for i, r in enumerate(roc_entry):
     style = r.style if r.colour != -1 else int(markers[i%len(markers)])
     linestyle = r.linestyle if r.colour != -1 else int(markers[i%len(markers)]%10)
 
+    r.roc.SetMinimum(minrej*0.98)
     r.roc.SetMarkerColor(col)
     r.roc.SetLineColor(col)
     # set the marker and line style
