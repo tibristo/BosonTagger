@@ -32,7 +32,14 @@ f = open(sys.argv[1],'r')
 
 
 current = ''
-table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c|c|c|}\n\\hline\n'
+caption = 'Training parameters and scores for the top 5 BDTs based on background rejection at 50\% signal efficiency.'
+table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c|c|c|c|c|}\n\\hline\n'
+print len(sys.argv)
+if len(sys.argv) >= 2:
+    print sys.argv[2]
+    if sys.argv[2] == 'dnn': 
+        table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c|c|c|c|c|c|}\n\\hline\n'
+        caption = 'Training parameters and scores for the top 5 neural networks based on background rejection at 50\% signal efficiency.'
 
 f_list = list(f)
 
@@ -43,7 +50,7 @@ table += ' & '.join(f_list[0].split(',')).strip().replace('_',' ') + ' \\\\ \n\\
 for i in range(1,6):
     table += ' & '.join(f_list[i].split(',')).strip() + ' \\\\ \\hline\n'
 
-table += '\\end{tabular}\n\\caption{}\n\\end{center}\n\\end{table}\n'
+table += '\\end{tabular}\n\\caption{'+caption+'}\n\\end{center}\n\\end{table}\n'
 
 f.close()
 
