@@ -10,9 +10,64 @@ from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, rec
 import operator
 import re
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from math import floor, log10
+import itertools
+columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
 
-job_id = 'features_l_2_10'
+
+
+def getTaggerScores(files):
+    all_taggers_scores = {}
+    all_taggers_positions = {}
+    scores = {}
+    max_score = 0
+    max_id = ""
+    for f in files:
+        print 'plotting file: ' + f
+        if f.endswith('pickle'):
+            with open('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
+        else:
+            with bz2.BZ2File('evaluationObjects/'+f,'r') as p:
+                model = pickle.load(p)
+        taggers = model.taggers
+        
+        for t in taggers:
+            if t not in all_taggers_scores.keys():
+                all_taggers_scores[t] = []
+                all_taggers_positions[t] = []
+                
+        feature_importances = 100.0 * (model.feature_importances / model.feature_importances.max())
+
+
+        sorted_idx = np.argsort(feature_importances)[::-1]
+        for x in range(len(sorted_idx)):
+            # add the feature importance score and the position
+            all_taggers_scores[taggers[sorted_idx[x]]].append(feature_importances[sorted_idx[x]])
+            all_taggers_positions[taggers[sorted_idx[x]]].append(x)
+        scores[model.job_id] = model.ROC_rej_power_05
+        if model.score > max_score:
+            max_score = model.ROC_rej_power_05
+            max_id = model.job_id
+
+    sorted_scores = sorted(scores.items(), key=operator.itemgetter(1))
+    print sorted_scores
+    print 'press a key to get tagger scores'
+    # write to file
+    f = open('scores'+key+'.txt','w')
+    for s in sorted_scores:
+        f.write(s[0] + ': ' + str(s[1]) +'\n')
+    f.close()
+
+    # find median of each
+    medians = {}
+    for t in all_taggers_scores.keys():
+        medians[t] = np.median(all_taggers_scores[t])
+
+    sorted_medians = sorted(medians.items(), key=operator.itemgetter(1))
+    print sorted_medians
+
 
 def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
     
@@ -89,36 +144,15 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
 
             
 
-# set up the job ids
-key = 'features_l_2_10_v5'
-#key = 'features_l_2_10ID'
-full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
-# are we wanting to use bz2?
-compress_id = 'pbz2' # or pickle
-jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith(compress_id)]
-#print jobids
-print 'total number of objects: ' + str(len(jobids))
-total = len(jobids)
-#raw_input()
-#for i, j in enumerate(jobids):
-#    print 'progress: ' + str(float(100.0*i/total))
-#    recreateFull(j,full_dataset, 'full_v2', compress=True)
-
-    
-#print 'finished creating new full objects'
-#sys.exit()
-#raw_input()
-files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith('_full_v2.'+compress_id) ]
-print files
-raw_input()
-
 def createDataframe(key, files):
     '''
     create a dataframe containing the info for all of the evaluation objects contained in the files list.
     '''
     data = []
-    for f in files:
-        print 'plotting file: ' + f
+    num_files = str(len(files))
+    
+    for i, f in enumerate(files):
+        print 'plotting file: ' + f + ' file number: ' + str(i) + ' out of ' + num_files
         if f.endswith('pickle'):
             with open('evaluationObjects/'+f,'r') as p:
                 model = pickle.load(p)
@@ -170,7 +204,7 @@ def createDataframe(key, files):
     return data
 
 
-def plotValidationCurve(key, parameters, train_scores_mean, test_scores_mean, train_scores_std, test_scores_std, param_range):
+def plotValidationCurve(key, parameters, param_abbrev, train_scores_mean, test_scores_mean, train_scores_std, test_scores_std, param_range,  val_variable = '$Max depth$', file_id = ''):
     '''
     Plot a validation curve. For the moment this does a validation curve for the bdt. A bdt normally depends on the tree depth
     for over and under-fitting.
@@ -178,15 +212,22 @@ def plotValidationCurve(key, parameters, train_scores_mean, test_scores_mean, tr
     Keyword args:
     key -- file identifier
     parameters --- the values for the training parameters: dictionary with learning_rate: lr, n_est: n, max_depth: md
+    parameters --- the abbreviations for the training parameters to be used in the file name, example: _lr_xyz_n_xyz etc
     mean and std for training and testing scores
     param_range --- the range of the max_depth variable
+    val_variable --- the variable being validationed
+    file_id  --- suffix for the filename
     '''
-
-    # set up the file name
-    fname = "validation_curves/"+key+'_lr_'+str(parameters['learning_rate'])+'_n_'+str(parameters['n_estimators'])+'.png'
+    xlabel = val_variable
+    parameter_string = ''
+    for x in parameters.keys():
+        parameter_string += '_'+param_abbrev[x]+'_' + str(parameters[x])
+            # set up the file name
+    #fname = "validation_curves/"+key+'_lr_'+str(parameters['learning_rate'])+'_n_'+str(parameters['n_estimators'])+file_id+'.png'
+    fname = "validation_curves/"+key+parameter_string+file_id+'.png'
     plt.clf()
     plt.title("Validation Curve with BDT")
-    plt.xlabel("$Max depth$")
+    plt.xlabel(xlabel.replace('_',' '))
     plt.ylabel("Accuracy")
     # find out what the y limits should be
     y_up = max(np.amax(train_scores_mean), np.amax(test_scores_mean))
@@ -203,48 +244,191 @@ def plotValidationCurve(key, parameters, train_scores_mean, test_scores_mean, tr
     plt.savefig(fname)
 
 
-recreate_csv = True
-columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
 
+    
 
-if recreate_csv:
-    #get a dict of the data
-    data_dict = createDataframe(key, files)
-    # now create a dataframe out of the data
-    df = pd.DataFrame(data_dict)
-    # save it as a csv so that we don't have to do this all over again every time.
-    #if save_csv:
-    csv_file = open('data_'+key+'.csv','w')
-    # write the column names to the csv file
-    csv_file.write('test_id,cv_id,max_depth,n_estimators,learning_rate,f1_train,f1_test,recall_train,recall_test,precision_train,precision_test,accuracy_train,accuracy_test,bkg_rej_train,bkg_rej_test,filename\n')
-    for i,d in enumerate(data_dict):
-        # write the keys to the file if it is the first one
-        num_keys = len(d.keys())
-        #if i != 0:
-        for j,k in enumerate(columns):
-            csv_file.write(str(d[k]))
-            if j != num_keys-1:
-                csv_file.write(',')
-            else:
-                csv_file.write('\n')
-    csv_file.close()
+def getDataFrame(recreate_csv=False, key='features_l_2_10_v6', file_id = 'validation', compress_id ='pbz2', fullset = True):
+    if fullset:
+        files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith(compress_id) and f.find('full') != -1]
+    else:
+        files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith(compress_id) and f.find('full') == -1]
+    print 'total number of objects: ' + str(len(files))
+    
+    if recreate_csv:
+        #get a dict of the data
+        data_dict = createDataframe(key, files)
+        # now create a dataframe out of the data
+        df = pd.DataFrame(data_dict)
+        # save it as a csv so that we don't have to do this all over again every time.
+        #if save_csv:
+        csv_file = open('data_'+key+file_id+'.csv','w')
+        # write the column names to the csv file
+        csv_file.write('test_id,cv_id,max_depth,n_estimators,learning_rate,f1_train,f1_test,recall_train,recall_test,precision_train,precision_test,accuracy_train,accuracy_test,bkg_rej_train,bkg_rej_test,filename\n')
+        for i,d in enumerate(data_dict):
+            # write the keys to the file if it is the first one
+            num_keys = len(d.keys())
+            #if i != 0:
+            for j,k in enumerate(columns):
+                csv_file.write(str(d[k]))
+                if j != num_keys-1:
+                    csv_file.write(',')
+                else:
+                    csv_file.write('\n')
+        csv_file.close()
 
-else:
-    # we can read it in from the csv file
-    # check that the file exists
-    filefound = False
-    fname = 'data_'+key+'.csv'
-    while not filefound:
-        if not os.path.isfile(fname):
-            print "file "+fname+" doesn't exist! Enter another name to try"
-            fname = raw_input()
-            continue
-        filefound = True
+    else:
+        # we can read it in from the csv file
+        # check that the file exists
+        filefound = False
+        fname = 'data_'+key+file_id+'.csv'
+        while not filefound:
+            if not os.path.isfile(fname):
+                print "file "+fname+" doesn't exist! Enter another name to try"
+                fname = raw_input()
+                continue
+            filefound = True
         
-    df = pd.read_csv(fname)
+        df = pd.read_csv(fname)
+
+    return df
 
 
+def evaluateVariableCombined(df, variable, key, file_id):
+    # because the indexing is so hard and complicated...
+    # you can't do lr_mean.loc[0.1], whereas you can do that if your loc[] thing is an int
+    # my hack is to convert all of the learning rates to ints and use it like that
+    scale_factor = 10
+    if df[variable].dtype == np.float64:
+        df[variable] = df[variable]*scale_factor
+        df[variable] = df[variable].astype(int)
+    
+    train_leg = mpatches.Patch(color='blue', label='Train accuracy')
+    val_leg = mpatches.Patch(color='red', label='Validation accuracy')
 
+    plt.clf()
+    plt.title("Accuracy as a function of " + variable)#max depth")
+    plt.xlabel("$"+variable+"$")
+    plt.ylabel("Accuracy")
+    plt.legend(handles=[train_leg,val_leg])
+    grouped_md = df.groupby([variable,'test_id'])
+    md_mean = grouped_md.mean()
+    md = md_mean.index.levels[0].values # get all of the unique values for max_depth
+    # goign to store these stats
+    train_mean = np.zeros(len(md))
+    test_mean = np.zeros(len(md))
+    train_std = np.zeros(len(md))
+    test_std = np.zeros(len(md))
+    # loop through all of the validation variable values
+    for i, m in enumerate(md):
+        md_m = md_mean.loc[m]
+        test_mean[i] = np.mean(md_m['accuracy_test'])
+        test_std[i] = np.std(md_m['accuracy_test'])
+        train_mean[i] = np.mean(md_m['accuracy_train'])
+        train_std[i] = np.std(md_m['accuracy_train'])
+        plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_test'], label=str(m), color='r')#, label='Validation')
+        plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_train'], label=str(m), color='b')#, label='Train')
+        
+    plt.savefig('validation_curves/combined_'+variable+key+file_id+'.png')
+    # create a validation curve, rather than a scatter plot
+    plotValidationCurve(key, {'combined':variable} , {'combined':variable}, train_mean, test_mean, train_std, test_std, md, '$'+variable+'$',file_id) 
+
+
+def evaluateVariable(df, key, file_id = '', grouping = ['learning_rate','n_estimators','max_depth']):
+
+    # some preset param_abbreviations
+    preset_abbrev = {'learning_rate':'lr','n_estimators':'n','max_depth':'md'}
+    
+    # now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
+    # easiest to run in interactive mode first.
+    grouped = df.groupby(grouping)
+    # get the mean scores
+    gmean = grouped.mean()
+    gstd = grouped.std()
+    # get the index
+    idx = gmean.index
+    # get the levels - this stores the keys for the different groupby objects
+    lvls = idx.levels
+    # lvls is a FrozenList with each element being a Frozen64Index
+    # get all of the values for the different parameters
+    level_values = []
+    for i, x in enumerate(grouping):
+        level_values.append(lvls[i].values)
+
+    # this is the list of parameters that gets passed to plotValidationCurve
+    grouping_variables = {}
+    param_abbrev = {}
+    for g in grouping[:-1]:
+        grouping_variables[g] = 0.0
+        if g in preset_abbrev.keys():
+            param_abbrev[g] = preset_abbrev[g]
+        else: # a default value - first letter
+            param_abbrev[g] = g[0]
+            
+    # we are interested in the scores for the LAST variable in the grouping!
+    validation_variable = level_values[-1]
+    # name
+    val_var_name = grouping[-1]
+    
+    training_points = np.zeros(len(validation_variable))
+    training_std = np.zeros(len(validation_variable))
+    testing_points = np.zeros(len(validation_variable))
+    testing_std = np.zeros(len(validation_variable))
+    # now we can get the scores for the different values of the validation variable
+    # create a list with a combination of all variables
+    # exclude the validation variable as we will loop over this on it's own
+    for v in validation_variable:
+        variable_list = [list(x) for x in level_values]
+        #combinations = itertools.product(*variable_list)
+    indices = pd.MultiIndex.from_product(variable_list, names = grouping)
+    plot_values = gmean.loc[indices]
+    plot_std = gstd.loc[indices]
+    rows = len(plot_values)
+    init_val = variable_list[-1][0]
+    counter = 0
+    # loop through all of the combinations now
+    for i in xrange(rows):
+        # if we have looped through a full set of the last variable, start over and plot the val curve
+        if plot_values.iloc[i].name[-1] == init_val:
+            if counter != 0:
+                # create the parameter dictionary
+                for j, g in enumerate(grouping[:-1]): # get all of the values
+                    grouping_variables[g] = plot_values.iloc[i].name[j]
+                plotValidationCurve(key, grouping_variables, param_abbrev, training_points, testing_points, training_std, testing_std, validation_variable, val_var_name, file_id)
+            counter = 0
+
+        else:
+            counter+=1
+        # record the values for each value of the validation variable
+        training_points[counter] = plot_values.iloc[i]['accuracy_train']
+        training_std[counter] = plot_std.iloc[i]['accuracy_train']
+        testing_points[counter] = plot_values.iloc[i]['accuracy_test']
+        testing_std[counter] = plot_std.iloc[i]['accuracy_test']
+
+recreate_csv = False
+
+# set up the job ids
+job_id = 'features_l_2_10'
+key = 'features_l_2_10_v6'
+#key = 'features_l_2_10ID'
+file_id = ''
+full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
+# are we wanting to use bz2?
+compress_id = 'pbz2' # or pickle
+
+#jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+#print 'total number of objects: ' + str(len(jobids))
+#total = len(jobids)
+
+#for i, j in enumerate(jobids):
+#    print 'progress: ' + str(float(100.0*i/total))
+#    recreateFull(j,full_dataset, 'full_v2', compress=True)    
+#print 'finished creating new full objects'
+#sys.exit()        
+    
+df = getDataFrame(recreate_csv, key, file_id, compress_id, fullset = True)
+
+
+file_id = 'legit_full'
 
 grouped_id = df.groupby(['test_id']) # this combines all of the cv folds
 # get the mean scores
@@ -261,115 +445,14 @@ for r in to_round:
 # make sure the max depth and n_estimators are ints
 srt_bkg[['max_depth','n_estimators']] = srt_bkg[['max_depth','n_estimators']].astype(int)
     
-srt_bkg.to_csv('data_'+key+'_sortedresults.csv',columns=['max_depth','learning_rate','n_estimators','accuracy_test','bkg_rej_test'])
+srt_bkg.to_csv('data_'+key+file_id+'_sortedresults.csv',columns=['max_depth','learning_rate','n_estimators','accuracy_test','bkg_rej_test'])
 
-    
-# now we want to be able to the dataframe sort on a number of criteria and create meaningful stats
-# easiest to run in interactive mode first.
-grouped = df.groupby(['learning_rate','n_estimators','max_depth'])
-# get the mean scores
-gmean = grouped.mean()
-gstd = grouped.std()
-# get the index
-idx = gmean.index
-# get the levels - this stores the keys for the different groupby objects
-lvls = idx.levels
-# lrate is lvls[0], n_est is 1, max_depth is 2
-# lvls is a FrozenList with each element being a Frozen64Index
-lrates = lvls[0].values
-n_est = lvls[1].values
-md = lvls[2].values
-training_points = np.zeros(len(md))
-training_std = np.zeros(len(md))
-testing_points = np.zeros(len(md))
-testing_std = np.zeros(len(md))
-# now we can get the scores for the different max_depths
-for lr in lrates:
-    for n in n_est:
-        # store the values for all possible depths. this is what we want to plot!
-        for i,d in enumerate(md):
-            #print gmean.loc[lr,n,d]['accuracy_test']
-            training_points[i] = gmean.loc[lr,n,d]['accuracy_test']
-            training_std[i] = gstd.loc[lr,n,d]['accuracy_test']
-            testing_points[i] = gmean.loc[lr,n,d]['accuracy_train']
-            testing_std[i] = gstd.loc[lr,n,d]['accuracy_train']
-        # now we can plot these
-        #print training_points
-        plotValidationCurve(key, {'learning_rate':lr, 'n_estimators':n}, training_points, testing_points, training_std, testing_std, md)
-        
 # we also want to know how all of the max_depth values did, for all parameters.
-grouped_md = df.groupby(['max_depth','test_id'])
-md_mean = grouped_md.mean()
-for m in md:
-    md_m = md_mean.loc[m]
-    plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_test'], label=str(m))
-    plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_train'], label=str(m))
-plt.savefig('validation_curves/combined_max_depth.png')
 
-def getTaggerScores(files):
-    all_taggers_scores = {}
-    all_taggers_positions = {}
-    scores = {}
-    max_score = 0
-    max_id = ""
-    for f in files:
-        print 'plotting file: ' + f
-        if f.endswith('pickle'):
-            with open('evaluationObjects/'+f,'r') as p:
-                model = pickle.load(p)
-        else:
-            with bz2.BZ2File('evaluationObjects/'+f,'r') as p:
-                model = pickle.load(p)
-        taggers = model.taggers
-        
-        for t in taggers:
-            if t not in all_taggers_scores.keys():
-                all_taggers_scores[t] = []
-                all_taggers_positions[t] = []
-                
-        feature_importances = 100.0 * (model.feature_importances / model.feature_importances.max())
+evaluateVariable(df, key, file_id, ['learning_rate','n_estimators','max_depth'])
+evaluateVariable(df, key, file_id, ['n_estimators','max_depth','learning_rate'])
+evaluateVariable(df, key, file_id, ['max_depth','learning_rate', 'n_estimators'])
 
-        #feature_importances = model.feature_importances
-        #print feature_importances
-        sorted_idx = np.argsort(feature_importances)[::-1]
-        for x in range(len(sorted_idx)):
-            # add the feature importance score and the position
-            all_taggers_scores[taggers[sorted_idx[x]]].append(feature_importances[sorted_idx[x]])
-            all_taggers_positions[taggers[sorted_idx[x]]].append(x)
-            #print 'feature: ' + taggers[sorted_idx[x]]+' score: ' + str(feature_importances[sorted_idx[x]])
-
-        scores[model.job_id] = model.ROC_rej_power_05
-        #print 'sum: ' + str(np.sum(feature_importances))
-        if model.score > max_score:
-            max_score = model.ROC_rej_power_05
-            max_id = model.job_id
-
-
-
-    print 'max score: ' + str(max_score)
-    print 'id: ' + max_id
-
-    sorted_scores = sorted(scores.items(), key=operator.itemgetter(1))
-    print sorted_scores
-    print 'press a key to get tagger scores'
-    # write to file
-    f = open('scores'+key+'.txt','w')
-    for s in sorted_scores:
-        f.write(s[0] + ': ' + str(s[1]) +'\n')
-    f.close()
-
-    # find median of each
-    medians = {}
-    for t in all_taggers_scores.keys():
-        #print t
-        #print np.median(all_taggers_scores[t])
-        medians[t] = np.median(all_taggers_scores[t])
-        #print '***********'
-
-        #print all_taggers_scores
-
-
-        # sort medians
-
-    sorted_medians = sorted(medians.items(), key=operator.itemgetter(1))
-    print sorted_medians
+evaluateVariableCombined(df, 'max_depth', key, file_id)
+evaluateVariableCombined(df, 'learning_rate', key, file_id)
+evaluateVariableCombined(df, 'n_estimators', key, file_id)

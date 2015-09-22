@@ -106,7 +106,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
     weight_flag = '_weighted' if weight_plots else ''
     
     # file mode for tagger_stats and event_count
-    file_mode = 'w' if first_tagger else 'w'
+    file_mode = 'w' if first_tagger else 'a'
     
     # load the cross validation folds
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
@@ -137,7 +137,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
     event_count.write('{0:15}  {1:10} {2:14}{3:10}'.format('Valid cv '+cv_num,str(X_validation[y_validation==1].shape[0]), str(X_validation[y_validation==0].shape[0]),str(X_validation.shape[0]))+'\n')
     event_count.close()
     
-    stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+    stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
 
     
     for i,t in enumerate(taggers):
@@ -168,15 +168,15 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         std_signal = '{0:.4f}'.format(float(np.std(X[y==1][:,i])))
         std_bkg = '{0:.4f}'.format(float(np.std(X[y==0][:,i])))
 
-        result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Full',str(mean),str(std),str(mean_signal),str(std_signal),str(mean_bkg),str(std_bkg))
-        result_tr = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Train',str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))
-        result_val = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Valid',str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))
+        result = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Full',str(mean),str(std),str(mean_signal),str(std_signal),str(mean_bkg),str(std_bkg))
+        result_tr = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Train',str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))
+        result_val = '{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Valid',str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))
         
         stats.write(result+'\n'+result_tr+'\n'+result_val+'\n\n')
         if first_tagger:
             tagger_stats.write(result+'\n')
-        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Train cv '+cv_num,str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))+'\n')
-        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Valid cv '+cv_num,str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))+'\n')
+        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Train cv '+cv_num,str(mean_tr),str(std_tr),str(mean_signal_tr),str(std_signal_tr),str(mean_bkg_tr),str(std_bkg_tr))+'\n')
+        tagger_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Valid cv '+cv_num,str(mean_val),str(std_val),str(mean_signal_val),str(std_signal_val),str(mean_bkg_val),str(std_bkg_val))+'\n')
         tagger_stats.close()
 
     stats.close()
@@ -358,7 +358,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
             print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
     else:
         import bz2
-        f_name_full = 'evaluationObjects/'+job_id+'.pbz2'
+        f_name_full = 'evaluationObjects/'+job_id+'_full.pbz2'
         try:
             with bz2.BZ2File(f_name_full,'w') as d:
                 pickle.dump(m, d)
@@ -458,7 +458,7 @@ print os.getcwd()
 
 model = AdaBoostClassifier()
 
-base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]
+base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
 params = OrderedDict([
     ('base_estimator', base_estimators),
     ('n_estimators', np.linspace(20, 100, 10, dtype=np.int)),
@@ -479,7 +479,7 @@ algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_10
 trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
 #key = 'features_nc_2_10_v5'
-key = 'features_l_2_10_v5'
+key = 'features_l_2_10_v6'
 #test_case = 'features_nc_2_10_v1'
 #test_case = 'cv'
 #test_case = 'test_tgraph'
@@ -505,7 +505,7 @@ if plotCV:
     with open('fold_stats/event_counts'+weight_flag+'.txt') as infile:
         combined_stats.write(infile.read())
     combined_stats.write('\n')
-    combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+    combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
     for t in trainvars:
         label = t
         if t in label_dict.keys():
@@ -547,7 +547,7 @@ lb_view = client.load_balanced_view()
 for t in trainvars_iterations:
     filenames = cross_validation(data, model, params, 10, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
     allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_datase,compress=compresst)
+        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_dataset,compress=compress)
 
 
     prog = printProgress(alltasks)
