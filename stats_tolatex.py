@@ -6,10 +6,12 @@ f_list = list(f)
 
 
 split_table = True
-
+title = "DNN"
 
 current = ''
-begin_frame = '\\begin{frame}[t]{} \n'
+begin_frame = '\\begin{frame}[t]{BDT Cross Validation Sample Statistics} \n'
+if title == 'DNN':
+    begin_frame = begin_frame.replace('BDT','DNN')
 end_frame = '\\end{frame}\n'
 begin_table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c|c|c|c|c|}\n'#\\hline\n'
 end_table = '\\end{tabular}\n\\caption{Statistics for training variables in the full dataset and the training and validation samples. For the neural network these are standardised such that they have mean of 0 and a standard deviation of 1.}\n\\end{center}\n\\end{table}\n'

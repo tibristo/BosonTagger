@@ -76,6 +76,82 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     
     return cv_split_filenames
 
+def drawMatrix(cov_matrix, title, taggers, file_id = ''):
+    cov_train_hist = ROOT.TH2F(title,title,matrix_size, 1, matrix_size+1, matrix_size, 1, matrix_size+1)
+    # we can set the labels of the covariance matrices from label_dict
+    for i, t in enumerate(taggers):
+        cov_train_hist.GetXaxis().SetBinLabel(i+1, label_dict[t])
+        cov_train_hist.GetYaxis().SetBinLabel(i+1, label_dict[t])
+    for row in range(len(matrix)):
+        for col in range(len(matrix)):
+            cov_train_hist.SetBinContent(row+1, col+1, cov_matrix[row][col])
+    # create the canvas and set up the latex and legends
+    tc = ROOT.TCanvas()
+    # turn on the colours
+    ROOT.gStyle.SetPalette(1)
+    ROOT.gStyle.SetPadBorderSize(0)
+    ROOT.gPad.SetBottomMargin(0.10)
+    ROOT.gPad.SetLeftMargin(0.2)
+    matrix.SetStats(0)
+    matrix.SetMarkerSize(1)
+    matrix.Draw("TEXTCOLZ")
+    from ROOT import TLatex 
+    texw = TLatex();
+    texw.SetNDC();
+    texw.SetTextSize(0.035);
+    texw.SetTextFont(72);
+    texw.DrawLatex(0.6,0.91,"ATLAS");
+    p = TLatex();
+    p.SetNDC();
+    p.SetTextFont(42);
+    p.SetTextSize(0.035);
+    p.SetTextColor(ROOT.kBlack);
+    p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
+    # check that the matrix folder exists, if not, create it
+    tc.SaveAs("cov_matrices/cov_matrix_"+file_id+".pdf")
+
+
+
+def plotCovariance(cv_split_filenames, full_dataset, taggers, key = ''):
+    '''
+    Method for plotting the covariance or correlation of all variables.
+
+    cv_split_filenames --- cv fold filenames
+    full_dataset --- full dataset from which the cv folds are created
+    taggers --- the variable names
+    key --- add this to the output file id
+    '''
+
+    import os.path
+    import matplotlib.pylab as plt
+    plt.rc('text',usetex=True)
+    from sklearn.externals import joblib
+    import numpy as np
+
+    # create an output folder for the correlation matrices
+    if not os.path.exists('cov_matrices'):
+        os.makedirs('cov_matrices')
+
+    # load the cross validation folds
+    for cv in cv_split_filenames:
+        X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
+            'persist/'+cv, mmap_mode='c')
+        # the number of cols gives us the number of variables and size of the matrix
+        matrix_size = len(taggers)
+        # get the covariance matrix for training data
+        cov_train = np.cov(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the cov method
+        plotMatrix(cov_train, "Covariance Matrix for training data cv split "+str(cv), taggers, file_id='train_'+str(cv)+key)
+
+        cov_valid = np.cov(X_validation, rowvar=0)
+        plotMatrix(cov_valid, "Covariance Matrix for validation data cv split "+str(cv), taggers, file_id='valid_'+str(cv)+key)
+        
+    # load the full dataset
+    X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
+    cov_full = np.cov(X, rowvar=0)
+    plotMatrix(cov_full, "Covariance Matrix for full dataset", taggers, file_id=full_dataset)
+    
+    # get the covariance matrix for the 
+
 
 def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger = False, weight_plots = False):
     '''
@@ -101,7 +177,6 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
 
     if not os.path.exists('fold_plots'):
         os.makedirs('fold_plots')
-    import numpy as np
 
     weight_flag = '_weighted' if weight_plots else ''
     
@@ -491,9 +566,16 @@ trainvars_iterations = [trainvars]
 full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
 #full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
 
-plotCV = True
+plotCV = False
 weight_plots = True
 weight_flag = '_weighted' if weight_plots else ''
+
+plotCovMatrix = True
+
+if plotCovMatrix:
+    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
+    plotCovariance(filenames, full_dataset, trainvars, key=key)
+    sys.exit()
 
 if plotCV:
     filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
