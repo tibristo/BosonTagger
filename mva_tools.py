@@ -14,7 +14,8 @@ from sklearn.tree import DecisionTreeClassifier
 from pprint import pprint
 from collections import OrderedDict
 import bz2
-label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$"}
+import math
+label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$",'EEC_D2_2':r"$D^{(\beta=2)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$", 'PlanarFlow':r"\textit{P}", 'ThrustMin':r"$T_{min}$",'Sphericity':r"$\textit{S}$",'Tau21':r"$\tau_{21}$",'ThrustMaj':r"$T_{maj}$",'Dip12':r"$D_{12}$",'TauWTA2TauWTA1':r"$\tau^{WTA}_{21}$",'YFilt':r"$YFilt$",'Mu12':r"$\mu_{12}$",'ZCUT12':r"$\sqrt{z_{12}}$",'Tau2':r"$\tau_2$"}
 
 
 #import cv_fold
@@ -76,15 +77,31 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     
     return cv_split_filenames
 
-def drawMatrix(cov_matrix, title, taggers, file_id = ''):
-    cov_train_hist = ROOT.TH2F(title,title,matrix_size, 1, matrix_size+1, matrix_size, 1, matrix_size+1)
+def round_sigfigs(num, sig_figs):
+    '''
+    Round number to specified number of significant digits
+    '''
+    if num != 0:
+        return round(num, -int(math.floor(math.log10(abs(num))) - (sig_figs-1)))
+    else:
+        return 0 # can't take the log of 0
+
+def drawMatrix(corr_matrix, title, taggers, matrix_size, file_id = ''):
+    import ROOT
+    ROOT.gROOT.SetBatch(1)
+    corr_hist = ROOT.TH2F(title,title,matrix_size, 1, matrix_size+1, matrix_size, 1, matrix_size+1)
     # we can set the labels of the covariance matrices from label_dict
+    # right now label_dict has the latex versions of the variables, but this doesn't work with th2f, need
+    # to replace \ with #
     for i, t in enumerate(taggers):
-        cov_train_hist.GetXaxis().SetBinLabel(i+1, label_dict[t])
-        cov_train_hist.GetYaxis().SetBinLabel(i+1, label_dict[t])
-    for row in range(len(matrix)):
-        for col in range(len(matrix)):
-            cov_train_hist.SetBinContent(row+1, col+1, cov_matrix[row][col])
+        label = label_dict[t].replace('$','').replace("\\","#").replace("text","")
+        #corr_hist.GetXaxis().SetBinLabel(i+1, label_dict[t])
+        corr_hist.GetXaxis().SetBinLabel(i+1, label)
+        #corr_hist.GetYaxis().SetBinLabel(i+1, label_dict[t])
+        corr_hist.GetYaxis().SetBinLabel(i+1, label)
+    for row in range(len(corr_matrix)):
+        for col in range(len(corr_matrix)):
+            corr_hist.SetBinContent(row+1, col+1, round_sigfigs(corr_matrix[row][col], 3))
     # create the canvas and set up the latex and legends
     tc = ROOT.TCanvas()
     # turn on the colours
@@ -92,9 +109,9 @@ def drawMatrix(cov_matrix, title, taggers, file_id = ''):
     ROOT.gStyle.SetPadBorderSize(0)
     ROOT.gPad.SetBottomMargin(0.10)
     ROOT.gPad.SetLeftMargin(0.2)
-    matrix.SetStats(0)
-    matrix.SetMarkerSize(1)
-    matrix.Draw("TEXTCOLZ")
+    corr_hist.SetStats(0)
+    corr_hist.SetMarkerSize(0.7)
+    corr_hist.Draw("TEXTCOLZ")
     from ROOT import TLatex 
     texw = TLatex();
     texw.SetNDC();
@@ -108,11 +125,11 @@ def drawMatrix(cov_matrix, title, taggers, file_id = ''):
     p.SetTextColor(ROOT.kBlack);
     p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
     # check that the matrix folder exists, if not, create it
-    tc.SaveAs("cov_matrices/cov_matrix_"+file_id+".pdf")
+    tc.SaveAs("corr_matrices/corr_matrix_"+file_id+".pdf")
 
 
 
-def plotCovariance(cv_split_filenames, full_dataset, taggers, key = ''):
+def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = ''):
     '''
     Method for plotting the covariance or correlation of all variables.
 
@@ -129,8 +146,8 @@ def plotCovariance(cv_split_filenames, full_dataset, taggers, key = ''):
     import numpy as np
 
     # create an output folder for the correlation matrices
-    if not os.path.exists('cov_matrices'):
-        os.makedirs('cov_matrices')
+    if not os.path.exists('corr_matrices'):
+        os.makedirs('corr_matrices')
 
     # load the cross validation folds
     for cv in cv_split_filenames:
@@ -139,16 +156,15 @@ def plotCovariance(cv_split_filenames, full_dataset, taggers, key = ''):
         # the number of cols gives us the number of variables and size of the matrix
         matrix_size = len(taggers)
         # get the covariance matrix for training data
-        cov_train = np.cov(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the cov method
-        plotMatrix(cov_train, "Covariance Matrix for training data cv split "+str(cv), taggers, file_id='train_'+str(cv)+key)
-
-        cov_valid = np.cov(X_validation, rowvar=0)
-        plotMatrix(cov_valid, "Covariance Matrix for validation data cv split "+str(cv), taggers, file_id='valid_'+str(cv)+key)
+        corr_train = np.corrcoef(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the corr method
+        drawMatrix(corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key)
+        corr_valid = np.corrcoef(X_validation, rowvar=0)
+        drawMatrix(corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key)
         
     # load the full dataset
     X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
-    cov_full = np.cov(X, rowvar=0)
-    plotMatrix(cov_full, "Covariance Matrix for full dataset", taggers, file_id=full_dataset)
+    corr_full = np.corrcoef(X, rowvar=0)
+    drawMatrix(corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full")
     
     # get the covariance matrix for the 
 
@@ -550,7 +566,7 @@ algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_10
 #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
 
 #trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
-#trainvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
+allvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
 trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
 #key = 'features_nc_2_10_v5'
@@ -570,11 +586,11 @@ plotCV = False
 weight_plots = True
 weight_flag = '_weighted' if weight_plots else ''
 
-plotCovMatrix = True
+plotCorrMatrix = True
 
-if plotCovMatrix:
+if False:#plotCorrMatrix:
     filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
-    plotCovariance(filenames, full_dataset, trainvars, key=key)
+    plotCorrelation(filenames, full_dataset, trainvars, key=key)
     sys.exit()
 
 if plotCV:
@@ -602,6 +618,12 @@ if plotCV:
 import pandas as pd
 #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
 data = pd.read_csv('csv/'+algorithm+'_merged.csv')
+
+if plotCorrMatrix:
+    X = data[allvars].values
+    corr_matrix = np.corrcoef(X, rowvar=0)
+    drawMatrix(corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id="full_allvars")
+    sys.exit()
 
 #runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
 #runTest('persist/data_features_l_2_10_v3_001.pkl', model, trainvars, algorithm, full_dataset)
