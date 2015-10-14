@@ -253,6 +253,20 @@ def getDataFrame(recreate_csv=False, key='features_l_2_10_v6', file_id = 'valida
     else:
         files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith(compress_id) and f.find('full') == -1]
     print 'total number of objects: ' + str(len(files))
+
+    # check that the file exists if we have decided not to recreate the csv file
+    if not recreate_csv:
+        filefound = False
+        fname = 'data_'+key+file_id+'.csv'
+        while not filefound:
+            if not os.path.isfile(fname):
+                print "file "+fname+" doesn't exist! Enter another name to try or hit enter to create a new csv"
+                fname = input()
+                if fname == '':
+                    recreate_csv = True
+                    filefound = True
+                continue
+            filefound = True
     
     if recreate_csv:
         #get a dict of the data
@@ -278,16 +292,6 @@ def getDataFrame(recreate_csv=False, key='features_l_2_10_v6', file_id = 'valida
 
     else:
         # we can read it in from the csv file
-        # check that the file exists
-        filefound = False
-        fname = 'data_'+key+file_id+'.csv'
-        while not filefound:
-            if not os.path.isfile(fname):
-                print "file "+fname+" doesn't exist! Enter another name to try"
-                fname = raw_input()
-                continue
-            filefound = True
-        
         df = pd.read_csv(fname)
 
     return df
@@ -404,55 +408,63 @@ def evaluateVariable(df, key, file_id = '', grouping = ['learning_rate','n_estim
         testing_points[counter] = plot_values.iloc[i]['accuracy_test']
         testing_std[counter] = plot_std.iloc[i]['accuracy_test']
 
-recreate_csv = False
 
-# set up the job ids
-job_id = 'features_l_2_10'
-key = 'features_l_2_10_v6'
-#key = 'features_l_2_10ID'
-file_id = ''
-full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
-# are we wanting to use bz2?
-compress_id = 'pbz2' # or pickle
 
-#jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
-#print 'total number of objects: ' + str(len(jobids))
-#total = len(jobids)
-
-#for i, j in enumerate(jobids):
-#    print 'progress: ' + str(float(100.0*i/total))
-#    recreateFull(j,full_dataset, 'full_v2', compress=True)    
-#print 'finished creating new full objects'
-#sys.exit()        
+def main(args):
+    parser = argparse.ArgumentParser(description='Plot the evaluation objects and get some meaningful stats from the output of the BDTs.')
+    parser.add_argument('--key', default='features_l_2_10_v6', help = 'Key to use for reading in the evaluation objects. This gets added to the output filenames for the stats files.')
+    parser.add_argument('--fileid', default='legit_full', help = 'File id to add to the output file name (works together with the key).')
+    #parser.add_argument('--fulldataset', default='', help = 'Name of the full dataset.')
+    parser.add_argument('--createcsv', type=bool, default = False, help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
+    args = parser.parse_args()
     
-df = getDataFrame(recreate_csv, key, file_id, compress_id, fullset = True)
+    recreate_csv = args.createcsv
 
+    key = args.key
+    file_id = args.fileid
+    full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
+    # are we wanting to use bz2?
+    compress_id = 'pbz2' # or pickle
 
-file_id = 'legit_full'
+    #jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+    #print 'total number of objects: ' + str(len(jobids))
+    #total = len(jobids)
 
-grouped_id = df.groupby(['test_id']) # this combines all of the cv folds
-# get the mean scores
-id_mean = grouped_id.mean()
-id_std = grouped_id.std()
+    #for i, j in enumerate(jobids):
+    #    print 'progress: ' + str(float(100.0*i/total))
+    #    recreateFull(j,full_dataset, 'full_v2', compress=True)    
+    #print 'finished creating new full objects'
 
-# sort the groups based on bkg rej power at 50%
-srt_bkg = id_mean.sort('bkg_rej_test',ascending=False)
+    # get the dataframe. either from a df written to a csv file or from the evaluation objects
+    df = getDataFrame(recreate_csv, key, file_id = 'validation', compress_id = compress_id, fullset = True)
 
-# before writing to csv, format it to only use 4 sig digits
-to_round = ['learning_rate','accuracy_test','bkg_rej_test']
-for r in to_round:
-    srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+3) )
-# make sure the max depth and n_estimators are ints
-srt_bkg[['max_depth','n_estimators']] = srt_bkg[['max_depth','n_estimators']].astype(int)
+    grouped_id = df.groupby(['test_id']) # this combines all of the cv folds
+    # get the mean scores
+    id_mean = grouped_id.mean()
+    id_std = grouped_id.std()
+
+    # sort the groups based on bkg rej power at 50%
+    srt_bkg = id_mean.sort('bkg_rej_test',ascending=False)
+
+    # before writing to csv, format it to only use 4 sig digits
+    to_round = ['learning_rate','accuracy_test','bkg_rej_test']
+    for r in to_round:
+        srt_bkg[r] = srt_bkg[r].map(lambda x: round(x, -int(floor(log10(x)))+3) )
+    # make sure the max depth and n_estimators are ints
+    srt_bkg[['max_depth','n_estimators']] = srt_bkg[['max_depth','n_estimators']].astype(int)
     
-srt_bkg.to_csv('data_'+key+file_id+'_sortedresults.csv',columns=['max_depth','learning_rate','n_estimators','accuracy_test','bkg_rej_test'])
+    srt_bkg.to_csv('data_'+key+file_id+'_sortedresults.csv',columns=['max_depth','learning_rate','n_estimators','accuracy_test','bkg_rej_test'])
 
-# we also want to know how all of the max_depth values did, for all parameters.
+    # we also want to know how all of the max_depth values did, for all parameters.
 
-evaluateVariable(df, key, file_id, ['learning_rate','n_estimators','max_depth'])
-evaluateVariable(df, key, file_id, ['n_estimators','max_depth','learning_rate'])
-evaluateVariable(df, key, file_id, ['max_depth','learning_rate', 'n_estimators'])
+    evaluateVariable(df, key, file_id, ['learning_rate','n_estimators','max_depth'])
+    evaluateVariable(df, key, file_id, ['n_estimators','max_depth','learning_rate'])
+    evaluateVariable(df, key, file_id, ['max_depth','learning_rate', 'n_estimators'])
 
-evaluateVariableCombined(df, 'max_depth', key, file_id)
-evaluateVariableCombined(df, 'learning_rate', key, file_id)
-evaluateVariableCombined(df, 'n_estimators', key, file_id)
+    evaluateVariableCombined(df, 'max_depth', key, file_id)
+    evaluateVariableCombined(df, 'learning_rate', key, file_id)
+    evaluateVariableCombined(df, 'n_estimators', key, file_id)
+
+
+if __name__ == '__main__':
+    main(sys.argv)

@@ -15,12 +15,15 @@ from pprint import pprint
 from collections import OrderedDict
 import bz2
 import math
+import argparse
+
+# some common variables and their latex format
 label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$",'EEC_D2_2':r"$D^{(\beta=2)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$", 'PlanarFlow':r"\textit{P}", 'ThrustMin':r"$T_{min}$",'Sphericity':r"$\textit{S}$",'Tau21':r"$\tau_{21}$",'ThrustMaj':r"$T_{maj}$",'Dip12':r"$D_{12}$",'TauWTA2TauWTA1':r"$\tau^{WTA}_{21}$",'YFilt':r"$YFilt$",'Mu12':r"$\mu_{12}$",'ZCUT12':r"$\sqrt{z_{12}}$",'Tau2':r"$\tau_2$"}
 
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
-                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True, overwrite_full=True,signal_eff=1.0, bkg_eff=1.0):
+                      suffix="_cv_%03d.pkl", test_size=0.25, random_state=None, scale=True, overwrite=True, overwrite_full=True,signal_eff=1.0, bkg_eff=1.0, onlyFull = False):
     """Materialize randomized train test splits of a dataset."""
     import os.path
     from root_numpy import array2root
@@ -38,8 +41,8 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     if overwrite_full or not os.path.isfile(full_fname):
         full_set = (X,y,w,[signal_eff,bkg_eff])
         joblib.dump(full_set,full_fname)
-
-    #return
+    if onlyFull:
+        return
         
     for i, (train, test) in enumerate(cv):
         cv_split_filename = prefix+name + suffix % i
@@ -506,7 +509,7 @@ def find_bests(all_parameters, all_tasks, n_top=5, save=False, bests_tag='cv'):
     return bests
 
 
-def cross_validation(data, model, params, iterations, variables, ovwrite=True, ovwrite_full=True,suffix_tag = 'cv', scale=True):
+def cross_validation(data, model, params, iterations, variables, ovwrite=True, ovwrite_full=True,suffix_tag = 'cv', scale=True, onlyFull = False):
     X = data[variables].values
     y = data['label'].values
     w = data['weight'].values
@@ -516,7 +519,7 @@ def cross_validation(data, model, params, iterations, variables, ovwrite=True, o
     bkg_eff = data.loc[data['label']==0]['eff'].values[0]
 
     # create the cross validation splits and write them to disk
-    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, overwrite_full=ovwrite_full, signal_eff=signal_eff, bkg_eff=bkg_eff)
+    filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, overwrite_full=ovwrite_full, signal_eff=signal_eff, bkg_eff=bkg_eff, onlyFull=onlyFull)
 
     return filenames
     
@@ -541,124 +544,161 @@ def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
     
     for i, params in enumerate(all_parameters):
         compute_evaluation(cv_split_filename, model, params, job_id = 'test', taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset)
-        plotSamples(cv_split_filename, trainvars)
+        #plotSamples(cv_split_filename, trainvars)
         return
         
-print os.getcwd()
-#    import cv_fold
 
-model = AdaBoostClassifier()
+def main(args):
+    '''
+    Main method which runs the classifier.  Takes in a number of arguments which are then used to control which methods get run -> creating plots, cv splits, correlation plots, grid_search, run test
+    '''
+    parser = argparse.ArgumentParser(description='Run parts of the MVA tagger.')
+    parser.add_argument('-a','--algorithm', default='AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw', help = 'Set the Algorithm (default: AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw)')
+    parser.add_argument('--fileid', default='corr_matrix', help = 'File id to use if drawing the correlation matrix.')
+    parser.add_argument('--key', default='mc15_v1_2_10_default', help = 'Key to be used for finding the files to plot, or the key that gets used when creating the plots and cv splits. (Default: mc15_v1_2_10_default)')
+    parser.add_argument('--fulldataset', default = 'persist/data_DEFAULT_100.pkl', help = 'The name of the full dataset pkl file. This is the one created with the persist_cv method (default: persist/data_mc15_nc_v1_2_10_v1_100.pkl)')
+    parser.add_argument('--plotCorrMatrix', type=bool, default=False, help = 'Plot the correlation matrix. Usually set the fileid parameter at the same time as this.')
+    parser.add_argument('--createFoldsOnly', type=bool, default=False, help = 'Create the cv splits only, without running any computation.')
+    parser.add_argument('--runTestCase', type=bool, default=False, help = 'Run a test of the BDT with the current set of variables. Useful for checking the setup is correct and for getting the feature_importances for a single run.')
+    parser.add_argument('--allVars', type=bool, default=False, help = 'Use all of the variables. This is useful at the beginning when it is not yet clear which variables should be used for training.')
+    parser.add_argument('--plotCV', type=bool, default=False, help = 'Plot the cv splits and get stats about the variables in the cv splits.')
+    parser.add_argument('--testSample', default = 'persist/data_DEFAULT_000.pkl', help = 'The name of the file on which to run the test (see runTestCase option). Default is persist/data_(key)_000.pkl')
+    parser.add_argument('--runMVA', type=bool, default=False, help = 'Whether or not to run the full grid search.')
+    parser.add_argument('--folds', type=int, default=10, help = 'Number of cv folds to create.')
+    # should be using a subparser here, but whatever.
+    parser.add_argument('--onlyFull', type=bool, default=False, help = 'If creating folds should only the full dataset be done or not?')
+    
+    args = parser.parse_args()
+    
+    model = AdaBoostClassifier()
 
-base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
-params = OrderedDict([
-    ('base_estimator', base_estimators),
-    ('n_estimators', np.linspace(20, 100, 10, dtype=np.int)),
-    ('learning_rate', np.linspace(0.1, 1, 10))
-])
+    base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
+    params = OrderedDict([
+        ('base_estimator', base_estimators),
+        ('n_estimators', np.linspace(20, 100, 10, dtype=np.int)),
+        ('learning_rate', np.linspace(0.1, 0.5, 5))
+    ])
 
-#{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
-#            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
-#            min_samples_split=2, min_weight_fraction_leaf=0.0,
-#            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
+    #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
+    #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
+    #            min_samples_split=2, min_weight_fraction_leaf=0.0,
+    #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
 
-#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedL_ranged_v2_1000_1500_mw'
-algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-#algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_notcleaned_v2_200_1000_mw'
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
+    #algorithm = ''
+    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_notcleaned_v1_200_1000_mw'
 
-#trainvars = ['Aplanarity','ThrustMin','Tau1','Sphericity','FoxWolfram20','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','Angularity','ZCUT12','Tau2','EEC_D2_2','TauWTA1','PlanarFlow']
-allvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1 
-trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
+    # these were used for dc14
+    #allvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1
+    #trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
 
-#key = 'features_nc_2_10_v5'
-key = 'features_l_2_10_v6'
-#test_case = 'features_nc_2_10_v1'
-#test_case = 'cv'
-#test_case = 'test_tgraph'
+    # these are for the mc15 samples
+    allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow']# features v1
+    # trainvars for mc15 200-1000 AK10
+    #trainvars = ['EEC_C2_1','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2']
+    # trainvars for mc15 1000-1500 AK10
+    trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow'] 
 
-compress = True
-file_type = 'pbz2' # .pickle or .pbz2
+    # if we are running the bdt (or other classifier) with all of the variables
+    if args.allVars == True:
+        trainvars = allvars
+        
+    #key = 'mc15_v1_2_10_v6'
+    #key = 'mc15_nc_v1_2_10_v1'
 
-trainvars_iterations = [trainvars]
-full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
-#full_dataset = 'persist/data_features_l_2_10_v3_100.pkl'
+    compress = True
+    file_type = 'pbz2' # .pickle or .pbz2
 
-plotCV = False
-weight_plots = True
-weight_flag = '_weighted' if weight_plots else ''
+    trainvars_iterations = [trainvars]
+    #full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
+    if args.fulldataset.find('DEFAULT') != -1:
+        full_dataset = args.fulldataset.replace('DEFAULT',args.key)
+    else:
+        full_dataset = args.fulldataset#'persist/data_mc15_nc_v1_2_10_v1_100.pkl'
+    
+    weight_plots = True
+    weight_flag = '_weighted' if weight_plots else ''
+    
+    
+    if False:#plotCorrMatrix:
+        filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
+        plotCorrelation(filenames, full_dataset, trainvars, key=args.key)
 
-plotCorrMatrix = True
-
-if False:#plotCorrMatrix:
-    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
-    plotCorrelation(filenames, full_dataset, trainvars, key=key)
-    sys.exit()
-
-if plotCV:
-    filenames = [f for f in os.listdir('persist/') if f.find(key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
-    for i,f in enumerate(filenames):
-        plotSamples(f,full_dataset,trainvars, key = key, first_tagger = i == 0, weight_plots = True)
-    # create the combined stats file for all taggers and all cv splits
-    combined_stats = open('fold_stats/combined_stats_'+key+weight_flag+'.txt','w')
-    combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
-    with open('fold_stats/event_counts'+weight_flag+'.txt') as infile:
-        combined_stats.write(infile.read())
-    combined_stats.write('\n')
-    combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
-    for t in trainvars:
-        label = t
-        if t in label_dict.keys():
-            label = label_dict[t]
-        combined_stats.write(label+'\n')
-        with open('fold_stats/'+t+'_'+key+weight_flag+'.txt') as tfile:
-            combined_stats.write(tfile.read())
+    # perhaps this part should be moved so that it can be run at the same time as the other stuff? in a single call...
+    if args.plotCV:
+        filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
+        for i,f in enumerate(filenames):
+            plotSamples(f,full_dataset,trainvars, key = args.key, first_tagger = i == 0, weight_plots = True)
+        # create the combined stats file for all taggers and all cv splits
+        combined_stats = open('fold_stats/combined_stats_'+args.key+weight_flag+'.txt','w')
+        combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
+        with open('fold_stats/event_counts'+weight_flag+'.txt') as infile:
+            combined_stats.write(infile.read())
         combined_stats.write('\n')
-    sys.exit()
+        combined_stats.write('{0:15}: {1:10} {2:10} {3:10} {4:10} {5:10} {6:10}'.format('Variable','Mean','Std','Mean Sig','Std Sig','Mean Bkg','Std Bkg')+'\n\n')
+        for t in trainvars:
+            label = t
+            if t in label_dict.keys():
+                label = label_dict[t]
+            combined_stats.write(label+'\n')
+            with open('fold_stats/'+t+'_'+args.key+weight_flag+'.txt') as tfile:
+                combined_stats.write(tfile.read())
+            combined_stats.write('\n')
 
 
-import pandas as pd
-#data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
-data = pd.read_csv('csv/'+algorithm+'_merged.csv')
+    if not (args.createFoldsOnly or args.plotCorrMatrix or args.runTestCase or args.runMVA):
+        sys.exit()
+        
+    import pandas as pd
+    data = pd.read_csv('csv/'+args.algorithm+'_merged.csv')
 
-if plotCorrMatrix:
-    X = data[allvars].values
-    corr_matrix = np.corrcoef(X, rowvar=0)
-    drawMatrix(corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id="full_allvars")
-    sys.exit()
+    if args.plotCorrMatrix:
+        X = data[allvars].values
+        corr_matrix = np.corrcoef(X, rowvar=0)
+        drawMatrix(corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid)#"full_allvars_mc15")
 
-#runTest('persist/data_features_5_10__001.pkl', model, trainvars, algorithm)
-#runTest('persist/data_features_l_2_10_v3_001.pkl', model, trainvars, algorithm, full_dataset)
+    # just create the folds
 
-#sys.exit(0)
-#raw_input()
+    if args.createFoldsOnly:
+        # we need to add some extra variables that might not get used for training, but we want in there anyway!
+        # ideally we don't always want to create 10 folds, esp if we're just looking for the full file only, or just doing some initial exploration of the data
+        filenames = cross_validation(data, model, params, args.folds, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=args.key, scale=False, onlyFull=args.onlyFull)
 
-# just create the folds
-createFoldsOnly = False
-if createFoldsOnly:
-    # we need to add some extra variables that might not get used for training, but we want in there anyway!
-    filenames = cross_validation(data, model, params, 10, trainvars, ovwrite=True, ovwrite_full=True,suffix_tag=key, scale=False)
-    sys.exit()
+    # run the test case
+    if args.runTestCase:
+        #testSample = 'persist/data_mc15_v1_2_10_v6_000.pkl'
+        if args.testSample.find('DEFAULT') != -1:
+            args.testSample = args.testSample.replace('DEFAULT',args.key)
+        runTest(args.testSample, model, trainvars, args.algorithm, full_dataset)
 
+    if not args.runMVA:
+        sys.exit(0)
+        
 
-# do the full grid search    
-from IPython.parallel import Client
+    # do the full grid search    
+    from IPython.parallel import Client
 
-client = Client()
-#with client[:].sync_imports():
-lb_view = client.load_balanced_view()
+    client = Client()
+    #with client[:].sync_imports():
+    lb_view = client.load_balanced_view()
 
 
     
-for t in trainvars_iterations:
-    filenames = cross_validation(data, model, params, 10, t, ovwrite=True, ovwrite_full=False, suffix_tag=key, scale=False)
-    allparms, alltasks = grid_search(
-        lb_view, model, filenames, params, t, algorithm, id_tag=key, weighted=True, full_dataset=full_dataset,compress=compress)
+    for t in trainvars_iterations:
+        filenames = cross_validation(data, model, params, args.folds, t, ovwrite=True, ovwrite_full=False, suffix_tag=args.key, scale=False)
+        allparms, alltasks = grid_search(
+            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress)
 
 
-    prog = printProgress(alltasks)
-    while prog < 1:
-        time.sleep(10)
         prog = printProgress(alltasks)
-        pprint(find_bests(allparms,alltasks))
+        while prog < 1:
+            time.sleep(10)
+            prog = printProgress(alltasks)
+            pprint(find_bests(allparms,alltasks))
 
 
-    pprint(find_bests(allparms,alltasks,len(allparms), True, key))
+        pprint(find_bests(allparms,alltasks,len(allparms), True, args.key))
+
+
+if __name__=='__main__':
+    main(sys.argv)
