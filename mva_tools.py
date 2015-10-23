@@ -334,7 +334,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     bkg_scaling = bkg_tr_idx*bkg_count
     tot_scaling = sig_scaling+bkg_scaling
 
-    #w_train = w_train*tot_scaling
+    w_train = w_train*tot_scaling
 
     if weighted:
         model.fit(X_train, y_train, w_train)
@@ -532,11 +532,12 @@ def printProgress(tasks):
 
 
 def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
-    base_estimators = [DecisionTreeClassifier(max_depth=5)]
+    base_estimators = [DecisionTreeClassifier(max_depth=3)]
+
     params = OrderedDict([
             ('base_estimator', base_estimators),
-            ('n_estimators', [50]),
-            ('learning_rate', [1.0])
+            ('n_estimators', [40]),
+            ('learning_rate', [0.3])
             ])
 
     from sklearn.grid_search import ParameterGrid
@@ -597,8 +598,11 @@ def main(args):
     # trainvars for mc15 200-1000 AK10
     #trainvars = ['EEC_C2_1','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2']
     # trainvars for mc15 1000-1500 AK10
-    trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow'] 
-
+    #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow']
+    # train vars for mc15_jz5_v1
+    #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','ZCUT12','Aplanarity']
+    # trainvars for mc15_jz5_v2
+    trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
     # if we are running the bdt (or other classifier) with all of the variables
     if args.allVars == True:
         trainvars = allvars

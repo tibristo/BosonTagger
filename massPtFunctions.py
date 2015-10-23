@@ -18,7 +18,7 @@ pt_high = 3000
 pt_low = 200
 weightedxAOD = False
 
-def setPtWeightFile(sigtmp, bkgtmp):
+def setPtWeightFile(sigtmp, bkgtmp, normalise=True):
     '''
     Set up the histogram used for pt rw.  The signal and background pt TH1F histograms are 
     used to create this.
@@ -30,9 +30,9 @@ def setPtWeightFile(sigtmp, bkgtmp):
     sig = sigtmp.Clone()
     bkg = bkgtmp.Clone()
 
-    if sig.Integral() != 0:
+    if normalise and sig.Integral() != 0:
         sig.Scale(1./sig.Integral())
-    if bkg.Integral() != 0:
+    if normalise and bkg.Integral() != 0:
         bkg.Scale(1./bkg.Integral())
 
     ptweights = copy.deepcopy(bkg)

@@ -1,8 +1,4 @@
-"""
-=========================================
-Binary Classification with NumPy and TMVA
-=========================================
-"""
+
 from array import array
 import numpy as np
 from numpy.random import RandomState
@@ -14,6 +10,7 @@ plt.style.use('ggplot')
 RNG = RandomState(42)
 
 # Construct an example dataset for binary classification
+'''
 n_vars = 2
 n_events = 1000
 signal = RNG.multivariate_normal(
@@ -31,7 +28,16 @@ y = y[permute]
 # Split into training and test datasets
 X_train, y_train, w_train = X[:n_events], y[:n_events], w[:n_events]
 X_test, y_test, w_test = X[n_events:], y[n_events:], w[n_events:]
+'''
 
+from sklearn.externals import joblib
+X_train, y_train, w_train, X_test, y_test, w_test = joblib.load('persist/data_mc15_jz5_v1_8_12_v2_000.pkl')
+n_vars = X_train.shape[1]
+#print X_train
+#print y_train
+#print type(X_train)
+
+#input()
 output = TFile('tmva_output.root', 'recreate')
 factory = TMVA.Factory('classifier', output,
                        'AnalysisType=Classification:'
@@ -43,15 +49,17 @@ for n in range(n_vars):
 add_classification_events(factory, X_train, y_train, weights=w_train)
 add_classification_events(factory, X_test, y_test, weights=w_test, test=True)
 # The following line is necessary if events have been added individually:
-factory.PrepareTrainingAndTestTree(TCut('1'), 'NormMode=EqualNumEvents')
+#factory.PrepareTrainingAndTestTree(TCut('1'), 'NormMode=EqualNumEvents')
 
 # Train a classifier
 factory.BookMethod('Fisher', 'Fisher',
                    'Fisher:VarTransform=None:CreateMVAPdfs:'
                    'PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:'
                    'NsmoothMVAPdf=10')
-factory.TrainAllMethods()
 
+print 'added all the events and booked the method'
+factory.TrainAllMethods()
+print 'trained'
 # Classify the test dataset with the classifier
 reader = TMVA.Reader()
 for n in range(n_vars):

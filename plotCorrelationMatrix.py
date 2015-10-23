@@ -83,8 +83,11 @@ def plotMatrix(version):
                 varsdict[v[0]] = 1
 
     # sort all of the variables. sortedvars is a tuple sorted by value of varsdict. order contains the desired order if these variables are present
+    #order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']
     order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']    
     #sortedvars = sorted(varsdict.items(), key=operator.itemgetter(0))
+    
+    
     sortedvars = []
     # variables that are not in the "order" list
     toadd = []
@@ -126,8 +129,9 @@ def plotMatrix(version):
                 # nominal, error up, error down
                 rej[variables[0]] = [ variables[1], variables[2], variables[3] ]
                 var4 = True
-        if not 4:
-            rej = dict(rejectionmatrix[r])
+            #if not var4:
+            else:
+                rej[variables[0]] = [variables[1],-1,-1]
             
         #print rej
         # we want to sort rej based on sorted vars.... Won't work yet

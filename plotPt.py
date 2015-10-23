@@ -7,18 +7,18 @@ SetAtlasStyle()
 
 
 pthists = []
-s = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_matched_v2/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matched_v2/TopoTrimmedPtFrac5SmallR20_inclusive_sig.root')
+s = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_sig.root')
 sighist = s.Get('pt_reweightsig')
 sighist.SetDirectory(0)
 s.Close()
-b = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_matched_v2/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matched_v2/TopoTrimmedPtFrac5SmallR20_inclusive_bkg.root')
+b = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_bkg.root')
 
 bkghist = b.Get('pt_reweightbkg')
 bkghist.SetDirectory(0)
 b.Close()
 
 
-massPtFunctions.setPtWeightFile(sighist, bkghist)
+massPtFunctions.setPtWeightFile(sighist, bkghist, normalise=False)
 ptweights = massPtFunctions.getPtWeightsFile()
 # draw the pt histogram and reweighted histogram
 ptweightBins = [200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000]
@@ -43,7 +43,7 @@ for hist in [pt, pt_ca12, pt_rw, pt_rw_ca12]:
         hist[k].GetXaxis().SetTitle('#it{p}_{T} (GeV)')
         hist[k].GetYaxis().SetTitle('# entries normalised to 1')
         
-fname = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_matched_v2/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matched_v2/TopoTrimmedPtFrac5SmallR20_inclusive_FILE.root'
+fname = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_FILE.root'
 
 for datatype in ['sig', 'bkg']:
     f = TFile.Open(fname.replace('FILE',datatype),'read')
