@@ -416,7 +416,8 @@ def main(args):
     parser.add_argument('--key', default='features_l_2_10_v6', help = 'Key to use for reading in the evaluation objects. This gets added to the output filenames for the stats files.')
     parser.add_argument('--fileid', default='legit_full', help = 'File id to add to the output file name (works together with the key).')
     #parser.add_argument('--fulldataset', default='', help = 'Name of the full dataset.')
-    parser.add_argument('--createcsv', type=bool, default = False, help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
+    parser.add_argument('--createcsv', dest='createcsv',  action='store_true', help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
+    parser.set_defaults(createcsv=False)
     args = parser.parse_args()
     
     recreate_csv = args.createcsv

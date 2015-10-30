@@ -499,15 +499,19 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
 
         if typename == 'bkg':
             numpydata['weight'] = [numpydata['evt_filtereff'][i]*numpydata['evt_xsec'][i]*numpydata['mc_event_weight'][i]*(1./numpydata['evt_nEvts'][i]) for i in xrange(0,len(numpydata['evt_xsec']))]
+            bkg_count = numpydata['weight'].sum()#float(len(numpydata['evt_xsec']))
+            if background_events != -1.0:
+                numpydata['eff'] = float(bkg_count/background_events)
+            else:
+                numpydata['eff'] = 1.0
+            numpydata['label']=0
+            #if file_type.find('csv')!=-1:
+            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')#,mode='a',header=False)
+
         else:
             numpydata['weight'] = [ptweights.GetBinContent(ptweights.GetXaxis().FindBin(numpydata['jet_CamKt12Truth_pt'][i]/1000.)) for i in xrange(0,len(numpydata['evt_xsec']))]
-
-        if typename == 'sig':
             sig_count = numpydata['weight'].sum()#float(len(numpydata['evt_xsec']))
-        else:
-            bkg_count = numpydata['weight'].sum()#float(len(numpydata['evt_xsec']))        
 
-        if typename == 'sig':
             # if we know the number of events we can calculate an efficiency
             if signal_events != -1:
                 numpydata['eff'] = float(sig_count/signal_events)
@@ -516,22 +520,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             numpydata['label']=1
             #if file_type.find('csv')!=-1:
             numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')
-            #if file_type.find('root')!=-1:
-                #create a root file
-                
-            #    root_numpy.array2root(numpydata.values, 'root/'+ Algorithm + fileid + '_' + typename + '.root', 'outputTree')
-        else:
             
-            if background_events != -1.0:
-                numpydata['eff'] = float(bkg_count/background_events)
-            else:
-                numpydata['eff'] = 1.0
-            numpydata['label']=0
-            #if file_type.find('csv')!=-1:
-            numpydata.to_csv('csv/' + Algorithm + fileid + '_' + typename + '.csv')#,mode='a',header=False)
-            #if file_type.find('root')!=-1:
-            #    root_numpy.array2root(numpydata.values, 'root/'+ Algorithm + fileid + '_' + typename + '.root', 'outputTree')
-
         file_in.Close()
     return sig_count, bkg_count
 

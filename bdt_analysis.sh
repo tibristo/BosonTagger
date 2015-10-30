@@ -38,4 +38,4 @@ python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_
 cat bests/bestsmc15_v1_2_10.txt
 
 # now run some plots to create the validation plots and some more score stats about the different bdts
-python plotEvaluationObjects.py
+python plotEvaluationObjects.py --key=mc15_jz5_v1_8_12_v4 --fileid=mc15_jz5_v4_full --createcsv=True

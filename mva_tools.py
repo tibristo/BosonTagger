@@ -433,7 +433,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     m_full.toROOT()
     # save the train score
     m_full.setTrainRejection(bkg_rej_train)
-
+    m_full.plotDecisionFunction()
 
 
     # save the model to use later.
@@ -532,11 +532,11 @@ def printProgress(tasks):
 
 
 def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
-    base_estimators = [DecisionTreeClassifier(max_depth=3)]
+    base_estimators = [DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#min_weight_fraction_leaf=0.0
 
     params = OrderedDict([
             ('base_estimator', base_estimators),
-            ('n_estimators', [40]),
+            ('n_estimators', [50]),
             ('learning_rate', [0.3])
             ])
 
@@ -573,11 +573,13 @@ def main(args):
     
     model = AdaBoostClassifier()
 
+    #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
+    #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     params = OrderedDict([
         ('base_estimator', base_estimators),
-        ('n_estimators', np.linspace(20, 100, 10, dtype=np.int)),
-        ('learning_rate', np.linspace(0.1, 0.5, 5))
+        ('n_estimators', np.linspace(20, 80, 8, dtype=np.int)),
+        ('learning_rate', np.linspace(0.1, 0.3, 3))
     ])
 
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
