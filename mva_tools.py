@@ -299,7 +299,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.clf()
 
 
-def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True):
+def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True):
     """Function executed by a worker to evaluate a model on a CV split"""
     import os
     from sklearn.externals import joblib
@@ -334,7 +334,16 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     bkg_scaling = bkg_tr_idx*bkg_count
     tot_scaling = sig_scaling+bkg_scaling
 
-    w_train = w_train*tot_scaling
+    #w_train = w_train*tot_scaling
+    # the weight transformation was very successful on the dnn, so I'm going to try it here too
+    # implementation of the weight transform done on the 6th of Nov 2015.
+    # copied from the create_folds.py file in the WTaggingNN setup
+    if transform_weights:
+        for idx in xrange(0, w_train.shape[0]):
+            if y_train[idx] == 1:
+                w_train[idx] = 1.0
+            else:
+                w_train[idx] = np.arctan(1./w_train[idx])
 
     if weighted:
         model.fit(X_train, y_train, w_train)
@@ -466,7 +475,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     return roc_bkg_rej#bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True, transform_weights=False):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -477,7 +486,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
        
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress, transform_weights=transform_weights)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -568,7 +577,8 @@ def main(args):
     parser.add_argument('--folds', type=int, default=10, help = 'Number of cv folds to create.')
     # should be using a subparser here, but whatever.
     parser.add_argument('--onlyFull', type=bool, default=False, help = 'If creating folds should only the full dataset be done or not?')
-    
+    parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
+    parser.set_defaults(txweights=False)
     args = parser.parse_args()
     
     model = AdaBoostClassifier()
@@ -576,12 +586,20 @@ def main(args):
     #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
+    '''
     params = OrderedDict([
         ('base_estimator', base_estimators),
         ('n_estimators', np.linspace(20, 80, 8, dtype=np.int)),
         ('learning_rate', np.linspace(0.1, 0.3, 3))
     ])
-
+    '''
+    # best performing parameteres for jz5_v2
+    params = [{'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.3]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.1]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.2]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
+    
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
     #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
     #            min_samples_split=2, min_weight_fraction_leaf=0.0,
@@ -693,7 +711,7 @@ def main(args):
     for t in trainvars_iterations:
         filenames = cross_validation(data, model, params, args.folds, t, ovwrite=True, ovwrite_full=False, suffix_tag=args.key, scale=False)
         allparms, alltasks = grid_search(
-            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress)
+            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights)
 
 
         prog = printProgress(alltasks)

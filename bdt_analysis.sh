@@ -29,6 +29,7 @@ python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_
 python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --runTestCase=True --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl
 
 # now run the entire mva
+startcluster8
 python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl --runMVA=True
 
 # can now get some info out of the cv splits if we want

@@ -93,7 +93,7 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
     prob_predict_full = model.model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id+'_full', model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.decision_function, decision_function_sig = model.df_sig_idx, decision_function_bkg = model.df_bkg_idx)
+    m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.decision_function, decision_function_sig = model.df_sig_idx, decision_function_bkg = model.df_bkg_idx)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
     # get the indices in the full sample
@@ -415,27 +415,31 @@ def main(args):
     parser = argparse.ArgumentParser(description='Plot the evaluation objects and get some meaningful stats from the output of the BDTs.')
     parser.add_argument('--key', default='features_l_2_10_v6', help = 'Key to use for reading in the evaluation objects. This gets added to the output filenames for the stats files.')
     parser.add_argument('--fileid', default='legit_full', help = 'File id to add to the output file name (works together with the key).')
-    #parser.add_argument('--fulldataset', default='', help = 'Name of the full dataset.')
+    parser.add_argument('--fulldataset', default='persist/data_features_nc_2_10_v5_100.pkl', help = 'Name of the full dataset.')
     parser.add_argument('--createcsv', dest='createcsv',  action='store_true', help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
+    parser.add_argument('--evaluate', dest='evaluate', action='store_true', help = 'If the bdt is getting tested on some new data, using the trained models. Default is false.')
+    
     parser.set_defaults(createcsv=False)
+    parser.set_defaults(evaluate=False)
     args = parser.parse_args()
     
     recreate_csv = args.createcsv
 
     key = args.key
     file_id = args.fileid
-    full_dataset = 'persist/data_features_nc_2_10_v5_100.pkl'
+    full_dataset = args.fulldataset#'persist/data_features_nc_2_10_v5_100.pkl'
     # are we wanting to use bz2?
     compress_id = 'pbz2' # or pickle
+    if args.evaluate:
+        jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+        print 'total number of objects: ' + str(len(jobids))
+        total = len(jobids)
 
-    #jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
-    #print 'total number of objects: ' + str(len(jobids))
-    #total = len(jobids)
-
-    #for i, j in enumerate(jobids):
-    #    print 'progress: ' + str(float(100.0*i/total))
-    #    recreateFull(j,full_dataset, 'full_v2', compress=True)    
-    #print 'finished creating new full objects'
+        for i, j in enumerate(jobids):
+            print 'progress: ' + str(float(100.0*i/total))
+            recreateFull(j,full_dataset, 'full_bkg_training_4_16', compress=True)    
+        print 'finished evaluation'
+        sys.exit(0)
 
     # get the dataframe. either from a df written to a csv file or from the evaluation objects
     df = getDataFrame(recreate_csv, key, file_id = 'validation', compress_id = compress_id, fullset = True)
