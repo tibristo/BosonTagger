@@ -437,7 +437,7 @@ def main(args):
 
         for i, j in enumerate(jobids):
             print 'progress: ' + str(float(100.0*i/total))
-            recreateFull(j,full_dataset, 'full_bkg_training_4_16', compress=True)    
+            recreateFull(j,full_dataset, '_bkg_training_12_16', compress=True)    
         print 'finished evaluation'
         sys.exit(0)
 
