@@ -70,7 +70,7 @@ def getTaggerScores(files):
     print sorted_medians
 
 
-def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
+def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_valid_weights = False, weight_validation = False):
     
     # load the model from the cv model
     if job_id.endswith('pickle'):
@@ -88,10 +88,23 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
         return roc_bkg_rej
     print file_full
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
+
+
+    if transform_valid_weights and weight_validation:
+        for idx in xrange(0, w_full.shape[0]):
+            if y_full[idx] == 1:
+                w_full[idx] = 1.0
+            else:
+                w_full[idx] = np.arctan(1./w_full[idx])
+
+    if weight_validation:
+        w_tmp = w_full
+    else:
+        w_tmp = None
     print efficiencies
-    full_score = model.model.score(X_full, y_full)
+    full_score = model.model.score(X_full, y_full, sample_weight=w_tmp)
     prob_predict_full = model.model.predict_proba(X_full)[:,1]
-    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
+    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight = w_tmp)
     # need to set the maximum efficiencies for signal and bkg
     m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.decision_function, decision_function_sig = model.df_sig_idx, decision_function_bkg = model.df_bkg_idx)
     m_full.setSigEff(efficiencies[0])
@@ -100,10 +113,10 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True):
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_tmp)
     # set the different scoresx
     y_pred_full = model.model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight = w_tmp), precision=precision_score(y_pred_full, y_full, sample_weight = w_tmp), recall=recall_score(y_pred_full, y_full, sample_weight = w_tmp), f1=f1_score(y_pred_full, y_full, sample_weight = w_tmp))
 
     # need to get the train scores!
     m_full.setScores('train',accuracy=model.train_accuracy, precision=model.train_precision, recall=model.train_recall, f1=model.train_f1)
@@ -418,9 +431,16 @@ def main(args):
     parser.add_argument('--fulldataset', default='persist/data_features_nc_2_10_v5_100.pkl', help = 'Name of the full dataset.')
     parser.add_argument('--createcsv', dest='createcsv',  action='store_true', help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
     parser.add_argument('--evaluate', dest='evaluate', action='store_true', help = 'If the bdt is getting tested on some new data, using the trained models. Default is false.')
+    parser.add_argument('--weight-validation', dest='weight_validation', action='store_true', help = 'If the validation samples should be weighted.')
+    parser.add_argument('--transform-weight-validation', dest='tx_weight_validation', action='store_true', help = 'If the validation sample weights should be transformed.')
+    parser.add_argument('--new-fileid', dest = 'fullid', help = 'File identifier if the bdt is getting tested on some new data.')
     
     parser.set_defaults(createcsv=False)
     parser.set_defaults(evaluate=False)
+    parser.set_defaults(tx_weight_validation=False)
+    parser.set_defaults(weight_validation=False)
+    parser.set_defaults(fullid='new_eval')
+    
     args = parser.parse_args()
     
     recreate_csv = args.createcsv
@@ -437,7 +457,7 @@ def main(args):
 
         for i, j in enumerate(jobids):
             print 'progress: ' + str(float(100.0*i/total))
-            recreateFull(j,full_dataset, '_bkg_training_12_16', compress=True)    
+            recreateFull(j,full_dataset, '_'+args.fullid, compress=True, transform_valid_weights = args.tx_weight_validation, weight_validation = args.weight_validation)#    '_bkg_training_12_16', compress=True)    
         print 'finished evaluation'
         sys.exit(0)
 

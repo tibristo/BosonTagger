@@ -126,7 +126,7 @@ class modelEvaluation:
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
 
         # fill the signal and background histograms
-        if weights not None:
+        if weights is not None:
             fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
             fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
         else:
@@ -241,7 +241,7 @@ class modelEvaluation:
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
 
         # fill the signal and background histograms
-        if weights not None:
+        if weights is not None:
             fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
             fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
         else:
