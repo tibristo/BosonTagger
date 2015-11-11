@@ -299,8 +299,15 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.clf()
 
 
-def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True):
-    """Function executed by a worker to evaluate a model on a CV split"""
+def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True, transform_valid_weights=False, weight_validation=False):
+    """Function executed by a worker to evaluate a model on a CV split
+
+    Usage:
+    cv_split_filename:
+    model:
+    params:
+    
+    """
     import os
     from sklearn.externals import joblib
     import numpy as np
@@ -344,6 +351,12 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
                 w_train[idx] = 1.0
             else:
                 w_train[idx] = np.arctan(1./w_train[idx])
+    if transform_valid_weights and weight_validation:
+        for idx in xrange(0, w_validation.shape[0]):
+            if y_validation[idx] == 1:
+                w_validation[idx] = 1.0
+            else:
+                w_validation[idx] = np.arctan(1./w_validation[idx])
 
     if weighted:
         model.fit(X_train, y_train, w_train)
@@ -353,18 +366,22 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
 
     # we want to do this for both the validation sample AND the full sample so that we
     # can compare it with the cut-based tagger.
-    validation_score = model.score(X_validation, y_validation)
+    if weighted:
+        w_test = w_validation
+    else:
+        w_test = None
+    validation_score = model.score(X_validation, y_validation, sample_weight=w_test)
     prob_predict_valid = model.predict_proba(X_validation)[:,1]
-    fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid)
+    fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid, sample_weight=w_test)
     
 
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
-    m.setProbas(prob_predict_valid, sig_idx, bkg_idx)
+    m.setProbas(prob_predict_valid, sig_idx, bkg_idx, w_validation)
     # set all of the scores
     y_val_pred = model.predict(X_validation)
-    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation), precision=precision_score(y_val_pred, y_validation), recall=recall_score(y_val_pred, y_validation), f1=f1_score(y_val_pred, y_validation))
+    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation, sample_weight=w_test), precision=precision_score(y_val_pred, y_validation, sample_weight = w_test), recall=recall_score(y_val_pred, y_validation, sample_weight = w_test), f1=f1_score(y_val_pred, y_validation, sample_weight = w_test))
     y_train_pred = model.predict(X_train)
-    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train)
+    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight = w_train), precision=precision_score(y_train_pred, y_train, sample_weight = w_train), recall=recall_score(y_train_pred, y_train, sample_weight = w_train), f1=f1_score(y_train_pred, y_train, sample_weight = w_train)
 )
     # create the output root file for this.
     m.toROOT()
@@ -372,7 +389,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     roc_bkg_rej = m.getRejPower()
     # calculate the training score as well
     prob_predict_train = model.predict_proba(X_train)[:,1]
-    bkg_rej_train = m.calculateBkgRej(prob_predict_train, sig_tr_idx, bkg_tr_idx)
+    bkg_rej_train = m.calculateBkgRej(prob_predict_train, sig_tr_idx, bkg_tr_idx, w_train)
     m.setTrainRejection(bkg_rej_train)
 
     # save the model for later
@@ -422,9 +439,19 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     print file_full
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
     print efficiencies
-    full_score = model.score(X_full, y_full)
+    if transform_valid_weights and weight_validation:
+        for idx in xrange(0, w_full.shape[0]):
+            if y_full[idx] == 1:
+                w_full[idx] = 1.0
+            else:
+                w_full[idx] = np.arctan(1./w_full[idx])
+    if not weight_validation:
+        w_full_tmp = None
+    else:
+        w_full_tmp = w_full
+    full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
     prob_predict_full = model.predict_proba(X_full)[:,1]
-    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full)
+    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight=w_full_tmp)
     # need to set the maximum efficiencies for signal and bkg
     m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, job_id+'_full', taggers, algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
     m_full.setSigEff(efficiencies[0])
@@ -433,11 +460,11 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx)
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, sample_weight=w_full_tmp)
     # set the different scoresx
     y_pred_full = model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full), precision=precision_score(y_pred_full, y_full), recall=recall_score(y_pred_full, y_full), f1=f1_score(y_pred_full, y_full))
-    m_full.setScores('train',accuracy=accuracy_score(y_train_pred, y_train), precision=precision_score(y_train_pred, y_train), recall=recall_score(y_train_pred, y_train), f1=f1_score(y_train_pred, y_train))
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp), precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
+    m_full.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight=w_train), precision=precision_score(y_train_pred, y_train, sample_weight=w_train), recall=recall_score(y_train_pred, y_train, sample_weight=w_train), f1=f1_score(y_train_pred, y_train, sample_weight=w_train))
     # write this into a root file
     m_full.toROOT()
     # save the train score
@@ -475,7 +502,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     return roc_bkg_rej#bkgrej#validation_score
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True, transform_weights=False):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True, transform_weights=False, transform_valid_weights=False, weight_validation=False):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -486,7 +513,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
        
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress, transform_weights=transform_weights)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -578,7 +605,11 @@ def main(args):
     # should be using a subparser here, but whatever.
     parser.add_argument('--onlyFull', type=bool, default=False, help = 'If creating folds should only the full dataset be done or not?')
     parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
+    parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
+    parser.add_argument('--weight-validation', dest='weightsval',action='store_true', help = "if weights must be applied during validation and testing")
     parser.set_defaults(txweights=False)
+    parser.set_defaults(txvalweights=False)
+    parser.set_defaults(weightval=False)
     args = parser.parse_args()
     
     model = AdaBoostClassifier()
@@ -711,7 +742,7 @@ def main(args):
     for t in trainvars_iterations:
         filenames = cross_validation(data, model, params, args.folds, t, ovwrite=True, ovwrite_full=False, suffix_tag=args.key, scale=False)
         allparms, alltasks = grid_search(
-            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights)
+            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
 
 
         prog = printProgress(alltasks)

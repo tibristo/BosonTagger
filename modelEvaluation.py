@@ -82,7 +82,7 @@ class modelEvaluation:
         plt.legend(loc="lower left",prop={'size':6})
         plt.savefig(str(self.job_id)+'rocmva.pdf')
 
-    def setProbas(self, probas, signal_idx, bkg_idx):
+    def setProbas(self, probas, signal_idx, bkg_idx, weights = None):
         '''
         Set the discriminant (here the probability scores) from the BDT and the actual signal
         and background indices.
@@ -90,8 +90,9 @@ class modelEvaluation:
         self.discriminant = probas
         self.sig_idx = signal_idx
         self.bkg_idx = bkg_idx
+        self.weights = weights
         
-    def plotDiscriminant(self, discriminant, signal_idx, bkg_idx, save_disc = True, rejection_power=True):
+    def plotDiscriminant(self, discriminant, signal_idx, bkg_idx, weights = None, save_disc = True, rejection_power=True):
         '''
         Plot the discriminants and the resulting ROC curve derived from them.
 
@@ -125,10 +126,14 @@ class modelEvaluation:
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
 
         # fill the signal and background histograms
-        fill_hist(hist_bkg,discriminant[bkg_idx])
+        if weights not None:
+            fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
+            fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
+        else:
+            fill_hist(hist_bkg,discriminant[bkg_idx])
+            fill_hist(hist_sig,discriminant[signal_idx])
         if hist_bkg.Integral() != 0:
             hist_bkg.Scale(1/hist_bkg.Integral())
-        fill_hist(hist_sig,discriminant[signal_idx])
         if hist_sig.Integral() != 0:
             hist_sig.Scale(1/hist_sig.Integral())
 
@@ -212,7 +217,7 @@ class modelEvaluation:
     def setTrainRejection(self, rej):
         self.ROC_rej_power_05_train = rej
 
-    def calculateBkgRej(self, discriminant, signal_idx, bkg_idx):
+    def calculateBkgRej(self, discriminant, signal_idx, bkg_idx, weights=None):
         '''
         This does essentially the same thing as the plotDiscriminant method, except that it does it for
         an arbritrary discriminant and doesn't save the histograms. It just calculates the score.
@@ -236,10 +241,14 @@ class modelEvaluation:
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
 
         # fill the signal and background histograms
-        fill_hist(hist_bkg,discriminant[bkg_idx])
+        if weights not None:
+            fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
+            fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
+        else:
+            fill_hist(hist_bkg,discriminant[bkg_idx])
+            fill_hist(hist_sig,discriminant[signal_idx])
         if hist_bkg.Integral() != 0:
             hist_bkg.Scale(1/hist_bkg.Integral())
-        fill_hist(hist_sig,discriminant[signal_idx])
         if hist_sig.Integral() != 0:
             hist_sig.Scale(1/hist_sig.Integral())
 
@@ -422,6 +431,6 @@ class modelEvaluation:
     def toROOT(self):
         if self.discriminant is not None:
             #self.plotDiscriminant(self.sig_idx, self.bkg_idx, self.discriminant)
-            self.plotDiscriminant(self.discriminant, self.sig_idx, self.bkg_idx)
+            self.plotDiscriminant(self.discriminant, self.sig_idx, self.bkg_idx, self.weights)
         else:
             return

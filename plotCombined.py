@@ -59,6 +59,7 @@ class rocEntry:
             self.legend = None
             return
         print tfile
+        self.filename = tfile
         self.tfile = rt.TFile(tfile)
         print roc_curve
         self.roc = self.tfile.Get(roc_curve).Clone()
@@ -111,8 +112,8 @@ if not singleFile:
     for c in config:
         c = c.strip()
         spl = c.split(',')
-        if len(spl) <= 3:
-            pass
+        if len(spl) <= 3 or c.startswith('#'):
+            continue
         roc_args = {'file':spl[0], 'roc_curve': spl[1], 'legend': spl[2], 'power_curve': spl[3]}
         roc_entry.append(rocEntry(**roc_args))
         if len(spl) >= 5: # add the colour and the marker style
@@ -154,6 +155,7 @@ markers = np.hstack([markers_1,markers_2])
 # find the minimum background rejection
 minrej = 1.0
 for r in roc_entry:
+    print r.filename
     n = r.roc.GetN()
     y = r.roc.GetY()
     locmin = rt.TMath.LocMin(n, y)

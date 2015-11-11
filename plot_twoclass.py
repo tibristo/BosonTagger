@@ -10,7 +10,7 @@ plt.style.use('ggplot')
 RNG = RandomState(42)
 
 # Construct an example dataset for binary classification
-'''
+
 n_vars = 2
 n_events = 1000
 signal = RNG.multivariate_normal(
@@ -25,16 +25,21 @@ permute = RNG.permutation(y.shape[0])
 X = X[permute]
 y = y[permute]
 
+print X.shape
+print y.shape
+print w.shape
+
 # Split into training and test datasets
-X_train, y_train, w_train = X[:n_events], y[:n_events], w[:n_events]
-X_test, y_test, w_test = X[n_events:], y[n_events:], w[n_events:]
-'''
+#X_train, y_train, w_train = X[:n_events], y[:n_events], w[:n_events]
+#X_test, y_test, w_test = X[n_events:], y[n_events:], w[n_events:]
+
 
 from sklearn.externals import joblib
-X_train, y_train, w_train, X_test, y_test, w_test = joblib.load('persist/data_mc15_jz5_v1_8_12_v2_000.pkl')
+X_train, y_train, w_train, X_test, y_test, w_test = joblib.load('persist/data_mc15_jz5_v1_8_12_v2_000.pkl',mmap_mode='c')
 n_vars = X_train.shape[1]
-#print X_train
-#print y_train
+print X_train.shape
+print y_train.shape
+print w_train.shape
 #print type(X_train)
 
 #input()
@@ -49,13 +54,17 @@ for n in range(n_vars):
 add_classification_events(factory, X_train, y_train, weights=w_train)
 add_classification_events(factory, X_test, y_test, weights=w_test, test=True)
 # The following line is necessary if events have been added individually:
-#factory.PrepareTrainingAndTestTree(TCut('1'), 'NormMode=EqualNumEvents')
-
+factory.PrepareTrainingAndTestTree(TCut('1'), 'NormMode=EqualNumEvents')
+#BookMethod( TMVA::Types::kBDT, "BDT",
+#
+#457                          "NTrees=400:nEventsMin=100:MaxDepth=4.:BoostType=AdaBoost:AdaBoostBeta=0.2:SeparationType=GiniIndex:nCuts=10:PruneStrength=2:PruneMethod=Exp    ectedError");
 # Train a classifier
-factory.BookMethod('Fisher', 'Fisher',
-                   'Fisher:VarTransform=None:CreateMVAPdfs:'
-                   'PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:'
-                   'NsmoothMVAPdf=10')
+factory.BookMethod('BDT', 'BDT',
+                   'NTrees=100:nEventsMin=30:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.2:SeparationType=GiniIndex:nCuts=10:PruneStrength=2:PruneMethod=ExpectedError')
+#factory.BookMethod('kBDT', 'BDT',
+#                   'Fisher:VarTransform=None:CreateMVAPdfs:'
+#                   'PDFInterpolMVAPdf=Spline2:NbinsMVAPdf=50:'
+#                   'NsmoothMVAPdf=10')
 
 print 'added all the events and booked the method'
 factory.TrainAllMethods()
@@ -64,8 +73,8 @@ print 'trained'
 reader = TMVA.Reader()
 for n in range(n_vars):
     reader.AddVariable('f{0}'.format(n), array('f', [0.]))
-reader.BookMVA('Fisher', 'weights/classifier_Fisher.weights.xml')
-twoclass_output = evaluate_reader(reader, 'Fisher', X_test)
+reader.BookMVA('BDT', 'weights/classifier_BDT.weights.xml')
+twoclass_output = evaluate_reader(reader, 'BDT', X_test)
 
 plot_colors = "br"
 plot_step = 0.02
@@ -78,6 +87,7 @@ plt.figure(figsize=(10, 5))
 plt.subplot(121)
 x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
 y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+'''
 xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
 
@@ -100,11 +110,12 @@ plt.legend(loc='upper right')
 plt.xlabel('x')
 plt.ylabel('y')
 plt.title('Decision Boundary')
-
+'''
 # Plot the two-class decision scores
 plot_range = (twoclass_output.min(), twoclass_output.max())
 plt.subplot(122)
-for i, n, c in zip([-1, 1], class_names, plot_colors):
+for i, n, c in zip([0, 1], class_names, plot_colors):
+    print i
     plt.hist(twoclass_output[y_test == i],
              bins=10,
              range=plot_range,
