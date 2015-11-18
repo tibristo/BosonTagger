@@ -17,6 +17,19 @@ import itertools
 columns = ['test_id','cv_id','max_depth','n_estimators','learning_rate','f1_train','f1_test','recall_train','recall_test','precision_train','precision_test','accuracy_train','accuracy_test','bkg_rej_train','bkg_rej_test','filename']
 
 
+def matchAll(test, filters=[]):
+    '''
+    Check if every string in filters is found in the test string, in order.
+    '''
+    prev = 0
+    for f in filters:
+        pos = test.find(f, prev)
+        if pos != -1:
+            prev = pos
+        else:
+            return False
+    return True
+
 
 def getTaggerScores(files):
     all_taggers_scores = {}
@@ -90,7 +103,7 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_v
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
 
 
-    if transform_valid_weights and weight_validation:
+    if transform_valid_weights:# and weight_validation:
         for idx in xrange(0, w_full.shape[0]):
             if y_full[idx] == 1:
                 w_full[idx] = 1.0
@@ -99,9 +112,14 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_v
 
     if weight_validation:
         w_tmp = w_full
+        #for idx in xrange(0, w_full.shape[0]):
+        #    if y_full[idx] == 1:
+        #        w_full[idx] = 1.0
+        #w_tmp[sig
     else:
         w_tmp = None
     print efficiencies
+    print w_tmp
     full_score = model.model.score(X_full, y_full, sample_weight=w_tmp)
     prob_predict_full = model.model.predict_proba(X_full)[:,1]
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight = w_tmp)
@@ -117,7 +135,7 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_v
     # set the different scoresx
     y_pred_full = model.model.predict(X_full)
     m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight = w_tmp), precision=precision_score(y_pred_full, y_full, sample_weight = w_tmp), recall=recall_score(y_pred_full, y_full, sample_weight = w_tmp), f1=f1_score(y_pred_full, y_full, sample_weight = w_tmp))
-
+    print accuracy_score(y_pred_full, y_full, sample_weight = w_tmp)
     # need to get the train scores!
     m_full.setScores('train',accuracy=model.train_accuracy, precision=model.train_precision, recall=model.train_recall, f1=model.train_f1)
     # write this into a root file
@@ -261,11 +279,12 @@ def plotValidationCurve(key, parameters, param_abbrev, train_scores_mean, test_s
 
     
 
-def getDataFrame(recreate_csv=False, key='features_l_2_10_v6', file_id = 'validation', compress_id ='pbz2', fullset = True):
+def getDataFrame(recreate_csv=False, keys=['features_l_2_10_v6'], file_id = 'validation', compress_id ='pbz2', fullset = True):
+    key = keys[0]
     if fullset:
-        files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith(compress_id) and f.find('full') != -1]
+        files = [f for f in os.listdir('evaluationObjects/') if matchAll(f,keys) and f.endswith(compress_id) and f.find('full') != -1]
     else:
-        files = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.endswith(compress_id) and f.find('full') == -1]
+        files = [f for f in os.listdir('evaluationObjects/') if matchAll(f,keys) and f.endswith(compress_id) and f.find('full') == -1]
     print 'total number of objects: ' + str(len(files))
 
     # check that the file exists if we have decided not to recreate the csv file
@@ -426,7 +445,7 @@ def evaluateVariable(df, key, file_id = '', grouping = ['learning_rate','n_estim
 
 def main(args):
     parser = argparse.ArgumentParser(description='Plot the evaluation objects and get some meaningful stats from the output of the BDTs.')
-    parser.add_argument('--key', default='features_l_2_10_v6', help = 'Key to use for reading in the evaluation objects. This gets added to the output filenames for the stats files.')
+    parser.add_argument('--key', default='features_l_2_10_v6', help = 'Key to use for reading in the evaluation objects. This gets added to the output filenames for the stats files. If a wildcard is encountered, such as *, then the first part of the key is used for naming, the full key for matching.')
     parser.add_argument('--fileid', default='legit_full', help = 'File id to add to the output file name (works together with the key).')
     parser.add_argument('--fulldataset', default='persist/data_features_nc_2_10_v5_100.pkl', help = 'Name of the full dataset.')
     parser.add_argument('--createcsv', dest='createcsv',  action='store_true', help = 'Whether or not to recreate the dataframe from the csv file or to read in all of the evaluation objects to create the dataframe.')
@@ -444,14 +463,19 @@ def main(args):
     args = parser.parse_args()
     
     recreate_csv = args.createcsv
-
-    key = args.key
+    # wildcards
+    ksplit = args.key.split("*")
+    
+    key = ksplit[0]
+    
     file_id = args.fileid
     full_dataset = args.fulldataset#'persist/data_features_nc_2_10_v5_100.pkl'
     # are we wanting to use bz2?
     compress_id = 'pbz2' # or pickle
     if args.evaluate:
-        jobids = [f for f in os.listdir('evaluationObjects/') if f.find(key)!=-1 and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+
+                    
+        jobids = [f for f in os.listdir('evaluationObjects/') if matchAll(f,ksplit) and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
         print 'total number of objects: ' + str(len(jobids))
         total = len(jobids)
 
@@ -462,7 +486,7 @@ def main(args):
         sys.exit(0)
 
     # get the dataframe. either from a df written to a csv file or from the evaluation objects
-    df = getDataFrame(recreate_csv, key, file_id = 'validation', compress_id = compress_id, fullset = True)
+    df = getDataFrame(recreate_csv, ksplit, file_id = file_id, compress_id = compress_id, fullset = True)
 
     grouped_id = df.groupby(['test_id']) # this combines all of the cv folds
     # get the mean scores

@@ -40,3 +40,7 @@ cat bests/bestsmc15_v1_2_10.txt
 
 # now run some plots to create the validation plots and some more score stats about the different bdts
 python plotEvaluationObjects.py --key=mc15_jz5_v1_8_12_v4 --fileid=mc15_jz5_v4_full --createcsv=True
+
+
+# if we want to test it on some other data:
+python plotEvaluationObjects.py --key=mc15_v2.3_4_16 --fulldataset=persist/data_mc15_jz5_nc_v2_8_12_v1_100.pkl --evaluate --weight-validation --new-fileid=tx_weightvalidation_jz5 --transform-weight-validation

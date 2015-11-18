@@ -351,7 +351,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
                 w_train[idx] = 1.0
             else:
                 w_train[idx] = np.arctan(1./w_train[idx])
-    if transform_valid_weights and weight_validation:
+    if transform_valid_weights:# and weight_validation:
         for idx in xrange(0, w_validation.shape[0]):
             if y_validation[idx] == 1:
                 w_validation[idx] = 1.0
@@ -460,7 +460,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, sample_weight=w_full_tmp)
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full_tmp)
     # set the different scoresx
     y_pred_full = model.predict(X_full)
     m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp), precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
@@ -567,7 +567,7 @@ def printProgress(tasks):
 
 
 
-def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
+def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=True, transform_valid_weights=False, weight_validation=False):
     base_estimators = [DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#min_weight_fraction_leaf=0.0
 
     params = OrderedDict([
@@ -580,7 +580,7 @@ def runTest(cv_split_filename, model, trainvars, algo, full_dataset=''):
     all_parameters = list(ParameterGrid(params))
     
     for i, params in enumerate(all_parameters):
-        compute_evaluation(cv_split_filename, model, params, job_id = 'test', taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset)
+        compute_evaluation(cv_split_filename, model, params, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
         #plotSamples(cv_split_filename, trainvars)
         return
         
@@ -597,6 +597,7 @@ def main(args):
     parser.add_argument('--plotCorrMatrix', type=bool, default=False, help = 'Plot the correlation matrix. Usually set the fileid parameter at the same time as this.')
     parser.add_argument('--createFoldsOnly', type=bool, default=False, help = 'Create the cv splits only, without running any computation.')
     parser.add_argument('--runTestCase', type=bool, default=False, help = 'Run a test of the BDT with the current set of variables. Useful for checking the setup is correct and for getting the feature_importances for a single run.')
+    parser.add_argument('--test-id', dest='testid', default = 'test', help = 'The name of the output files from the test run (default: test)')
     parser.add_argument('--allVars', type=bool, default=False, help = 'Use all of the variables. This is useful at the beginning when it is not yet clear which variables should be used for training.')
     parser.add_argument('--plotCV', type=bool, default=False, help = 'Plot the cv splits and get stats about the variables in the cv splits.')
     parser.add_argument('--testSample', default = 'persist/data_DEFAULT_000.pkl', help = 'The name of the file on which to run the test (see runTestCase option). Default is persist/data_(key)_000.pkl')
@@ -624,12 +625,20 @@ def main(args):
         ('learning_rate', np.linspace(0.1, 0.3, 3))
     ])
     '''
-    # best performing parameteres for jz5_v2
+    # best performing parameteres for jz5_v2 WITHOUT weighting the validation samples
+    '''
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.3]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.1]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
+    '''
+    # best performing parameteres for jz5_v2 WITH weighting the validation samples
+    params = [{'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.3]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[80],'learning_rate':[0.2]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[71],'learning_rate':[0.2]},
+              {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.1]}]
     
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
     #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
@@ -722,9 +731,11 @@ def main(args):
     # run the test case
     if args.runTestCase:
         #testSample = 'persist/data_mc15_v1_2_10_v6_000.pkl'
+        if args.testid == 'test' and args.fileid != '':
+            args.testid = args.fileid
         if args.testSample.find('DEFAULT') != -1:
             args.testSample = args.testSample.replace('DEFAULT',args.key)
-        runTest(args.testSample, model, trainvars, args.algorithm, full_dataset)
+        runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
 
     if not args.runMVA:
         sys.exit(0)

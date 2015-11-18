@@ -4,7 +4,7 @@
     <pt_high name = "310000"></pt_high>
     <pt_low name = "200000"></pt_low>
   </cutstring>
-  <Algorithm name = "CamKt12LCTopoSplitFilteredMu100SmallR30YCut4">
+  <Algorithm name = "CamKt12LCTopoBDRSFilteredMU100Y4">
     <AlgorithmString>C/A R=1.2, split-filtered jets</AlgorithmString>
     <AlgorithmSettings>#mu=1.0, R_{sub}=0.3, y_{cut}=0.04</AlgorithmSettings>
     <Energy>13</Energy>
@@ -16,6 +16,7 @@
   <ptBins>
     <bin name = "28"></bin>
   </ptBins>
+
   <varName name="pt">
   <stub>_pt</stub>
   <plot>True</plot>
