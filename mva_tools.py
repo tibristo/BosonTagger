@@ -612,7 +612,7 @@ def main(args):
     parser.set_defaults(txvalweights=False)
     parser.set_defaults(weightval=False)
     args = parser.parse_args()
-    
+    print 'allVars: ' + str(args.allVars)
     model = AdaBoostClassifier()
 
     #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]

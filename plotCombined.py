@@ -59,7 +59,6 @@ class rocEntry:
             self.legend = None
             return
         print tfile
-        self.filename = tfile
         self.tfile = rt.TFile(tfile)
         print roc_curve
         self.roc = self.tfile.Get(roc_curve).Clone()
@@ -155,7 +154,6 @@ markers = np.hstack([markers_1,markers_2])
 # find the minimum background rejection
 minrej = 1.0
 for r in roc_entry:
-    print r.filename
     n = r.roc.GetN()
     y = r.roc.GetY()
     locmin = rt.TMath.LocMin(n, y)
