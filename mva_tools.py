@@ -661,12 +661,16 @@ def main(args):
     #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow']
     # train vars for mc15_jz5_v1
     #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','ZCUT12','Aplanarity']
-    # trainvars for mc15_jz5_v2
-    trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
+
+    
     # if we are running the bdt (or other classifier) with all of the variables
     if args.allVars == True:
         trainvars = allvars
+    else:
+        # trainvars for mc15_jz5_v2
+        trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
         
+    print trainvars
     #key = 'mc15_v1_2_10_v6'
     #key = 'mc15_nc_v1_2_10_v1'
 
