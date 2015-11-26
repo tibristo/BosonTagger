@@ -481,6 +481,7 @@ def main(args):
 
         for i, j in enumerate(jobids):
             print 'progress: ' + str(float(100.0*i/total))
+            # this should make a call to mva_tools rather, as that already has the code
             recreateFull(j,full_dataset, '_'+args.fullid, compress=True, transform_valid_weights = args.tx_weight_validation, weight_validation = args.weight_validation)#    '_bkg_training_12_16', compress=True)    
         print 'finished evaluation'
         sys.exit(0)

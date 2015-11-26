@@ -608,9 +608,11 @@ def main(args):
     parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
     parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
     parser.add_argument('--weight-validation', dest='weightsval',action='store_true', help = "if weights must be applied during validation and testing")
+    parser.add_argument('--no-weight-train', dest='weighted',action='store_false', help = "Turn off weighting for training.")
     parser.set_defaults(txweights=False)
     parser.set_defaults(txvalweights=False)
     parser.set_defaults(weightval=False)
+    parser.set_defaults(weighted=True)
     args = parser.parse_args()
     print 'allVars: ' + str(args.allVars)
     model = AdaBoostClassifier()
@@ -757,7 +759,7 @@ def main(args):
     for t in trainvars_iterations:
         filenames = cross_validation(data, model, params, args.folds, t, ovwrite=True, ovwrite_full=False, suffix_tag=args.key, scale=False)
         allparms, alltasks = grid_search(
-            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=True, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
+            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=args.weighted, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
 
 
         prog = printProgress(alltasks)
