@@ -462,7 +462,7 @@ def writeCSV(signalFile, backgroundFile, branches, cutstring, treename, Algorith
             branches_pruned.append(a)
 
     # list any variables that you do not want to cut on/ add to the cutstring
-    donotcut = ['averageIntPerXing']
+    donotcut = ['averageIntPerXing','nTracks']
     plotranges = {key: value for key, value in plotranges.items() if key not in donotcut}
 
     # update cutstring to keep all variables within range specified in plotconfig
