@@ -30,7 +30,7 @@ python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_
 
 # now run the entire mva
 startcluster8
-python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl --runMVA=True
+python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl --runMVA=True --transform-weights --tranform-valid-weights --weight-validation
 
 # can now get some info out of the cv splits if we want
 python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl --plotCV=True
@@ -39,7 +39,7 @@ python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_
 cat bests/bestsmc15_v1_2_10.txt
 
 # now run some plots to create the validation plots and some more score stats about the different bdts
-python plotEvaluationObjects.py --key=mc15_jz5_v1_8_12_v4 --fileid=mc15_jz5_v4_full --createcsv=True
+python plotEvaluationObjects.py --key=mc15_jz5_v1_8_12_v4 --fileid=mc15_jz5_v4_full --createcsv
 
 
 # if we want to test it on some other data:

@@ -299,6 +299,58 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.clf()
 
 
+def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train):
+
+    X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
+    print efficiencies
+    if transform_valid_weights and weight_validation:
+        for idx in xrange(0, w_full.shape[0]):
+            if y_full[idx] == 1:
+                w_full[idx] = 1.0
+            else:
+                w_full[idx] = np.arctan(1./w_full[idx])
+    if not weight_validation:
+        w_full_tmp = None
+    else:
+        w_full_tmp = w_full
+    full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
+    prob_predict_full = model.predict_proba(X_full)[:,1]
+    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight=w_full_tmp)
+    # need to set the maximum efficiencies for signal and bkg
+    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, model_eval_obj.params, job_id, model_eval_obj.taggers, model_eval_obj.Algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=df_train, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    m_full.setSigEff(efficiencies[0])
+    m_full.setBkgEff(efficiencies[1])
+    # get the indices in the full sample
+    sig_full_idx = y_full == 1
+    bkg_full_idx = y_full == 0
+    # set the probabilities and the true indices of the signal and background
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full_tmp)
+    # set the different scoresx
+    y_pred_full = model.predict(X_full)
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp), precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
+    m_full.setScores('train',accuracy=model_eval_obj.train_accuracy, precision=model_eval_obj.train_precision, recall=model_eval_obj.train_recall, f1=model_eval_obj.train_f1)
+    # write this into a root file
+    m_full.toROOT()
+    # save the train score
+    m_full.setTrainRejection(bkg_rej_train)
+    m_full.plotDecisionFunction()
+
+
+    # save the model to use later.
+
+    import bz2
+    f_name_full = 'evaluationObjects/'+job_id+'_full.pbz2'
+    try:
+        with bz2.BZ2File(f_name_full,'w') as d:
+            pickle.dump(m_full, d)
+            d.close()
+    except:
+        msg = 'unable to dump '+job_id+ ' object'
+        with bz2.BZ2File(f_name_full,'w') as d:
+            pickle.dump(msg, d)
+        d.close()
+        print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
+        
 def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True, transform_valid_weights=False, weight_validation=False):
     """Function executed by a worker to evaluate a model on a CV split
 
@@ -394,28 +446,17 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
 
     # save the model for later
     import pickle
-    if not compress:
-        f_name = 'evaluationObjects/'+job_id+'.pickle'
-        try:
-            with open(f_name,'w') as d:
-                pickle.dump(m, d)
+    import bz2
+    f_name = 'evaluationObjects/'+job_id+'.pbz2'
+    try:
+        with bz2.BZ2File(f_name,'w') as d:
+            pickle.dump(m, d)
             d.close()
-        except:
-            msg = 'unable to dump '+job_id+ ' object'
-            with open(f_name,'w') as d:
-                pickle.dump(msg, d)
-            d.close()
-    else:
-        import bz2
-        f_name = 'evaluationObjects/'+job_id+'.pbz2'
-        try:
-            with bz2.BZ2File(f_name,'w') as d:
-                pickle.dump(m, d)
-            d.close()
-        except:
-            msg = 'unable to dump '+job_id+ ' object'
-            with bz2.BZ2File(f_name,'w') as d:
-                pickle.dump(msg, d)
+    except:
+        msg = 'unable to dump '+job_id+ ' object'
+        with bz2.BZ2File(f_name,'w') as d:
+            pickle.dump(msg, d)
+
     
     # do this for the full dataset
     # try reading in the memmap file
@@ -436,68 +477,8 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     if not os.path.isfile(file_full):
         print 'could not locate the full dataset'
         return roc_bkg_rej
-    print file_full
-    X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
-    print efficiencies
-    if transform_valid_weights and weight_validation:
-        for idx in xrange(0, w_full.shape[0]):
-            if y_full[idx] == 1:
-                w_full[idx] = 1.0
-            else:
-                w_full[idx] = np.arctan(1./w_full[idx])
-    if not weight_validation:
-        w_full_tmp = None
-    else:
-        w_full_tmp = w_full
-    full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
-    prob_predict_full = model.predict_proba(X_full)[:,1]
-    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight=w_full_tmp)
-    # need to set the maximum efficiencies for signal and bkg
-    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, params, job_id+'_full', taggers, algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
-    m_full.setSigEff(efficiencies[0])
-    m_full.setBkgEff(efficiencies[1])
-    # get the indices in the full sample
-    sig_full_idx = y_full == 1
-    bkg_full_idx = y_full == 0
-    # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full_tmp)
-    # set the different scoresx
-    y_pred_full = model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp), precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
-    m_full.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight=w_train), precision=precision_score(y_train_pred, y_train, sample_weight=w_train), recall=recall_score(y_train_pred, y_train, sample_weight=w_train), f1=f1_score(y_train_pred, y_train, sample_weight=w_train))
-    # write this into a root file
-    m_full.toROOT()
-    # save the train score
-    m_full.setTrainRejection(bkg_rej_train)
-    m_full.plotDecisionFunction()
-
-
-    # save the model to use later.
-    if not compress:
-        f_name_full = 'evaluationObjects/'+job_id+'_full.pickle'
-        try:
-            with open(f_name_full,'w') as d2:
-                pickle.dump(m_full, d2)
-            d2.close()
     
-        except:
-            msg = 'unable to dump '+job_id+ '_full object'
-            with open(f_name_full,'w') as d2:
-                pickle.dump(msg, d2)
-            d2.close()
-            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
-    else:
-        import bz2
-        f_name_full = 'evaluationObjects/'+job_id+'_full.pbz2'
-        try:
-            with bz2.BZ2File(f_name_full,'w') as d:
-                pickle.dump(m, d)
-            d.close()
-        except:
-            msg = 'unable to dump '+job_id+ ' object'
-            with bz2.BZ2File(f_name_full,'w') as d:
-                pickle.dump(msg, d)
-            d.close()
+    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
         
     return roc_bkg_rej#bkgrej#validation_score
 

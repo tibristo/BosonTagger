@@ -83,8 +83,8 @@ def getTaggerScores(files):
     print sorted_medians
 
 
-def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_valid_weights = False, weight_validation = False):
-    
+def recreateFull(job_id, full_dataset, suffix = 'v2', transform_valid_weights = False, weight_validation = False):
+    import mva_tools
     # load the model from the cv model
     if job_id.endswith('pickle'):
         with open('evaluationObjects/'+job_id,'r') as p:
@@ -99,81 +99,10 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', compress=True, transform_v
     if not os.path.isfile(file_full):
         print 'could not locate the full dataset'
         return roc_bkg_rej
+    
     print file_full
-    X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
-
-
-    if transform_valid_weights:# and weight_validation:
-        for idx in xrange(0, w_full.shape[0]):
-            if y_full[idx] == 1:
-                w_full[idx] = 1.0
-            else:
-                w_full[idx] = np.arctan(1./w_full[idx])
-
-    if weight_validation:
-        w_tmp = w_full
-        #for idx in xrange(0, w_full.shape[0]):
-        #    if y_full[idx] == 1:
-        #        w_full[idx] = 1.0
-        #w_tmp[sig
-    else:
-        w_tmp = None
-    print efficiencies
-    print w_tmp
-    full_score = model.model.score(X_full, y_full, sample_weight=w_tmp)
-    prob_predict_full = model.model.predict_proba(X_full)[:,1]
-    fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight = w_tmp)
-    # need to set the maximum efficiencies for signal and bkg
-    m_full = ev.modelEvaluation(fpr_full, tpr_full, thresh_full, model.model, model.params, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.taggers, model.Algorithm, full_score, file_full,feature_importances=model.feature_importances, decision_function=model.decision_function, decision_function_sig = model.df_sig_idx, decision_function_bkg = model.df_bkg_idx)
-    m_full.setSigEff(efficiencies[0])
-    m_full.setBkgEff(efficiencies[1])
-    # get the indices in the full sample
-    sig_full_idx = y_full == 1
-    bkg_full_idx = y_full == 0
-    # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_tmp)
-    # set the different scoresx
-    y_pred_full = model.model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight = w_tmp), precision=precision_score(y_pred_full, y_full, sample_weight = w_tmp), recall=recall_score(y_pred_full, y_full, sample_weight = w_tmp), f1=f1_score(y_pred_full, y_full, sample_weight = w_tmp))
-    print accuracy_score(y_pred_full, y_full, sample_weight = w_tmp)
-    # need to get the train scores!
-    m_full.setScores('train',accuracy=model.train_accuracy, precision=model.train_precision, recall=model.train_recall, f1=model.train_f1)
-    # write this into a root file
-    m_full.toROOT()
-    # save the train score
-    m_full.setTrainRejection(model.ROC_rej_power_05)
-    if not compress:
-        f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pickle'
-        try:
-            with open(f_name_full,'w') as d2:
-                pickle.dump(m_full, d2)
-            d2.close()
-            print 'pickled ' + f_name_full
     
-        except:
-            msg = 'unable to dump '+job_id+ '_'+suffix+' object'
-            with open(f_name_full,'w') as d2:
-                pickle.dump(msg, d2)
-            d2.close()
-            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]            
-    else:
-        if job_id.endswith('pickle'):
-            f_name_full = 'evaluationObjects/'+job_id.replace('.pickle','')+'_'+suffix+'.pbz2'
-        else:
-            f_name_full = 'evaluationObjects/'+job_id.replace('.pbz2','')+'_'+suffix+'.pbz2'
-        try:
-            with bz2.BZ2File(f_name_full,'w') as d2:
-                pickle.dump(m_full, d2)
-            d2.close()
-            print 'pickled ' + f_name_full
-    
-        except:
-            msg = 'unable to dump '+job_id+ '_'+suffix+' object'
-            with bz2.BZ2File(f_name_full,'w') as d2:
-                pickle.dump(msg, d2)
-            d2.close()
-            print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
-
+    mva_tools.evaluateFull(model.model, file_full, transform_valid_weights, weight_validation, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
             
 
 def createDataframe(key, files):
