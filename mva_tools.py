@@ -300,7 +300,14 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
 
 
 def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train):
+    import os
+    from sklearn.externals import joblib
+    import numpy as np
+    from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
+    import modelEvaluation as me
+    import sys
 
+    import numpy as np    
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
     print efficiencies
     if transform_valid_weights and weight_validation:
@@ -339,7 +346,8 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
     # save the model to use later.
 
     import bz2
-    f_name_full = 'evaluationObjects/'+job_id+'_full.pbz2'
+    import pickle
+    f_name_full = 'evaluationObjects/'+job_id+'.pbz2'
     try:
         with bz2.BZ2File(f_name_full,'w') as d:
             pickle.dump(m_full, d)
@@ -349,7 +357,7 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
         with bz2.BZ2File(f_name_full,'w') as d:
             pickle.dump(msg, d)
         d.close()
-        print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
+        #print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
         
 def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True, transform_valid_weights=False, weight_validation=False):
     """Function executed by a worker to evaluate a model on a CV split
@@ -737,6 +745,7 @@ def main(args):
 
     client = Client()
     #with client[:].sync_imports():
+    client[:]['evaluateFull'] = evaluateFull
     lb_view = client.load_balanced_view()
 
 
