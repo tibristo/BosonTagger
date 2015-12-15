@@ -171,15 +171,26 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         # unfortunately, some of the values in the ntuples are NaNs!!!
         # keep track of which ones these are...
         nan_idx_tmp = np.empty([0])
+        no_values_tmp = np.empty([0])
         for d in data_arr.dtype.names:
+            if d not in dnn_vars_1 and d not in dnn_vars_2:
+                continue
+
             if np.any(np.isnan(data_arr[d])) or not np.all(np.isfinite(data_arr[d])):
                 if len(nan_idx_tmp) == 0:
                     nan_idx_tmp = np.asarray(np.where(np.isnan(data_arr[d])))[0]
                 else:
                     nan_idx_tmp = np.concatenate((nan_idx_tmp, np.asarray(np.where(np.isnan(data_arr[d])))[0]))
                 data_arr[d] = np.nan_to_num(data_arr[d])
-
+                
+            if len(no_values_tmp) == 0:
+                no_values_tmp = np.asarray(np.where(data_arr[d]<-98))[0]
+            else:
+                no_values_tmp = np.concatenate((no_values_tmp, np.asarray(np.where(data_arr[d]<-98))[0]))
+        
+        # concatenate
         nan_idx = np.unique(nan_idx_tmp)
+        no_values = np.unique(no_values_tmp)
 
         data_arr['jetTrim1_groosplit12'] = data_arr['jetTrim1_groosplit12']/1000.
         data_arr['jetTrim2_groosplit12'] = data_arr['jetTrim2_groosplit12']/1000.
@@ -216,8 +227,18 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
 
         for i, v in enumerate(dnn_scaler.variables):
             # reverse lookup for v
+            #print v
             if v in dnn_var_map.keys():
-                if dnn_var_map[v] in dnn_data.dtype.names:
+                #print 'found v in dnn_var_map'
+                #print dnn_var_map[v]
+                if dnn_var_map[v].replace('X','1') in dnn_data.dtype.names:
+                    '''
+                    print v
+                    print 'means and std'
+                    print dnn_scaler.means[i]
+                    print dnn_scaler.std[i]
+                    print np.mean(dnn_data[dnn_var_map[v].replace('X','1')])
+                    '''
                     dnn_data[dnn_var_map[v].replace('X','1')] = (dnn_data[dnn_var_map[v].replace('X','1')] - dnn_scaler.means[i]) / dnn_scaler.std[i]
                     dnn_data_2[dnn_var_map[v].replace('X','2')] = (dnn_data_2[dnn_var_map[v].replace('X','2')] - dnn_scaler.means[i]) / dnn_scaler.std[i]
 
@@ -231,12 +252,13 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         dnn_predictions_2.dtype.names = ['jetTrim2_dnn']
 
         # set all of the nan index ones to zero
-        for n in nan_idx:
+        for n in np.unique(np.concatenate((no_values, nan_idx))):#nan_idx:
             dnn_predictions['jetTrim1_dnn'][n] = 0
             dnn_predictions_2['jetTrim2_dnn'][n] = 0
             bdt_proba[n] = 0
             bdt_proba_2[n] = 0
-
+        data_arr['jetTrim1_groosplit12'] = data_arr['jetTrim1_groosplit12']*1000.
+        data_arr['jetTrim2_groosplit12']*=1000.
         # have to do this annoying .copy() to be able to add the dtype.names to any
         # arrays that come from a slice.
         #bdt_ = X.copy().view(dtype=[(n, np.float64) for n in variables]).reshape(len(X))
