@@ -32,7 +32,7 @@ plt.gray()
 
 # In[2]:
 import pandas as pd
-data = pd.read_csv('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_merged.csv')
+data = pd.read_csv('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_merged.csv')
 
 # In[4]:
 from sklearn.preprocessing import StandardScaler

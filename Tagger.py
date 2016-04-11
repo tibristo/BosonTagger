@@ -443,8 +443,8 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             canv1.cd(index+1)
             #roc_nomw[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
             #roc_nomw[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
-            hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); 
-            hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);  
+            hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); hist_nomw['sig_'+branchname + '_full'].Rebin(4);
+            hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);  hist_nomw['bkg_'+branchname + '_full'].Rebin(4);
 
         leg1.Clear()
         # add legend entries for bkg and signal histograms
@@ -465,7 +465,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             tempCanv.cd()
             p.SetPad(0,0,1,1) # resize
             p.Draw()
-            tempCanv.SaveAs(varpath+branchname+".png")
+            tempCanv.SaveAs(varpath+branchname+".pdf")
             #tempCanv.SaveAs(varpath+branchname+".eps")
             del p
 
@@ -495,7 +495,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # add the latex parts to the plot -> ATLAS, tev range, etc.
             fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], massrange = mrange)
 
-            tempCanv2.SaveAs(varpath+branchname+"_noMW.png")
+            tempCanv2.SaveAs(varpath+branchname+"_noMW.pdf")
             #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
             del tempCanv2
 

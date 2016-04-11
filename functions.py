@@ -259,7 +259,7 @@ def readXML(configfile, pt_range="default"):
     for l in root.findall('lumi'):
         lumi = float(l.get('name'))
 
-def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[]):
+def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[], drawATLAS = False):
     '''
     Method to add Latex text to a plot.  The canvas is already set before this method
     is called, so that when this is run it is already on that canvas.
@@ -272,19 +272,20 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[]):
     nvtxrange --- The cuts on the number of vertices.
     massrange -- The 68% mass window cuts
     '''
-    from ROOT import TLatex 
-    texw = TLatex();
-    texw.SetNDC();
-    texw.SetTextSize(0.035);
-    texw.SetTextFont(72);
-    texw.DrawLatex(0.58,0.88,"ATLAS");
+    from ROOT import TLatex
+    if drawATLAS:
+        texw = TLatex();
+        texw.SetNDC();
+        texw.SetTextSize(0.035);
+        texw.SetTextFont(72);
+        texw.DrawLatex(0.58,0.88,"ATLAS");
     
-    p = TLatex();
-    p.SetNDC();
-    p.SetTextFont(42);
-    p.SetTextSize(0.035);
-    p.SetTextColor(ROOT.kBlack);
-    p.DrawLatex(0.66,0.88,"Simulation Work in Progress");#"Internal Simulation");
+        p = TLatex();
+        p.SetNDC();
+        p.SetTextFont(42);
+        p.SetTextSize(0.035);
+        p.SetTextColor(ROOT.kBlack);
+        p.DrawLatex(0.66,0.88,"Simulation Work in Progress");#"Internal Simulation");
 
     p = TLatex();
     p.SetNDC();

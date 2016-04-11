@@ -7,11 +7,11 @@ SetAtlasStyle()
 
 
 pthists = []
-s = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_sig.root')
+s = TFile('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_sig.root')
 sighist = s.Get('pt_reweightsig')
 sighist.SetDirectory(0)
 s.Close()
-b = TFile('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_bkg.root')
+b = TFile('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_bkg.root')
 
 bkghist = b.Get('pt_reweightbkg')
 bkghist.SetDirectory(0)
@@ -43,7 +43,7 @@ for hist in [pt, pt_ca12, pt_rw, pt_rw_ca12]:
         hist[k].GetXaxis().SetTitle('#it{p}_{T} (GeV)')
         hist[k].GetYaxis().SetTitle('# entries normalised to 1')
         
-fname = '/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_FILE.root'
+fname = '/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BoostedBosonFiles/13tev_mc15_jz5_v1/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_jz5_v1/TopoTrimmedPtFrac5SmallR20_inclusive_FILE.root'
 
 for datatype in ['sig', 'bkg']:
     f = TFile.Open(fname.replace('FILE',datatype),'read')

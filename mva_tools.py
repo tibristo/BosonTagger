@@ -664,6 +664,9 @@ def main(args):
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
         # now adding nTracks!
         trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity', 'nTracks']
+        # seeing if removing sphericity and aplanarity will help.  Looking at the distributions there is probably too much overlap.
+        # the peaks overlap, but bkg has a long tail.
+        #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow', 'Sphericity', 'nTracks']
         
     print trainvars
     #key = 'mc15_v1_2_10_v6'

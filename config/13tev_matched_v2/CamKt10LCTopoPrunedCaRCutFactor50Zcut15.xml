@@ -89,7 +89,7 @@
 
   <varName name="#tau_{2} (dimensionless)">
   <stub>_Tau2</stub>
-  <plot>True</plot>
+  <plot>False</plot>
   <range name="default">
     <maxValue>1.0</maxValue>
     <minValue>0.0</minValue>
@@ -123,7 +123,7 @@
 
   <varName name="#tau_{21} (dimensionless)">
   <stub>_Tau21</stub>
-  <plot>True</plot>
+  <plot>False</plot>
   <range name="default">
     <maxValue>1.4</maxValue>
     <minValue>0.0</minValue>
@@ -235,7 +235,7 @@
 
   <varName name="C_{2}^{(#beta=2)} (dimensionless)">
   <stub>_EEC_C2_2</stub>
-  <plot>True</plot>
+  <plot>False</plot>
   <range name="default">
     <maxValue>0.7</maxValue>
     <minValue>0.0</minValue>
@@ -279,7 +279,7 @@
 
   <varName name="D_{2}^{(#beta=2)} (dimensionless)">
   <stub>_EEC_D2_2</stub>
-  <plot>True</plot>
+  <plot>False</plot>
   <range name="default">
     <minValue>0.0</minValue>
     <maxValue>20.0</maxValue>

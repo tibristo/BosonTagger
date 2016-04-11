@@ -99,7 +99,7 @@ def pca(algorithm):
     plt.rcParams['axes.grid'] = True
     plt.gray()
     #data = pd.read_csv('/media/win/BoostedBosonFiles/csv/'+algorithm+'_merged.csv')
-    data = pd.read_csv('/Disk/ecdf-nfs-ppe/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_mw_merged.csv')
+    data = pd.read_csv('/Disk/ds-sopa-group/PPE/atlas/users/tibristo/BosonTagging/csv/'+algorithm+'_mw_merged.csv')
     print trainvars
     datatrain = data[trainvars]
     # standardise the data

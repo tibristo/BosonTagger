@@ -14,6 +14,7 @@ import pickle
 import root_numpy as rn
 import ROOT as rt
 
+'''
 def rootAnalyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_files):
         # second option would be run through data, filling in the stuff as we go.  Doesn't require
     # data to be read in as df or recarray, but it's probably way slower.
@@ -31,15 +32,22 @@ def rootAnalyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data
         jetTrim2_bdt = np.zeros(1,dtype=float)
         jetTrim1_dnn = np.zeros(1,dtype=float)
         jetTrim2_dnn = np.zeros(1,dtype=float)
-        tree_out.Branch('jetTrim1_bdt', jetTrim1_bdt, 'jetTrim1_bdt/D')
-        tree_out.Branch('jetTrim2_bdt', jetTrim2_bdt, 'jetTrim2_bdt/D')
-        tree_out.Branch('jetTrim1_dnn', jetTrim1_dnn, 'jetTrim1_dnn/D')
-        tree_out.Branch('jetTrim2_dnn', jetTrim2_dnn, 'jetTrim2_dnn/D')
         
-        bdt_idx = {'EEC_C2_1':0,'SPLIT12':1,'EEC_D2_1':2,'TauWTA2TauWTA1':3,'PlanarFlow':4,'Sphericity':5, 'Aplanarity':6, 'nTracks':7}
-        bdt_predict_arr = np.zeros(8,dtype=float)
+        #tree_out.Branch('jetTrim1_bdt', jetTrim1_bdt, 'jetTrim1_bdt/D')
+        #tree_out.Branch('jetTrim2_bdt', jetTrim2_bdt, 'jetTrim2_bdt/D')
+        #tree_out.Branch('jetTrim1_dnn', jetTrim1_dnn, 'jetTrim1_dnn/D')
+        #tree_out.Branch('jetTrim2_dnn', jetTrim2_dnn, 'jetTrim2_dnn/D')
+        
+
+        tree_out.Branch('jetTrim1_bdt_nontrk', jetTrim1_bdt, 'jetTrim1_bdt_nontrk/D')
+        tree_out.Branch('jetTrim2_bdt_nontrk', jetTrim2_bdt, 'jetTrim2_bdt_nontrk/D')
+        tree_out.Branch('jetTrim1_dnn_nontrk', jetTrim1_dnn, 'jetTrim1_dnn_nontrk/D')
+        tree_out.Branch('jetTrim2_dnn_nontrk', jetTrim2_dnn, 'jetTrim2_dnn_nontrk/D')
+        
+        bdt_idx = {'EEC_C2_1':0,'SPLIT12':1,'EEC_D2_1':2,'TauWTA2TauWTA1':3,'PlanarFlow':4,'Sphericity':5, 'Aplanarity':6}#, 'nTracks':7}
+        bdt_predict_arr = np.zeros(7,dtype=float)# 8 when using nTracks!
         #bdt_predict_arr = np.recarray((1,), dtype=[('EEC_C2_1',float),('SPLIT12', float),('EEC_D2_1',float), ('TauWTA2TauWTA1', float), ('PlanarFlow', float), ('Sphericity', float), ('Aplanarity', float), ('nTracks', int)])
-        bdt_predict_arr_2 = np.zeros(8,dtype=float)
+        bdt_predict_arr_2 = np.zeros(7,dtype=float)# 8 when using nTracks!
 
         dnn_predict_arr = np.recarray((1,), dtype=[('eec_c2_1',float),('eec_d2_1',float),('aplanarity',float),('split12',float), ('tauwta2tauwta1',float), ('planarflow',float), ('sphericity',float), ('ntracks',int)])
         dnn_predict_arr_2 = np.recarray((1,), dtype=[('eec_c2_1',float),('eec_d2_1',float),('aplanarity',float),('split12',float), ('tauwta2tauwta1',float), ('planarflow',float), ('sphericity',float), ('ntracks',int)])
@@ -115,6 +123,9 @@ def rootAnalyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data
             tree_out.Fill()
         tfile_out.Write()
         tfile_out.Close()
+'''
+
+
 
 def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_files):
     # using bdt_model
@@ -263,8 +274,9 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         # arrays that come from a slice.
         #bdt_ = X.copy().view(dtype=[(n, np.float64) for n in variables]).reshape(len(X))
         # now add them to the data file and write it out
+        #data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
         data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
-        rn.array2root(data_scored, data_file.replace('.root','_scored.root'),'dibjet','recreate')
+        rn.array2root(data_scored, data_file.replace('.root','_scored_v4.root'),'dibjet','recreate')
             
             
 
@@ -284,7 +296,7 @@ def main(args):
     bdt_model = modelObject.model
     # get the variables we use for classification
     bdt_taggers = modelObject.taggers
-
+    print bdt_taggers
     # load the dnn schema
     dnn_file_obj = open(args.dnn_file,'r')
     schema = yaml.load(dnn_file_obj)
