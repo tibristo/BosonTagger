@@ -10,6 +10,7 @@ from matplotlib import rcParams
 from matplotlib.afm import AFM
 ROOT.gROOT.LoadMacro("getExtent.C")
 from ROOT import getWidth
+ROOT.gROOT.SetBatch(True)
 
 def round_sigfigs(in_num, sig_figs):
     """Round to specified number of sigfigs.
@@ -97,7 +98,7 @@ def abbreviate(in_str):
         config_str+=in_str[in_str.find('Y')+1:]+'%}}'
         max_length = max(len(config_str)-6, max_length)# the 6 comes from the _{}, # and }}
         width = getWidth(config_str)
-        print width
+        #print width
         if max_width < width:
             max_line = 2
             max_width = width
@@ -120,7 +121,7 @@ def abbreviate(in_str):
         
         max_length = max(len(config_str)-8, max_length)# the 8 comes from the 2*_{} and }}
         width = getWidth(config_str)
-        print width
+        #print width
         if max_width < width:
             max_width = width
             max_line = 2
@@ -142,7 +143,7 @@ def abbreviate(in_str):
         if max_length < len(config_str)-8:# the 8 comes from the 2*_{} and }}
             max_length = len(config_str)-8
         width = getWidth(config_str)
-        print width
+        #print width
         if max_width < width:
             max_line = 2
             max_width = width
@@ -156,7 +157,11 @@ def plotMatrix(version, drawATLAS=False):
 
     rejectionmatrix = pickle.load(open("rejectionmatrix_"+version+".p", "rb"))
 
-
+    # get the pt range out of the version string
+    pos_high = version.rfind("_")
+    pt_high = version[pos_high+1:]
+    pos_low = version.rfind("_",0,pos_high-1)
+    pt_low = version[pos_low+1:pos_high]
 
     tc = ROOT.TCanvas()
     
@@ -177,8 +182,8 @@ def plotMatrix(version, drawATLAS=False):
 
     # sort all of the variables. sortedvars is a tuple sorted by value of varsdict. order contains the desired order if these variables are present
     #order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']
-    order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']
-    latexVars = {'Angularity':'a_{3}','Aplanarity':'#it{A}','EEC_C2_1':'C_{2}^{(#beta=1)}','EEC_C2_2':'C_{2}^{(#beta=2)}','EEC_D2_1':'D_{2}^{(#beta=1)}','EEC_D2_2':'D_{2}^{(#beta=2)}','FoxWolfram20':'FoxWolfram20','PlanarFlow':'#it{P}','SPLIT12':'#sqrt{d_{12}}','Sphericity':'#it{S}','Tau21':'#tau_{21}','TauWTA2TauWTA1':'#tau^{WTA}_{2}/#tau^{WTA}_{1}','ThrustMaj':'#it{T}_{maj}','ThrustMin':'#it{T}_{min}','ZCUT12':'#sqrt{z_{12}}','Mu12':'#mu_{12}','YFilt':'#sqrt{y_{12}}','m':'m'}
+    order = ['Angularity','Aplanarity','EEC_C2_1','EEC_C2_2','EEC_D2_1','EEC_D2_2','FoxWolfram20','PlanarFlow','SPLIT12','Sphericity','Tau21','TauWTA2','TauWTA2TauWTA1','ThrustMaj','ThrustMin','ZCUT12','Mu12','YFilt','m']
+    latexVars = {'Angularity':'a_{3}','Aplanarity':'#it{A}','EEC_C2_1':'C_{2}^{(#beta=1)}','EEC_C2_2':'C_{2}^{(#beta=2)}','EEC_D2_1':'D_{2}^{(#beta=1)}','EEC_D2_2':'D_{2}^{(#beta=2)}','FoxWolfram20':'FoxWolfram20','PlanarFlow':'#it{P}','SPLIT12':'#sqrt{d_{12}}','Sphericity':'#it{S}','Tau21':'#tau_{21}','TauWTA2':'#tau^{WTA}_{2}','TauWTA2TauWTA1':'#tau^{WTA}_{2}/#tau^{WTA}_{1}','ThrustMaj':'#it{T}_{maj}','ThrustMin':'#it{T}_{min}','ZCUT12':'#sqrt{z_{12}}','Mu12':'#mu_{12}','YFilt':'#sqrt{y_{12}}','m':'m'}
     #sortedvars = sorted(varsdict.items(), key=operator.itemgetter(0))
     
     
@@ -222,7 +227,7 @@ def plotMatrix(version, drawATLAS=False):
         if width > max_width:
             max_width = width
         abbreviations.append([abb,lenabb,idx,width])
-        print abb,lenabb,width
+        #print abb,lenabb,width
         max_totwidth = max(max_totwidth, getWidth(abb))
         for v in varsdict:
             if v not in rejvars:
@@ -231,72 +236,27 @@ def plotMatrix(version, drawATLAS=False):
     for a in range(0,len(abbreviations)):
         #if len(abbreviations[a])
         add = ''
-        print abbreviations[a]
+        #print abbreviations[a]
         
         if getWidth(abbreviations[a][0]) < max_totwidth:
             # sigh - need to know which line this belongs to!
-            print 'extending: ', abbreviations[a]
-            print getWidth(abbreviations[a][0])
+            #print 'extending: ', abbreviations[a]
+            #print getWidth(abbreviations[a][0])
             #for b in xrange(abbreviations[a][1], max_abbrev):
             #add = '#scale[0.1]{#color[0]{.}}'
             pos1 = abbreviations[a][0].find('{')+1
             pos2 = abbreviations[a][0].find('}{')
             add = abbreviations[a][0]#[pos1: pos2]
-            print add
-            print getWidth(add)
-            print max_width-abbreviations[a][3]
             while getWidth(add) <= max_totwidth:#-abbreviations[a][3]:
                 add+='#scale[0.4]{#color[0]{.}}'#' '#kern[0.3]{}'
                 #print 'added1'
-            #add += '#color[0]{.}'
-            print getWidth(add)#len(add)
-            # okay now replace the correct line :/ How to find this?!
-            print 'replacing: ', abbreviations[a][0], add
             abbreviations[a][0] = add
-            #abbreviations[a][0] = abbreviations[a][0][:pos1] + add + abbreviations[a][0][pos2:]
-            print abbreviations[a][0]#.replace(abbreviations[a][0][pos1: pos2],add)
-            '''
-            line = abbreviations[a][2]
-            if line == 0:
-                abbreviations[a][0].replace('}{#splitline', add+'}{#splitline')
-            elif line == 1:
-                #abbreviations[a][0].replace('}{', add+'}{#splitline')
-                abbreviations[a][0]=abbreviations[a][0][::-1].replace('{}','{}'+add[::-1],1)[::-1]
-            elif line == 2:
-                abbreviations[a][0]=abbreviations[a][0][::-1].replace('}}','}}'+add[::-1],1)[::-1]
-            '''
-        print abbreviations[a][0]
-        print getWidth(abbreviations[a][0])
-        '''
-        if abbreviations[a][3] < max_width:
-            # sigh - need to know which line this belongs to!
-            print 'extending: ', abbreviations[a]
-            print getWidth(abbreviations[a][0])
-            #for b in xrange(abbreviations[a][1], max_abbrev):
-            #add = '#scale[0.1]{#color[0]{.}}'
-            pos1 = abbreviations[a][0].find('{')+1
-            pos2 = abbreviations[a][0].find('}{')
-            add = abbreviations[a][0][pos1: pos2]
-            print add
-            print getWidth(add)
-            print max_width-abbreviations[a][3]
-            while getWidth(add) <= max_width:#-abbreviations[a][3]:
-                add+='#scale[0.2]{#color[0]{.}}'#' '#kern[0.3]{}'
-                #print 'added1'
-            #add += '#color[0]{.}'
-            print getWidth(add)#len(add)
-            # okay now replace the correct line :/ How to find this?!
-            print 'replacing: ', abbreviations[a][0], add
-            abbreviations[a][0] = abbreviations[a][0][:pos1] + add + abbreviations[a][0][pos2:]
-            print abbreviations[a][0]#.replace(abbreviations[a][0][pos1: pos2],add)
-        print abbreviations[a][0]
-        print getWidth(abbreviations[a][0])
-        '''
-    #print abbreviations
-    print rejectionmatrix
 
     matrix = ROOT.TH2F("Background Rejection Matrix","Background Rejection Matrix",len(sortedvars),1, len(sortedvars)+1, len(rejectionmatrix), 1, len(rejectionmatrix)+1)
+    matrix.SetTitle("")
     matrix.GetZaxis().SetRangeUser(0.0,35.0)
+    matrix.GetZaxis().SetTitle("Bkg. rejection @ 50% signal eff.")
+
 
     # fill the th2 with all of the values
     for i, r in enumerate(rejectionmatrix):
@@ -344,7 +304,12 @@ def plotMatrix(version, drawATLAS=False):
     ROOT.gStyle.SetPalette(1)
     ROOT.gStyle.SetPadBorderSize(0)
     ROOT.gPad.SetBottomMargin(0.10)
-    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetTopMargin(0.11)
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetRightMargin(0.15)
+    ROOT.gStyle.SetTitleFont(matrix.GetZaxis().GetLabelFont())
+    ROOT.gStyle.SetTitleAlign(23)
+    ROOT.gStyle.SetTitleFontSize(matrix.GetZaxis().GetLabelSize())
     matrix.SetStats(0)
     matrix.SetMarkerSize(1)
     matrix.Draw("TEXTCOLZ")
@@ -353,6 +318,18 @@ def plotMatrix(version, drawATLAS=False):
 
     print 'matrix drawn'
     from ROOT import TLatex
+    title = TLatex();
+    title.SetNDC();
+    title.SetTextSize(0.03)
+    title.SetTextFont(42)
+    title.DrawLatex(0.15,0.91,"#sqrt{s}=13 TeV, "+pt_low+"<p_{T}^{Truth}<"+pt_high+" (GeV), 68% mass window")
+
+    title2 = TLatex();
+    title2.SetNDC();
+    title2.SetTextSize(0.04)
+    title2.SetTextFont(42)
+    title2.DrawLatex(0.15,0.95,"Grooming and tagging combinations")
+
     if drawATLAS:
         texw = TLatex();
         texw.SetNDC();

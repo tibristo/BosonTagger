@@ -20,6 +20,7 @@ import argparse
 # some common variables and their latex format
 label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$",'EEC_D2_2':r"$D^{(\beta=2)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$", 'PlanarFlow':r"\textit{P}", 'ThrustMin':r"$T_{min}$",'Sphericity':r"$\textit{S}$",'Tau21':r"$\tau_{21}$",'ThrustMaj':r"$T_{maj}$",'Dip12':r"$D_{12}$",'TauWTA2TauWTA1':r"$\tau^{WTA}_{21}$",'YFilt':r"$YFilt$",'Mu12':r"$\mu_{12}$",'ZCUT12':r"$\sqrt{z_{12}}$",'Tau2':r"$\tau_2$",'nTracks':r"$nTrk$"}
 
+   
 
 #import cv_fold
 def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='persist/',\
@@ -89,9 +90,10 @@ def round_sigfigs(num, sig_figs):
     else:
         return 0 # can't take the log of 0
 
-def drawMatrix(corr_matrix, title, taggers, matrix_size, file_id = ''):
+def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', drawATLAS = False):
     import ROOT
     ROOT.gROOT.SetBatch(1)
+    #ROOT.gStyle.SetPaintTextFormat("4.1f")
     corr_hist = ROOT.TH2F(title,title,matrix_size, 1, matrix_size+1, matrix_size, 1, matrix_size+1)
     # we can set the labels of the covariance matrices from label_dict
     # right now label_dict has the latex versions of the variables, but this doesn't work with th2f, need
@@ -102,31 +104,73 @@ def drawMatrix(corr_matrix, title, taggers, matrix_size, file_id = ''):
         corr_hist.GetXaxis().SetBinLabel(i+1, label)
         #corr_hist.GetYaxis().SetBinLabel(i+1, label_dict[t])
         corr_hist.GetYaxis().SetBinLabel(i+1, label)
-    for row in range(len(corr_matrix)):
-        for col in range(len(corr_matrix)):
-            corr_hist.SetBinContent(row+1, col+1, round_sigfigs(corr_matrix[row][col], 3))
+    # the set bin content does set(x,y), but the loop here goes through the rows and columns - y and x.
+    for row in range(len(corr_matrix)-1,-1,-1): # row = y
+        # only want to draw the top diagonal!
+        for col in range(len(corr_matrix)): # col = x
+            # also, axis in corr_matrix is 0->n down the y axis, but n+1->1 in corr_hist
+            if col < row +1:
+                corr_hist.SetBinContent(col+1, row+1, round_sigfigs(corr_matrix[row][col], 3))
+            else:
+                corr_hist.SetBinContent(col+1, row+1, -1.1)
     # create the canvas and set up the latex and legends
+    #corr_hist.SetAxisColor(1,"Z")
     tc = ROOT.TCanvas()
     # turn on the colours
     ROOT.gStyle.SetPalette(1)
     ROOT.gStyle.SetPadBorderSize(0)
     ROOT.gPad.SetBottomMargin(0.10)
-    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetLeftMargin(0.1)
+    ROOT.gPad.SetRightMargin(0.15)
+    corr_hist.SetTitle("")
     corr_hist.SetStats(0)
     corr_hist.SetMarkerSize(0.7)
     corr_hist.Draw("TEXTCOLZ")
-    from ROOT import TLatex 
-    texw = TLatex();
-    texw.SetNDC();
-    texw.SetTextSize(0.035);
-    texw.SetTextFont(72);
-    texw.DrawLatex(0.6,0.91,"ATLAS");
-    p = TLatex();
-    p.SetNDC();
-    p.SetTextFont(42);
-    p.SetTextSize(0.035);
-    p.SetTextColor(ROOT.kBlack);
-    p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
+    corr_hist.GetZaxis().SetTitle('Linear Correlation')
+    corr_hist.GetZaxis().SetRangeUser(-1.0,1.0)
+    from ROOT import TLatex
+    # need to put the pt range on here....
+    # okay, so this is nasty and poor form, but I'm super stressed and running out of time
+    # to finish my thesis, so whatever.  The algorithm name should have the pt range in it in gev
+    # At this point things are narrowed down to the point where we are only considering two
+    # pt ranges: 400-1600 GeV or 800-1200 GeV, so just look for those.
+    ptrange = ''
+    if key.find('400_1600'):
+        ptrange = '400<p_{T}^{Truth}<1600 GeV'
+    elif key.find('800_1200'):
+        ptrange = '800<p_{T}^{Truth}<1200 GeV'
+
+        
+    if ptrange != '':
+        # draw it
+        ptl = TLatex()
+        ptl.SetNDC()
+        ptl.SetTextFont(42)
+        ptl.SetTextSize(0.035)
+        ptl.SetTextColor(ROOT.kBlack)
+        ptl.DrawLatex(0.6,0.41,ptrange);#"Internal Simulation");
+    # the bdt parameters too?!
+    e = TLatex();e.SetNDC();e.SetTextFont(42);e.SetTextSize(0.035);e.SetTextColor(ROOT.kBlack)
+    e.DrawLatex(0.6,0.46, "#sqrt{s}=13 TeV")
+
+    m = TLatex();m.SetNDC();m.SetTextFont(42);m.SetTextSize(0.035);m.SetTextColor(ROOT.kBlack)
+    m.DrawLatex(0.6,0.36,"68% mass window")
+
+    #param = TLatex();param.SetNDC();param.SetTextFont(42);param.SetTextSize(0.035);param.SetTextColor(ROOT.kBlack)
+    #param.DrawLatex(0.3,0.3,"BDT maxdepth=, rate=, est=")
+    
+    if drawATLAS: # also, in my hurry to do this, you'll notice that atlas is now drawn in the same place as the pt range above
+        texw = TLatex();
+        texw.SetNDC();
+        texw.SetTextSize(0.035);
+        texw.SetTextFont(72);
+        texw.DrawLatex(0.6,0.91,"ATLAS");
+        p = TLatex();
+        p.SetNDC();
+        p.SetTextFont(42);
+        p.SetTextSize(0.035);
+        p.SetTextColor(ROOT.kBlack);
+        p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
     # check that the matrix folder exists, if not, create it
     tc.SaveAs("corr_matrices/corr_matrix_"+file_id+".pdf")
 
@@ -160,14 +204,14 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = ''):
         matrix_size = len(taggers)
         # get the covariance matrix for training data
         corr_train = np.corrcoef(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the corr method
-        drawMatrix(corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key)
+        drawMatrix(key, corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key)
         corr_valid = np.corrcoef(X_validation, rowvar=0)
-        drawMatrix(corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key)
+        drawMatrix(key, corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key)
         
     # load the full dataset
     X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
     corr_full = np.corrcoef(X, rowvar=0)
-    drawMatrix(corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full")
+    drawMatrix(key, corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full")
     
     # get the covariance matrix for the 
 
@@ -721,7 +765,7 @@ def main(args):
     if args.plotCorrMatrix:
         X = data[allvars].values
         corr_matrix = np.corrcoef(X, rowvar=0)
-        drawMatrix(corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid)#"full_allvars_mc15")
+        drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid)#"full_allvars_mc15")
 
     # just create the folds
 

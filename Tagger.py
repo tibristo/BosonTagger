@@ -443,13 +443,23 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             canv1.cd(index+1)
             #roc_nomw[branchname].GetXaxis().SetTitle("Efficiency_{W jets}")
             #roc_nomw[branchname].GetYaxis().SetTitle("1 - Efficiency_{QCD jets}")
-            hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); hist_nomw['sig_'+branchname + '_full'].Rebin(4);
-            hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);  hist_nomw['bkg_'+branchname + '_full'].Rebin(4);
+            hist_nomw['sig_'+branchname+'_full'].SetFillColor(4); hist_nomw['sig_'+branchname+'_full'].SetLineColor(4); hist_nomw['sig_'+branchname+'_full'].SetMarkerColor(4); 
+            hist_nomw['bkg_'+branchname+'_full'].SetFillColor(2); hist_nomw['bkg_'+branchname+'_full'].SetLineColor(2);  hist_nomw['bkg_'+branchname+'_full'].SetMarkerColor(2);
+            # resize the mass plots to be in a better range
+            if branchname.endswith('_m'):
+                hist['sig_'+branchname].SetAxisRange(0.0,300.0*1000.0)
+                hist['bkg_'+branchname].SetAxisRange(0.0,300.0*1000.0)
+                hist['sig_'+branchname].GetXaxis().SetLimits(0.0,300.0)
+                hist['bkg_'+branchname].GetXaxis().SetLimits(0.0,300.0)
+            else:
+                hist_nomw['sig_'+branchname + '_full'].Rebin(4);
+                hist_nomw['bkg_'+branchname + '_full'].Rebin(4);
 
         leg1.Clear()
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
 
+        
         # plot the maximum histogram
         if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
             fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
@@ -471,6 +481,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
 
         # now save "no mass window" plots
         if saveNoMassWindowPlots:
+            # resize the mass plots to be in a better range
+            if branchname.find('_m') != -1:
+                hist_nomw['sig_'+branchname+'_full'].SetAxisRange(0.0,300.0*1000.0)
+                hist_nomw['sig_'+branchname+'_full'].GetXaxis().SetLimits(0.0,300.0)
+                hist_nomw['bkg_'+branchname+'_full'].SetAxisRange(0.0,300.0*1000.0)
+                hist_nomw['bkg_'+branchname+'_full'].GetXaxis().SetLimits(0.0,300.0)
             tempCanv2 = TCanvas("tempnomw"+branchname)
             tempCanv2.cd()
             y_high = max(hist_nomw['sig_'+branchname+'_full'].GetMaximum(), hist_nomw['bkg_'+branchname+'_full'].GetMaximum())
@@ -492,6 +508,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                 line_max = TLine(float(mass_max), y_low, float(mass_max), y_high); line_max.SetLineColor(kBlack);
                 line_min.Draw()
                 line_max.Draw()
+
             # add the latex parts to the plot -> ATLAS, tev range, etc.
             fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], massrange = mrange)
 
