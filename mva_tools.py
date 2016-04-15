@@ -90,7 +90,7 @@ def round_sigfigs(num, sig_figs):
     else:
         return 0 # can't take the log of 0
 
-def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', drawATLAS = False):
+def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', drawATLAS = False, sampletype = 'combined'):
     import ROOT
     ROOT.gROOT.SetBatch(1)
     #ROOT.gStyle.SetPaintTextFormat("4.1f")
@@ -135,9 +135,9 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
     # At this point things are narrowed down to the point where we are only considering two
     # pt ranges: 400-1600 GeV or 800-1200 GeV, so just look for those.
     ptrange = ''
-    if key.find('400_1600'):
+    if key.find('400_1600') != -1:
         ptrange = '400<p_{T}^{Truth}<1600 GeV'
-    elif key.find('800_1200'):
+    elif key.find('800_1200') != -1:
         ptrange = '800<p_{T}^{Truth}<1200 GeV'
 
         
@@ -148,13 +148,22 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
         ptl.SetTextFont(42)
         ptl.SetTextSize(0.035)
         ptl.SetTextColor(ROOT.kBlack)
-        ptl.DrawLatex(0.6,0.41,ptrange);#"Internal Simulation");
+        ptl.DrawLatex(0.6,0.36,ptrange);#"Internal Simulation");
     # the bdt parameters too?!
+
+    sample = TLatex();sample.SetNDC();sample.SetTextFont(42);sample.SetTextSize(0.035);sample.SetTextColor(ROOT.kBlack)
+    if sampletype == 'bkg':
+        sample.DrawLatex(0.6,0.41, "Bkg (QCD jets)")
+    elif sampletype == 'sig':
+        sample.DrawLatex(0.6,0.41, "Signal (W jets)")
+    else:
+        sample.DrawLatex(0.6,0.41, "Merged Signal & Bkg.")
+        
     e = TLatex();e.SetNDC();e.SetTextFont(42);e.SetTextSize(0.035);e.SetTextColor(ROOT.kBlack)
     e.DrawLatex(0.6,0.46, "#sqrt{s}=13 TeV")
 
     m = TLatex();m.SetNDC();m.SetTextFont(42);m.SetTextSize(0.035);m.SetTextColor(ROOT.kBlack)
-    m.DrawLatex(0.6,0.36,"68% mass window")
+    m.DrawLatex(0.6,0.31,"68% mass window")
 
     #param = TLatex();param.SetNDC();param.SetTextFont(42);param.SetTextSize(0.035);param.SetTextColor(ROOT.kBlack)
     #param.DrawLatex(0.3,0.3,"BDT maxdepth=, rate=, est=")
@@ -176,7 +185,7 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
 
 
 
-def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = ''):
+def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', sampletype='combined'):
     '''
     Method for plotting the covariance or correlation of all variables.
 
@@ -204,14 +213,14 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = ''):
         matrix_size = len(taggers)
         # get the covariance matrix for training data
         corr_train = np.corrcoef(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the corr method
-        drawMatrix(key, corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key)
+        drawMatrix(key, corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key, sampletype = sampletype)
         corr_valid = np.corrcoef(X_validation, rowvar=0)
-        drawMatrix(key, corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key)
+        drawMatrix(key, corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key, sampletype = sampletype)
         
     # load the full dataset
     X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
     corr_full = np.corrcoef(X, rowvar=0)
-    drawMatrix(key, corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full")
+    drawMatrix(key, corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full", sampletype =sampletype)
     
     # get the covariance matrix for the 
 
@@ -327,20 +336,62 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
     weight_bkg = w_train[y_train==0] if weight_plots else None
     print label_dict
     for i, t in enumerate(taggers):
-        plt.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5,weights=weight_sig)
-        plt.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5,weights=weight_bkg)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        
+        ax.hist(X_train[y_train==1][:,i],normed=1, bins=50,color='red',label='signal',alpha=0.5,weights=weight_sig)
+        ax.hist(X_train[y_train==0][:,i],normed=1, bins=50,color='blue',label='background',alpha=0.5,weights=weight_bkg)
+        
         print t
         if t.strip() in label_dict.keys():
             plt.xlabel(label_dict[t])
-            plt.title(label_dict[t])
+            plt.title('Fold number ' + cv_num + ': ' + label_dict[t])
         else:
             print 'not in dict'
             plt.xlabel(t.replace('_','\_'))
             plt.title('Fold number ' + cv_num + ': '+ t.replace('_','\_'))
+        # add the pt range and sqrt{s}=13 TeV onto the plot.
+        # add the grooming algorithm?
+        # TODO: again I'm stressed because of time and I can't afford to make this more general
+        # and I'm hardcoding shit.  pt range is always 4-16 or 8-12, just one grooming alg.
+        # some of these things need to get moved... After VISUALLY inspecting (what a cost!)
+        # the output, these are the ones that need to have different coords
+        # split12 - this one is tough, not sure what to do about this one
+        # tauwta21 -  I think the legend can got top center - loc=9
+        # thrustmaj - everything moved to x=0.2 or 0.3
+        # yfilt - move text to x =0.2 or 0.3, move legend to loc=9
+        # zcut12 - move legend to loc=9
+        xval = 0.7
+        locval = 7
+        #if tagger.find('SPLIT12') != -1:
+        #    notsure
+        if t.find('TauWTA2TauWTA1') != -1 or t.find('ZCUT12') != -1:
+            locval = 9
+        elif t.find('ThrustMaj') != -1:
+            xval = 0.02
+            locval = 6
+        elif t.find('YFilt') != -1:
+            xval = 0.02
+            locval = 9
+        ax.text(xval,0.9, r'$\sqrt{s}=13$ TeV', transform = ax.transAxes )
+        if plt_fname.find('4_16') != -1 or plt_fname.find('400_1600'):
+            ax.text(xval,0.85, '$400<p_{T}<1600$ GeV', transform = ax.transAxes )
+        else:
+            ax.text(xval,0.85, '$800<p_{T}<1200$ GeV', transform = ax.transAxes )
+        ax.text(xval,0.8, '68% mass window', transform = ax.transAxes )
+        ax.text(xval,0.75, r'$\textrm{anti-k}_{t}~R=1.0~\textrm{jets}$', fontsize=10, transform = ax.transAxes )
+        ax.text(xval,0.71, r'Trimmed', fontsize=10, transform = ax.transAxes )
+        ax.text(xval,0.67, r'$f_{cut}=5\%,~R_{sub}=0.2$', fontsize=10, transform = ax.transAxes )
+
+        # want to change the limits for the y value
+        ymin, ymax = plt.ylim()
+        plt.ylim(ymax=ymax*1.1)
+        
         plt.ylabel('Number of events')
-        plt.legend()
+        plt.legend(loc=locval)
         plt.savefig('fold_plots/'+plt_fname+'_'+t+weight_flag+'.pdf')
         plt.clf()
+        plt.close(fig)
 
 
 def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train):
@@ -351,8 +402,10 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
     import modelEvaluation as me
     import sys
 
-    import numpy as np    
+    import numpy as np
+    #print file_full
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
+    #print X_full.shape
     print efficiencies
     if transform_valid_weights and weight_validation:
         for idx in xrange(0, w_full.shape[0]):
@@ -529,7 +582,7 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     if not os.path.isfile(file_full):
         print 'could not locate the full dataset'
         return roc_bkg_rej
-    
+    print m.taggers
     evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
         
     return roc_bkg_rej#bkgrej#validation_score
@@ -627,17 +680,17 @@ def main(args):
     parser.add_argument('--fileid', default='corr_matrix', help = 'File id to use if drawing the correlation matrix.')
     parser.add_argument('--key', default='mc15_v1_2_10_default', help = 'Key to be used for finding the files to plot, or the key that gets used when creating the plots and cv splits. (Default: mc15_v1_2_10_default)')
     parser.add_argument('--fulldataset', default = 'persist/data_DEFAULT_100.pkl', help = 'The name of the full dataset pkl file. This is the one created with the persist_cv method (default: persist/data_mc15_nc_v1_2_10_v1_100.pkl)')
-    parser.add_argument('--plotCorrMatrix', type=bool, default=False, help = 'Plot the correlation matrix. Usually set the fileid parameter at the same time as this.')
-    parser.add_argument('--createFoldsOnly', type=bool, default=False, help = 'Create the cv splits only, without running any computation.')
+    parser.add_argument('--plotCorrMatrix', dest='plotCorrMatrix',action='store_true', help = 'Plot the correlation matrix. Usually set the fileid parameter at the same time as this.')
+    parser.add_argument('--createFoldsOnly', dest='createFoldsOnly',action='store_true', help = 'Create the cv splits only, without running any computation.')
     parser.add_argument('--runTestCase', type=bool, default=False, help = 'Run a test of the BDT with the current set of variables. Useful for checking the setup is correct and for getting the feature_importances for a single run.')
     parser.add_argument('--test-id', dest='testid', default = 'test', help = 'The name of the output files from the test run (default: test)')
-    parser.add_argument('--allVars', type=bool, default=False, help = 'Use all of the variables. This is useful at the beginning when it is not yet clear which variables should be used for training.')
-    parser.add_argument('--plotCV', type=bool, default=False, help = 'Plot the cv splits and get stats about the variables in the cv splits.')
+    parser.add_argument('--allVars', dest='allVars',action='store_true', help = 'Use all of the variables. This is useful at the beginning when it is not yet clear which variables should be used for training.')
+    parser.add_argument('--plotCV', dest='plotCV', action='store_true', help = 'Plot the cv splits and get stats about the variables in the cv splits.')
     parser.add_argument('--testSample', default = 'persist/data_DEFAULT_000.pkl', help = 'The name of the file on which to run the test (see runTestCase option). Default is persist/data_(key)_000.pkl')
     parser.add_argument('--runMVA', type=bool, default=False, help = 'Whether or not to run the full grid search.')
     parser.add_argument('--folds', type=int, default=10, help = 'Number of cv folds to create.')
     # should be using a subparser here, but whatever.
-    parser.add_argument('--onlyFull', type=bool, default=False, help = 'If creating folds should only the full dataset be done or not?')
+    parser.add_argument('--onlyFull', dest='onlyFull',action='store_true', help = 'If creating folds should only the full dataset be done or not?')
     parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
     parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
     parser.add_argument('--weight-validation', dest='weightsval',action='store_true', help = "if weights must be applied during validation and testing")
@@ -646,20 +699,25 @@ def main(args):
     parser.set_defaults(txvalweights=False)
     parser.set_defaults(weightval=False)
     parser.set_defaults(weighted=True)
+    parser.set_defaults(plotCV=False)
+    parser.set_defaults(onlyFull=False)
+    parser.set_defaults(plotCorrMatrix=True)
+    parser.set_defaults(allVars = False)
+    parser.set_defaults(createFoldsOnly=False)
     args = parser.parse_args()
     print 'allVars: ' + str(args.allVars)
     model = AdaBoostClassifier()
 
     #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
-    base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5)]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
-    '''
+    base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
+    
     params = OrderedDict([
         ('base_estimator', base_estimators),
-        ('n_estimators', np.linspace(20, 80, 8, dtype=np.int)),
-        ('learning_rate', np.linspace(0.1, 0.3, 3))
+        ('n_estimators', np.linspace(20, 80, 10, dtype=np.int)),
+        ('learning_rate', np.linspace(0.1, 0.3, 10))
     ])
-    '''
+    
     # best performing parameteres for jz5_v2 WITHOUT weighting the validation samples
     '''
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.3]},
@@ -669,12 +727,13 @@ def main(args):
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
     '''
     # best performing parameteres for jz5_v2 WITH weighting the validation samples
+    '''
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.3]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[80],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.1]}]
-    
+    '''
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
     #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
     #            min_samples_split=2, min_weight_fraction_leaf=0.0,
@@ -725,7 +784,7 @@ def main(args):
         full_dataset = args.fulldataset.replace('DEFAULT',args.key)
     else:
         full_dataset = args.fulldataset#'persist/data_mc15_nc_v1_2_10_v1_100.pkl'
-    
+    print full_dataset
     weight_plots = True
     weight_flag = '_weighted' if weight_plots else ''
     
@@ -739,6 +798,7 @@ def main(args):
         filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
         for i,f in enumerate(filenames):
             plotSamples(f,full_dataset,trainvars, key = args.key, first_tagger = i == 0, weight_plots = True)
+            
         # create the combined stats file for all taggers and all cv splits
         combined_stats = open('fold_stats/combined_stats_'+args.key+weight_flag+'.txt','w')
         combined_stats.write('{0:15}  {1:10} {2:14}{3:10}'.format('Sample','Signal','Background','Total')+'\n')
@@ -760,12 +820,14 @@ def main(args):
         sys.exit()
         
     import pandas as pd
-    data = pd.read_csv('csv/'+args.algorithm+'_merged.csv')
+    sampletype = 'merged'
+    #data = pd.read_csv('csv/'+args.algorithm+'_merged.csv')
+    data = pd.read_csv('csv/'+args.algorithm+'_'+sampletype+'.csv')
 
     if args.plotCorrMatrix:
         X = data[allvars].values
         corr_matrix = np.corrcoef(X, rowvar=0)
-        drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid)#"full_allvars_mc15")
+        drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid, sampletype = sampletype)#"full_allvars_mc15")
 
     # just create the folds
 
@@ -798,7 +860,7 @@ def main(args):
 
     
     for t in trainvars_iterations:
-        filenames = cross_validation(data, model, params, args.folds, t, ovwrite=True, ovwrite_full=False, suffix_tag=args.key, scale=False)
+        filenames = cross_validation(data, model, params, args.folds, t, ovwrite=False, ovwrite_full=False, suffix_tag=args.key, scale=False)
         allparms, alltasks = grid_search(
             lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=args.weighted, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
 

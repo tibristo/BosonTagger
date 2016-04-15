@@ -185,25 +185,43 @@ def plotValidationCurve(key, parameters, param_abbrev, train_scores_mean, test_s
         parameter_string += '_'+param_abbrev[x]+'_' + str(parameters[x])
             # set up the file name
     #fname = "validation_curves/"+key+'_lr_'+str(parameters['learning_rate'])+'_n_'+str(parameters['n_estimators'])+file_id+'.png'
-    fname = "validation_curves/"+key+parameter_string+file_id+'.png'
+    fname = "validation_curves/"+key+parameter_string+file_id+'.pdf'
     plt.clf()
-    plt.title("Validation Curve with BDT")
-    plt.xlabel(xlabel.replace('_',' '))
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.title("Validation Curve")
+    plt.xlabel(xlabel.replace('_',' ').replace('$',''))
     plt.ylabel("Accuracy")
     # find out what the y limits should be
     y_up = max(np.amax(train_scores_mean), np.amax(test_scores_mean))
     y_do = min(np.amin(train_scores_mean), np.amin(test_scores_mean))
     plt.ylim(y_do*0.95, y_up*1.05)
-    plt.plot(param_range, train_scores_mean, label="Training score", color="r")
-    plt.fill_between(param_range, train_scores_mean - train_scores_std,
+    ax.plot(param_range, train_scores_mean, label="Training score", color="r")
+    ax.fill_between(param_range, train_scores_mean - train_scores_std,
                                       train_scores_mean + train_scores_std, alpha=0.2, color="r")
-    plt.plot(param_range, test_scores_mean, label="Cross-validation score",
+    ax.plot(param_range, test_scores_mean, label="Cross-validation score",
                               color="g")
-    plt.fill_between(param_range, test_scores_mean - test_scores_std,
+    ax.fill_between(param_range, test_scores_mean - test_scores_std,
                                       test_scores_mean + test_scores_std, alpha=0.2, color="g")
+    xval = 0.01
+    
+    ax.text(xval,0.9, r'$\sqrt{s}=13$ TeV', transform = ax.transAxes )
+    if key.find('4_16') != -1 or key.find('400_1600'):
+        ax.text(xval,0.85, '$400<p_{T}<1600$ GeV', transform = ax.transAxes )
+    else:
+        ax.text(xval,0.85, '$800<p_{T}<1200$ GeV', transform = ax.transAxes )
+    ax.text(xval,0.8, '68% mass window', transform = ax.transAxes )
+    # print the bdt parameters on here
+    params = parameter_string.replace('_n_','_estimators_').replace('_lr_','_rate_').replace('_md_','_depth_').replace('_',' ')
+    ax.text(xval,0.75, params, transform=ax.transAxes)
+    
+    #ax.text(xval,0.75, r'$\textrm{anti-k}_{t}~R=1.0~\textrm{jets}$', fontsize=10, transform = ax.transAxes )
+    #ax.text(xval,0.71, r'Trimmed', fontsize=10, transform = ax.transAxes )
+    #ax.text(xval,0.67, r'$f_{cut}=5\%,~R_{sub}=0.2$', fontsize=10, transform = ax.transAxes )
+
     plt.legend(loc="best")
     plt.savefig(fname)
-
+    plt.close(fig)
 
 
     
@@ -294,7 +312,7 @@ def evaluateVariableCombined(df, variable, key, file_id):
         plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_test'], label=str(m), color='r')#, label='Validation')
         plt.scatter(np.repeat([m],len(md_m)),md_m['accuracy_train'], label=str(m), color='b')#, label='Train')
         
-    plt.savefig('validation_curves/combined_'+variable+key+file_id+'.png')
+    plt.savefig('validation_curves/combined_'+variable+key+file_id+'.pdf')
     # create a validation curve, rather than a scatter plot
     plotValidationCurve(key, {'combined':variable} , {'combined':variable}, train_mean, test_mean, train_std, test_std, md, '$'+variable+'$',file_id) 
 
