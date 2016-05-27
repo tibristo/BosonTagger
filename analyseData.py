@@ -276,7 +276,7 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         # now add them to the data file and write it out
         #data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
         data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
-        rn.array2root(data_scored, data_file.replace('.root','_scored_v4.root'),'dibjet','recreate')
+        rn.array2root(data_scored, data_file.replace('.root','_scored_v6.root'),'dibjet','recreate')
             
             
 

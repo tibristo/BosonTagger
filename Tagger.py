@@ -229,6 +229,11 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         signal_eff = 1.0
         bkg_eff = 1.0
 
+        # setting the maximum of the plot - normally multiply by 1.2, but for some, like tauwta21 must be higher
+        max_multiplier = 1.2
+        if branchname.lower().find('tauwta2tauwta1') != -1:
+            max_multiplier = 1.25
+
 
         # loop through the datatypes: signal and background
         for indexin, datatype in enumerate(trees):
@@ -459,16 +464,26 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
         # add legend entries for bkg and signal histograms
         leg1.AddEntry(hist["sig_" + branchname],"W jets","l");    leg1.AddEntry(hist["bkg_" + branchname],"QCD jets","l");
 
-        
+        y_high = max(hist['sig_'+branchname].GetMaximum(), hist['bkg_'+branchname].GetMaximum())
+        hist['bkg_'+branchname].SetMaximum(y_high*max_multiplier);hist['sig_'+branchname].SetMaximum(y_high*max_multiplier)
         # plot the maximum histogram
-        if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
-            fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
+        #if (hist['sig_'+branchname].GetMaximum() > hist['bkg_'+branchname].GetMaximum()):
+        fn.drawHists(hist['sig_' + branchname], hist['bkg_' + branchname])
+        # else:
+        #    fn.drawHists(hist['bkg_' + branchname], hist['sig_' + branchname])
+        # change the coordinates to LHS of the canvas if we are plotting ThrustMaj or YFilt.
+        offset_x = False
+        if branchname.lower().find('thrustmaj')!=-1 or branchname.lower().find('yfilt')!=-1:
+            offset_x = True
+            leg1.SetX1NDC(0.25)
+            leg1.SetX2NDC(0.35)
         else:
-            fn.drawHists(hist['bkg_' + branchname], hist['sig_' + branchname])
+            leg1.SetX1NDC(0.8)
+            leg1.SetX2NDC(0.9)
         leg1.Draw("same")
 
         # add correctly formatted text to the plot for the ATLAS collab text, energy, etc.
-        fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()])
+        fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], offset_x)
         # save individual plots
         if savePlots:
             p = canv1.cd(index+1).Clone() 
@@ -484,18 +499,29 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # resize the mass plots to be in a better range
             if branchname.find('_m') != -1:
                 hist_nomw['sig_'+branchname+'_full'].SetAxisRange(0.0,300.0*1000.0)
+                hist_nomw['sig_'+branchname+'_full'].GetXaxis().SetRangeUser(0.0,1000.0*300.0)
                 hist_nomw['sig_'+branchname+'_full'].GetXaxis().SetLimits(0.0,300.0)
                 hist_nomw['bkg_'+branchname+'_full'].SetAxisRange(0.0,300.0*1000.0)
+                hist_nomw['bkg_'+branchname+'_full'].GetXaxis().SetRangeUser(0.0,1000.0*300.0)
                 hist_nomw['bkg_'+branchname+'_full'].GetXaxis().SetLimits(0.0,300.0)
             tempCanv2 = TCanvas("tempnomw"+branchname)
             tempCanv2.cd()
             y_high = max(hist_nomw['sig_'+branchname+'_full'].GetMaximum(), hist_nomw['bkg_'+branchname+'_full'].GetMaximum())
             y_low = 0.0 #min(hist_nomw['sig_'+branchname+'_full'].GetMinimum(), hist_nomw['bkg_'+branchname+'_full'].GetMaximum())
-            if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
-                fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
+            hist_nomw['bkg_'+branchname+'_full'].SetMaximum(y_high*max_multiplier);hist_nomw['sig_'+branchname+'_full'].SetMaximum(y_high*max_multiplier)
+            #if (hist_nomw['sig_'+branchname+'_full'].GetMaximum() > hist_nomw['bkg_'+branchname+'_full'].GetMaximum()):
+            fn.drawHists(hist_nomw['sig_' + branchname+'_full'], hist_nomw['bkg_' + branchname+'_full'])
+            #else:
+            #    fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
+
+            offset_x = False
+            if branchname.lower().find('thrustmaj')!=-1 or branchname.lower().find('yfilt')!=-1:
+                offset_x = True
+                leg1.SetX1NDC(0.25)
+                leg1.SetX2NDC(0.35)
             else:
-                fn.drawHists(hist_nomw['bkg_' + branchname+'_full'], hist_nomw['sig_' + branchname+'_full'])
-            
+                leg1.SetX1NDC(0.8)
+                leg1.SetX2NDC(0.9)
             leg1.Draw("same")
 
             # if we are doing the mass plt we want to indicate the mass window
@@ -504,13 +530,13 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             else:
                 mrange = [float(mass_min), float(mass_max)]
                 # if it is the mass variable then draw lines indicating the mass window
-                line_min = TLine(float(mass_min), y_low, float(mass_min), y_high); line_min.SetLineColor(kBlack);
-                line_max = TLine(float(mass_max), y_low, float(mass_max), y_high); line_max.SetLineColor(kBlack);
-                line_min.Draw()
-                line_max.Draw()
+                line_min = TLine(float(mass_min)/1000.0, y_low, float(mass_min)/1000.0, y_high); line_min.SetLineColor(kBlack);
+                line_max = TLine(float(mass_max)/1000.0, y_low, float(mass_max)/1000.0, y_high); line_max.SetLineColor(kBlack);
+                line_min.Draw('same')
+                line_max.Draw('same')
 
             # add the latex parts to the plot -> ATLAS, tev range, etc.
-            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], massrange = mrange)
+            fn.addLatex(fn.getAlgorithmString(),fn.getAlgorithmSettings(),fn.getPtRange(), fn.getE(), [fn.getNvtxLow(), fn.getNvtx()], offset_x, massrange = mrange)
 
             tempCanv2.SaveAs(varpath+branchname+"_noMW.pdf")
             #tempCanv2.SaveAs(varpath+branchname+"_noMW.eps")
@@ -911,7 +937,7 @@ def main(args):
             hist[histname] = TH1D(histname, hist_title, plotconfig[br][BINS], plotconfig[br][MINX], plotconfig[br][MAXX])
   
     # legends for histograms and roc curves
-    leg1 = TLegend(0.8,0.55,0.9,0.65);leg1.SetFillColor(kWhite)
+    leg1 = TLegend(0.8,0.58,0.9,0.68);leg1.SetFillColor(kWhite)
     leg2 = TLegend(0.2,0.2,0.5,0.7);leg2.SetFillColor(kWhite)
 
     # set up the mass window cuts

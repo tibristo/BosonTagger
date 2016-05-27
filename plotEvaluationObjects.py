@@ -94,6 +94,30 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', transform_valid_weights = 
         with bz2.BZ2File('evaluationObjects/'+job_id,'r') as p:
             model = pickle.load(p)
         
+    # load the training data
+    # need to get all of the parts out of the job_id!
+    # job_id looks as follows: paramID_4mc15_nTrk_v1_bkg_v4ID_3_full.pbz2
+    # cv name looks like persist/data_mc15_nTrk_v1_bkg_v4_100.pkl
+    # so we need to remove the paramID_X (where X is some integer), then find last int in the string
+    
+    ints = re.findall("\d+", job_id)
+    firstIntSearch = re.search("\d+",job_id)
+    firstIntPosEnd = firstIntSearch.start()+len(firstIntSearch.group(0))
+    print firstIntPosEnd
+    print job_id[firstIntPosEnd:]
+    endOfName = job_id[firstIntPosEnd:].find("ID")+firstIntPosEnd
+    print endOfName
+    def padInteger(number, length):
+        numStr = str(number)
+        for x in xrange(0, length-len(numStr)):
+            numStr = '0' +numStr
+        return numStr
+
+    print job_id[firstIntPosEnd:endOfName]
+    cv_fname = job_id[firstIntPosEnd:endOfName]
+    cv_fname += '_'+padInteger(ints[-2],3)+'.pkl' # use -2 because -1 is the 2 in the pbz2
+    X_train, y_train, w_train, X_val, y_val, w_val = joblib.load('persist/data_'+cv_fname, mmap_mode='c')
+    
     file_full = full_dataset
     # check that this file exists
     if not os.path.isfile(file_full):
@@ -101,8 +125,10 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', transform_valid_weights = 
         return roc_bkg_rej
     
     print file_full
-    
-    mva_tools.evaluateFull(model.model, file_full, transform_valid_weights, weight_validation, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+    sig_tr_idx = model.df_sig_idx
+    bkg_tr_idx = model.df_bkg_idx
+    bkg_rej_train = model.ROC_rej_power_05_train
+    mva_tools.evaluateFull(model.model, model, file_full, transform_valid_weights, weight_validation, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
             
 
 def createDataframe(key, files):
@@ -429,7 +455,7 @@ def main(args):
         for i, j in enumerate(jobids):
             print 'progress: ' + str(float(100.0*i/total))
             # this should make a call to mva_tools rather, as that already has the code
-            recreateFull(j,full_dataset, '_'+args.fullid, compress=True, transform_valid_weights = args.tx_weight_validation, weight_validation = args.weight_validation)#    '_bkg_training_12_16', compress=True)    
+            recreateFull(j,full_dataset, '_'+args.fullid, transform_valid_weights = args.tx_weight_validation, weight_validation = args.weight_validation)#    '_bkg_training_12_16', compress=True)    
         print 'finished evaluation'
         sys.exit(0)
 

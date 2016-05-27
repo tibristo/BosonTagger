@@ -259,7 +259,7 @@ def readXML(configfile, pt_range="default"):
     for l in root.findall('lumi'):
         lumi = float(l.get('name'))
 
-def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[], drawATLAS = False):
+def addLatex(algo, algosettings, ptrange, E, nvtxrange, offset_x = False, massrange=[], drawATLAS = False):
     '''
     Method to add Latex text to a plot.  The canvas is already set before this method
     is called, so that when this is run it is already on that canvas.
@@ -269,51 +269,63 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[], drawATLAS 
     algosettings --- Any additional settings that were used.
     ptrange --- The pT range that this is plotted in.
     E --- Energy of the simulations
+    offset_x --- for variables like ThrustMaj and YFilt the text must go on the LHS. True for doing this
     nvtxrange --- The cuts on the number of vertices.
     massrange -- The 68% mass window cuts
+    drawATLAS --- Add the ATLAS logo
     '''
     from ROOT import TLatex
+    offset = 0.06
+    x_offset = 0.0
+
+    # for the TMaj and YFilt variables the labels and legends need to move to the LHS,
+    # so there is a flag for this.
+    if offset_x:
+        x_offset = -0.4
+    
     if drawATLAS:
         texw = TLatex();
         texw.SetNDC();
         texw.SetTextSize(0.035);
         texw.SetTextFont(72);
-        texw.DrawLatex(0.58,0.88,"ATLAS");
+        texw.DrawLatex(0.58+x_offset,0.88,"ATLAS");
     
         p = TLatex();
         p.SetNDC();
         p.SetTextFont(42);
         p.SetTextSize(0.035);
         p.SetTextColor(ROOT.kBlack);
-        p.DrawLatex(0.66,0.88,"Simulation Work in Progress");#"Internal Simulation");
+        p.DrawLatex(0.66+x_offset,0.88,"Simulation Work in Progress");#"Internal Simulation");
+
+        offset = 0.0
 
     p = TLatex();
     p.SetNDC();
     p.SetTextFont(42);
     p.SetTextSize(0.032);
     p.SetTextColor(ROOT.kBlack);
-    p.DrawLatex(0.65,0.64,"#sqrt{s} = "+str(E)+" TeV");
+    p.DrawLatex(0.65+x_offset,0.64+offset,"#sqrt{s} = "+str(E)+" TeV");
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
     p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
-    p2.DrawLatex(0.65,0.82,algo);
+    p2.DrawLatex(0.65+x_offset,0.82+offset,algo);
     
     p2 = TLatex();
     p2.SetNDC();
     p2.SetTextFont(42);
     p2.SetTextSize(0.032);
     p2.SetTextColor(ROOT.kBlack);
-    p2.DrawLatex(0.65,0.76,algosettings);
+    p2.DrawLatex(0.65+x_offset,0.76+offset,algosettings);
     
     p3 = TLatex();
     p3.SetNDC();
     p3.SetTextFont(42);
     p3.SetTextSize(0.032);
     p3.SetTextColor(ROOT.kBlack);
-    p3.DrawLatex(0.65,0.70,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000.0))#+', '+str(massrange[0])+'< m <'+str(massrange[1]));#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
+    p3.DrawLatex(0.65+x_offset,0.70+offset,str(ptrange[0]/1000.0)+' < p_{T} (GeV) < ' + str(ptrange[1]/1000.0))#+', '+str(massrange[0])+'< m <'+str(massrange[1]));#, '+str(nvtxrange[0])+'<nvtx<'+str(nvtxrange[1]));
 
     if len(massrange) > 1:
         p4 = TLatex();
@@ -321,7 +333,7 @@ def addLatex(algo, algosettings, ptrange, E, nvtxrange, massrange=[], drawATLAS 
         p3.SetTextFont(42);
         p3.SetTextSize(0.032);
         p3.SetTextColor(ROOT.kBlack);
-        p3.DrawLatex(0.58,0.40,'68% window: ' + str(massrange[0]/1000.0)+' < m (GeV) < ' + str(massrange[1]/1000.0))
+        p3.DrawLatex(0.58,0.40+offset,'68% window: ' + str(massrange[0]/1000.0)+' < m (GeV) < ' + str(massrange[1]/1000.0))
 
     
 def drawHists(hist1, hist2):

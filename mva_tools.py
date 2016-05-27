@@ -653,7 +653,7 @@ def printProgress(tasks):
 
 
 
-def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=True, transform_valid_weights=False, weight_validation=False):
+def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=False, transform_valid_weights=False, weight_validation=False):
     base_estimators = [DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#min_weight_fraction_leaf=0.0
 
     params = OrderedDict([
@@ -693,7 +693,7 @@ def main(args):
     parser.add_argument('--onlyFull', dest='onlyFull',action='store_true', help = 'If creating folds should only the full dataset be done or not?')
     parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
     parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
-    parser.add_argument('--weight-validation', dest='weightsval',action='store_true', help = "if weights must be applied during validation and testing")
+    parser.add_argument('--weight-validation', dest='weightval',action='store_true', help = "if weights must be applied during validation and testing")
     parser.add_argument('--no-weight-train', dest='weighted',action='store_false', help = "Turn off weighting for training.")
     parser.set_defaults(txweights=False)
     parser.set_defaults(txvalweights=False)
@@ -710,14 +710,15 @@ def main(args):
 
     #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
+    '''
     base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     
     params = OrderedDict([
         ('base_estimator', base_estimators),
-        ('n_estimators', np.linspace(20, 80, 10, dtype=np.int)),
-        ('learning_rate', np.linspace(0.1, 0.3, 10))
+        ('n_estimators', np.linspace(20, 80, 5, dtype=np.int)),
+        ('learning_rate', np.linspace(0.1, 0.3, 3))
     ])
-    
+    '''
     # best performing parameteres for jz5_v2 WITHOUT weighting the validation samples
     '''
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.3]},
@@ -727,13 +728,13 @@ def main(args):
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
     '''
     # best performing parameteres for jz5_v2 WITH weighting the validation samples
-    '''
+
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.3]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[80],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.1]}]
-    '''
+
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
     #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
     #            min_samples_split=2, min_weight_fraction_leaf=0.0,
@@ -843,6 +844,7 @@ def main(args):
             args.testid = args.fileid
         if args.testSample.find('DEFAULT') != -1:
             args.testSample = args.testSample.replace('DEFAULT',args.key)
+        print trainvars
         runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
 
     if not args.runMVA:
