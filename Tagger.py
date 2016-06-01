@@ -131,7 +131,10 @@ def writePlotsToROOT(Algorithm, fileid, hist, rocs={}, rocs_rejpow={}, rocs_nomw
         
     fo.Close()
 
-def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "0.0", mass_max = "1200000.0", scaleLumi = 1):
+
+
+    
+def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight = True, varpath = "", savePlots = True, mass_min = "0.0", mass_max = "1200000.0", scaleLumi = 1, nTracks='999'):
     '''
     Run through the Algorithm for a given mass range.  Returns the bkg rej at 50% signal eff.
     Keyword args:
@@ -151,6 +154,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
     mass_min -- Mass window minimum
     mass_max -- Mass window maximum
     scaleLumi -- luminosity scale factor
+    nTracks -- cut on NTracks to apply.  Default is 999 which is essentially no cut.
 
     Returns:
     Background rejection at 50% signal efficiency using the ROC curve and variable used to achieve maximum rejection.
@@ -243,8 +247,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             print "plotting " + datatype + branchname
             #logfile.write("plotting " + datatype + branchname+"\n")
 
-            # set up the tree.Draw() variable expression for the histogram
-            varexp = branchname + '>>' + histname
+
             minxaxis = hist[histname].GetXaxis().GetXmin()
             maxxaxis = hist[histname].GetXaxis().GetXmax()
             # add the mc_weight and weighted number of events to the selection string
@@ -273,15 +276,17 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
                     cutstringandweight +='*SignalPtWeight3(jet_CamKt12Truth_pt)'
             
             hist[histname].Sumw2();
-
+            # set up the tree.Draw() variable expression for the histogram
+            varexp = branchname + '>>' + histname
             # apply the selection to the tree and store the output in the histogram
             if branchname.find('_m')==-1:
-                trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)
+                trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight+'*(nTracks<'+nTracks+')')
             else:
-                trees[datatype].Draw(varexp,cutstring+cutstringandweight)
+                trees[datatype].Draw(varexp,cutstring+cutstringandweight+'*(nTracks<'+nTracks+')')
 
-            # if the histogram is not empty then normalise it 
-            mw_int = hist[histname].Integral()
+            # if the histogram is not empty then normalise it
+            
+            #mw_int = hist[histname].Integral()
 
             if hist[histname].Integral() > 0.0:
                 if scaleLumi != 1:
@@ -299,25 +304,49 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             hist[histname].SetYTitle("Normalised Entries")
 
             #now get the same plot for no mass window cut to get the eff
+            hist_full_massonly = hist[histname].Clone()
+            hist_full_massonly.Reset()
+            hist_full_massonly.SetName(histname+'_massonly')
+            # need to store the variable in this histogram
+            varexpfull = branchname + ' >>' + histname+'_massonly'
+            # no nTracks cut here!!!!
+            if branchname.find('_m')==-1:
+                trees[datatype].Draw(varexpfull,cutstring_mass+cutstringandweight)
+            else:
+                trees[datatype].Draw(varexpfull,cutstring+cutstringandweight)
+            # get the integral and normalise
+            mw_int = hist_full_massonly.Integral()
+            
+            hist_full_massonly.Reset()
+            hist_full_massonly.SetName(histname+'_full_massonly')
+            # need to store the variable in this histogram
+            varexpfull = branchname + ' >>' + histname+'_full_massonly'
+            # no nTracks cut here!!!!
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)")
+            # get the integral and normalise
+            full_int = hist_full_massonly.Integral()
+
+            
+            if histname.find('_pt') != -1:
+                mw_int_pt[datatype] = mw_int
+                full_int_pt[datatype] = full_int
+
+
+            #now get the same plot for no mass window cut to get the eff
             hist_full = hist[histname].Clone()
             hist_full.Reset()
             hist_full.SetName(histname+'_full')
             # need to store the variable in this histogram
             varexpfull = branchname + ' >>' + histname+'_full'
 
-            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)")
-
-            # get the integral and normalise
-            full_int = hist_full.Integral()
-            if histname.find('_pt') != -1:
-                mw_int_pt[datatype] = mw_int
-                full_int_pt[datatype] = full_int
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)"+'*(nTracks<'+nTracks+')')
+            histInt = hist_full.Integral()
             # now scale
-            if full_int != 0.0:
+            if histInt != 0.0:
                 if scaleLumi!=1:
                     hist_full.Scale(scaleLumi)
                 else:
-                    hist_full.Scale(1./full_int)
+                    hist_full.Scale(1./histInt)
             # change the x title
             hist_full.SetXTitle(hist[histname].GetXaxis().GetTitle()+' (no mass window)')
 
@@ -644,6 +673,7 @@ def main(args):
     parser.add_argument('--ROCside', help = 'L or R for left or right sided ROC cut, leave blank for sorted version.')
     parser.add_argument('--massWindowOverwrite', help = 'Overwrite the current mass window file if it exists.')
     parser.add_argument('--writecsv', help = 'Write the data into a csv file, do not run analyse.')
+    parser.add_argument('--nTracks', help = 'The nTrack cut to apply.  Default is no cut.')
     parser.add_argument('--clean', help = 'When creating the csv file cuts will be applied on all variables. These are set in functions.py.')
 
     args = parser.parse_args()
@@ -807,6 +837,12 @@ def main(args):
 
     # default selection string
     cutstring = "(jet_CamKt12Truth_pt > "+str(ptrange[0])+") * (jet_CamKt12Truth_pt <= "+str(ptrange[1])+") * (jet_CamKt12Truth_eta > -1.2) * (jet_CamKt12Truth_eta < 1.2) " + channelcut
+
+
+    nTracks = '999'
+    if args.nTracks:
+        print 'applying an nTracks cut of ' + str(args.nTracks)
+        nTracks = args.nTracks
 
     # set up the input signal file
     signalFile = fn.getSignalFile()
@@ -973,7 +1009,7 @@ def main(args):
         # run the analysis for mass range
         mass_cut = " * (jet_" +Algorithm + "_m <= " +str(m_max)+ ")" + " * (jet_" +Algorithm + "_m > " +str(m_min)+ ") " 
         if not writecsv:
-            rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi)
+            rej,rejvar = analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutstring, hist, leg1, leg2, fileid, records, ptreweight, varpath, saveplots, str(m_min), str(m_max), lumi, nTracks=args.nTracks)
 
             if rej > max_rej:
                 max_rej = rej

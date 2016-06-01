@@ -34,6 +34,7 @@ def main(args):
     parser.add_argument('--ROCside', help = 'L/R for left or right sided ROC.  Leave blank for the sorted method.')
     parser.add_argument('--massWindowOverwrite', help = 'Overwrite the current mass window file if it exists.')
     parser.add_argument('--writecsv', help = 'Write the data into a csv file, do not run analyse.')
+    parser.add_argument('--nTracks', help = 'The nTrack cut to apply.  Default is no cut.')
     parser.add_argument('--clean', help = 'Apply cuts on variables listed in functions.writeCSV() function.  The ranges are in the config files.')
 
     args = parser.parse_args()
@@ -131,6 +132,8 @@ def main(args):
             if args.clean:
                 args_tag.append('--clean='+args.clean)
 
+        if args.nTracks:
+            args_tag.append('--nTracks='+args.nTracks)
 
         print args_tag
         # keep track of the args we use, to map to the thread pool later
