@@ -653,15 +653,22 @@ def printProgress(tasks):
 
 
 
-def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=False, transform_valid_weights=False, weight_validation=False):
+def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=False, transform_valid_weights=False, weight_validation=False, rfc = False):
+    
+    from sklearn.ensemble import RandomForestClassifier
     base_estimators = [DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#min_weight_fraction_leaf=0.0
+    
+    
 
     params = OrderedDict([
             ('base_estimator', base_estimators),
             ('n_estimators', [50]),
             ('learning_rate', [0.3])
             ])
-
+    if rfc:
+        model = RandomForestClassifier(n_estimators=10000,random_state=0,n_jobs=-1)
+        params = []
+    
     from sklearn.grid_search import ParameterGrid
     all_parameters = list(ParameterGrid(params))
     
@@ -669,8 +676,72 @@ def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_data
         compute_evaluation(cv_split_filename, model, params, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
         #plotSamples(cv_split_filename, trainvars)
         return
-        
+'''        
+def runTestForest():
+    from sklearn.ensemble import RandomForestClassifier
+    feat_labels = df_wine.columns[1:]
+    forest = RandomForestClassifier(n_estimators=10000,random_state=0,n_jobs=-1)
+    forest.fit(X_train, y_train)
+    importances = forest.feature_importances_
+    indices = np.argsort(importances)[::-1]
+    for f in range(X_train.shape[1]):
+        print("%2d) %-*s %f" % (f + 1, 30, feat_labels[f],importances[indices[f]]))
 
+    # plot it
+    plt.title('Feature Importances')
+    plt.bar(range(X_train.shape[1]),
+            importances[indices],
+            color='lightblue',
+            align='center')
+    plt.xticks(range(X_train.shape[1]),
+               feat_labels, rotation=90)
+    plt.xlim([-1, X_train.shape[1]])
+    plt.tight_layout()
+    plt.show()
+        
+def runTestRegression():
+    from sklearn.linear_model import LogisticRegression
+    LogisticRegression(penalty='l1')
+    lr = LogisticRegression(penalty='l1', C=0.1)
+    lr.fit(X_train_std, y_train)
+    print('Training accuracy:', lr.score(X_train_std, y_train))
+
+    print('Test accuracy:', lr.score(X_test_std, y_test))
+    print lr.intercept_
+    print lr.coef_
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    colors = ['blue', 'green', 'red', 'cyan',
+              'magenta', 'yellow', 'black',
+              'pink', 'lightgreen', 'lightblue',
+              'gray', 'indigo', 'orange']
+    weights, params = [], []
+    for c in np.arange(-4, 6):
+        lr = LogisticRegression(penalty='l1',
+                                C=10**c,
+                                random_state=0)
+        lr.fit(X_train_std, y_train)
+        weights.append(lr.coef_[1])
+        params.append(10**c)
+        weights = np.array(weights)
+        for column, color in zip(range(weights.shape[1]), colors):
+            plt.plot(params, weights[:, column],
+                     label=df_wine.columns[column+1],
+                     color=color)
+            plt.axhline(0, color='black', linestyle='--', linewidth=3)
+            plt.xlim([10**(-5), 10**5])
+            plt.ylabel('weight coefficient')
+            plt.xlabel('C')
+            plt.xscale('log')
+            plt.legend(loc='upper left')
+            ax.legend(loc='upper center',
+                      bbox_to_anchor=(1.38, 1.03),
+                      ncol=1, fancybox=True)
+            plt.show()
+
+'''    
+    
 def main(args):
     '''
     Main method which runs the classifier.  Takes in a number of arguments which are then used to control which methods get run -> creating plots, cv splits, correlation plots, grid_search, run test
@@ -695,6 +766,7 @@ def main(args):
     parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
     parser.add_argument('--weight-validation', dest='weightval',action='store_true', help = "if weights must be applied during validation and testing")
     parser.add_argument('--no-weight-train', dest='weighted',action='store_false', help = "Turn off weighting for training.")
+    parser.add_argument('--RFC', dest='rfc', action='store_true', help = 'If running RandomTreesClassifier for the testing.')
     parser.set_defaults(txweights=False)
     parser.set_defaults(txvalweights=False)
     parser.set_defaults(weightval=False)
@@ -704,6 +776,7 @@ def main(args):
     parser.set_defaults(plotCorrMatrix=True)
     parser.set_defaults(allVars = False)
     parser.set_defaults(createFoldsOnly=False)
+    parser.set_defaults(rfc=False)
     args = parser.parse_args()
     print 'allVars: ' + str(args.allVars)
     model = AdaBoostClassifier()
@@ -751,7 +824,7 @@ def main(args):
     # these are for the mc15 samples
     #allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow']# features v1
     # now adding nTracks!
-    allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow', 'nTracks']# features v1
+    allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow']#, 'nTracks']# features v1
     # trainvars for mc15 200-1000 AK10
     #trainvars = ['EEC_C2_1','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2']
     # trainvars for mc15 1000-1500 AK10
@@ -767,7 +840,7 @@ def main(args):
         # trainvars for mc15_jz5_v2
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
         # now adding nTracks!
-        trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity', 'nTracks']
+        trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']#, 'nTracks']
         # seeing if removing sphericity and aplanarity will help.  Looking at the distributions there is probably too much overlap.
         # the peaks overlap, but bkg has a long tail.
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow', 'Sphericity', 'nTracks']
@@ -845,7 +918,7 @@ def main(args):
         if args.testSample.find('DEFAULT') != -1:
             args.testSample = args.testSample.replace('DEFAULT',args.key)
         print trainvars
-        runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
+        runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval, rfc = args.rfc)
 
     if not args.runMVA:
         sys.exit(0)

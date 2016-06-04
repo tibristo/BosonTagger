@@ -66,12 +66,19 @@ class rocEntry:
         tfile = kwargs['file']
         roc_curve = kwargs['roc_curve']
         legend = kwargs['legend']
+        self.legend = legend
         if 'algorithm' in keys:
             algorithm = kwargs['algorithm']
         else:
             # get algorithm from roc_curve name
             algorithm = roc_curve[len('roc_jet_'):roc_curve.find('_',len('roc_jet_'))]
-        #check that the file exists
+        self.isDNN = self.legend.find('AGILE') != -1 or self.legend.find("DNN") != -1
+        self.isBDT = self.legend.find("BDT") != -1
+        if self.isDNN:
+            algorithm = 'DNN ' + algorithm
+        elif self.isBDT:
+            algorithm = 'BDT ' + algorithm
+            #check that the file exists
         if not os.path.isfile(tfile):
             print 'file does not exist: ' + tfile
             self.tfile = None
@@ -81,6 +88,7 @@ class rocEntry:
             return
         #print tfile
         self.tfile = rt.TFile(tfile)
+        self.tfilename = tfile
         #print roc_curve
         self.roc = self.tfile.Get(roc_curve).Clone()
         if 'power_curve' in kwargs.keys():
@@ -89,7 +97,7 @@ class rocEntry:
         else:
             self.power_curve = None
 
-        self.legend = legend
+
         self.roc.SetTitle('ROC: ' + legend)
         self.colour = -1
         self.algorithm = algorithm
@@ -98,28 +106,30 @@ class rocEntry:
         self.pt_high = 0
 
         
-    def setLegendMVA(resultsfile):
+    def setLegendMVA(self, resultsfile):
         self.resultsfile = resultsfile 
-        isDNN = self.legend.find('AGILE') != -1 or self.legend.find("DNN") != -1
-        isBDT = self.legend.find("BDT") != -1
-        if isDNN or isBDT:
+        if self.isDNN or self.isBDT:
             # get the results file name            
-            if isDNN:
+            if self.isDNN:
                 tmpdict = gp.dnn(self.resultsfile)
             else:
                 tmpdict = gp.bdt(self.resultsfile)
             # try to get the param id
-            pos = self.tfile.find('paramID_')+8
+            pos = self.tfilename.find('paramID_')+8
             pos_end = copy.deepcopy(pos)
-            while self.tfile[pos_end].isdigit():
+            while self.tfilename[pos_end].isdigit():
                 pos_end+=1
-            self.taggerid = self.tfile[pos:pos_end]
+            self.taggerid = self.tfilename[pos:pos_end]
             #id position
             idpos = self.legend.find('ID')
-            # find next space
-            while self.legend[idpos] != ' ':
+            #print self.taggerid
+            if idpos == -1:
+                self.legend = tmpdict[self.taggerid]
+                return
+                # find next space
+            while idpos < len(self.legend) and self.legend[idpos] != ' ':
                 idpos+=1
-            self.legend = tmpdict[self.taggerid] +' '+ self.legend[idpos+2:] # the +2 is to jump over the space
+            self.legend = tmpdict[self.taggerid] +' '+ self.legend[idpos+1:] # the +1 is to jump over the space
 
     def setPt(self,l,h):
         # get the pt range from the filename
@@ -179,10 +189,13 @@ minx1=0.0
 maxx1=1.0
 miny1=8.0
 maxy1=2000.0
-minx2=0.2
+minx2=0.45
 maxx2=0.55
-miny2=10.0
-maxy2=70.0
+# this works for jz5
+miny2=30.0
+maxy2=150.0
+isMVA = False
+
 logy=1
 
 ylabel_power="1/#varepsilon ^{G&T}_{QCD Jets}"
@@ -229,7 +242,9 @@ if not singleFile:
         #if len(spl) == 7:
             roc_entry[-1].setLineStyle(spl[6])
         if len(spl) == 8:
-            roc_entry[-1].setLegendMVA(spl[7])
+            legendfile = spl[7]
+            roc_entry[-1].setLegendMVA(legendfile)
+            isMVA = True
         # bah, gotta add in the fucking other things too
         if len(spl) == 10:
             roc_entry[-1].setPt(int(spl[8]),int(spl[9]))
@@ -294,25 +309,66 @@ for r in roc_entry:
 
     
 # first plot the roc curves
+ystart = 0.85
 dy = 0.045
+dy_dnn = 0.052
 nplot = 0
 curr_algorithm = ''
 prev_algorithm = 'default'
+sameAlg = False
+offset = 0
+#if we're doing lots on one plot then use smaller spacing
+smaller = False
+if len(roc_entry) > 12:
+    smaller = True
+    ystart = 0.88
 for i, r in enumerate(roc_entry):
     # set the colour
     nplot+=1
     curr_algorithm = r.algorithm
     if prev_algorithm != curr_algorithm:
-        if nplot != 1:
-            nplot+=1
-        startpos = 0.8-nplot*dy
+        #if nplot != 1:
+        #    nplot+=0.5
+        startpos = ystart-nplot*dy_dnn
         endpos = startpos + 0.05
         unique_algs[r.algorithm] = [endpos, startpos]
+        sameAlg = False
+        if smaller:
+            nplot+=0.3
+        else:
+            nplot+=0.4
+        offset += 0.1
+    else:
+        sameAlg = True
     
     col = int(r.colour) if r.colour != -1 else int(markers[i%len(markers)])
     style = r.style if r.colour != -1 else int(markers[i%len(markers)])
     linestyle = r.linestyle if r.colour != -1 else int(markers[i%len(markers)]%10)
 
+
+    legend_first = r.legend
+    legend_last = ''
+    if r.isDNN:
+        # first half
+        if smaller:
+            dy_dnn = 0.05
+            #nplot+=0.2
+        idx = r.legend.find(', u=')
+        if idx != -1:
+            legend_first = r.legend[:idx+1]
+            legend_last = r.legend[idx+1:]
+
+    elif r.isBDT:
+        # first half
+        idx = r.legend.find(')')
+        if smaller:
+            dy_dnn = 0.05
+        #nplot+=0.1
+        if idx != -1:
+            legend_first = r.legend[:idx+1]
+            legend_last = r.legend[idx+1:]
+
+        
     r.roc.SetMinimum(minrej*0.98)
     r.roc.SetMarkerColor(col)
     r.roc.SetLineColor(col)
@@ -333,7 +389,12 @@ for i, r in enumerate(roc_entry):
         r.roc.GetXaxis().SetRangeUser(0.,0.75)
         r.roc.Draw('same')
     #legend.AddEntry(r.roc, r.legend)
-    atlas.myLineText(0.76, 0.8-nplot*dy, 0.05, col, linestyle, 0.03, r.legend)
+    if r.isBDT or r.isDNN:
+        atlas.myLineText(0.76, ystart-nplot*dy_dnn, 0.05, col, linestyle, 0.025, legend_first)
+        atlas.myText(0.78, ystart-nplot*dy_dnn-0.033, 1, 0.025, legend_last)
+    else:
+        atlas.myLineText(0.76, ystart-nplot*dy_dnn, 0.05, col, linestyle, 0.025, r.legend)
+
     # draw the power curves
     if r.power_curve is None:
         pass
@@ -350,11 +411,15 @@ for i, r in enumerate(roc_entry):
         r.power_curve.Draw()
     else:
         r.power_curve.Draw('same')
-    
-    atlas.myLineText(0.76, 0.8-nplot*dy, 0.05, col, linestyle, 0.03, r.legend)
-    #if prev_alg != r.algorithm:
-    unique_algs[r.algorithm] = [max(0.8-nplot*dy,unique_algs[r.algorithm][0]), min(0.8-nplot*dy,unique_algs[r.algorithm][1])]
+    # dnn label must go over two lines...
+    if r.isBDT or r.isDNN:
+        atlas.myLineText(0.76, ystart-nplot*dy_dnn, 0.05, col, linestyle, 0.025, legend_first)
+        atlas.myText(0.78, ystart-nplot*dy_dnn-0.033, 1, 0.025, legend_last)
+    else:
+        atlas.myLineText(0.76, ystart-nplot*dy_dnn, 0.05, col, linestyle, 0.025, r.legend)
+
     #print 0.8-nplot*dy
+    unique_algs[r.algorithm] = [max(ystart-nplot*dy_dnn,unique_algs[r.algorithm][0]), min(ystart-nplot*dy_dnn,unique_algs[r.algorithm][1])]
     #startpos = 0.8-nplot*dy# no this is not right
     #legend_power.AddEntry(r.power_curve, r.legend)
     prev_algorithm = copy.deepcopy(curr_algorithm)
@@ -391,10 +456,11 @@ for canvas in [tc_power, tc]:
 output_file = args.outputfile
 output_file = output_file.replace('.root','')
 
-inlayx1=[0.43,0.2]
-inlayy1=[0.51,0.2]
-inlayx2=[0.67,0.43]
-inlayy2=[0.91,0.61]
+# entry 0: for power, 1 for power with mva, 2 for roc
+inlayx1=[0.43,0.16,0.2]
+inlayy1=[0.51,0.18,0.2]
+inlayx2=[0.67,0.38,0.43]
+inlayy2=[0.91,0.51,0.61]
 inlayx1roc=0.23
 inlayy1roc=0.11
 inlayx2roc=0.47
@@ -402,10 +468,12 @@ inlayy2roc=0.51
 def drawInlay(power=False):
     global tc_power, tc, roc_entry, output_file
     idx = 0 # this is power, 1 is roc!
+    if isMVA:
+        idx = 1
     if power:
         tc_power.cd()
     else:
-        idx = 1
+        idx = 2
         tc.cd()
     pinlay = rt.TPad("p","p",inlayx1[idx],inlayy1[idx],inlayx2[idx],inlayy2[idx]); # the inlay is in the wrong place and has the wrong limits when looking at ROC!
     pinlay.SetLeftMargin(0.13);
@@ -424,8 +492,8 @@ def drawInlay(power=False):
         grefinlay.SetMaximum(maxy2)
         grefinlay.GetXaxis().SetRangeUser(minx2,maxx2)
     else:
-        grefinlay.SetMinimum(0.94)
-        grefinlay.SetMaximum(0.99)
+        grefinlay.SetMinimum(0.95)
+        grefinlay.SetMaximum(1.0)
         grefinlay.GetXaxis().SetRangeUser(0.4,0.6)
     grefinlay.Draw("AC");
     for r in roc_entry:

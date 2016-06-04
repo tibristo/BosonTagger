@@ -22,7 +22,8 @@ ev_table += ' & '.join(f_list[0].split()).strip().replace('_',' ') + ' \\\\ \n\\
 
 pos = 1
 while f_list[pos] != '\n':
-    spl = f_list[pos].strip().split() 
+    spl = f_list[pos].strip().split()
+    print spl
     ev_table += (' '.join(spl[:-3])).replace('_',' ') + ' & '
     ev_table += (' & '.join([spl[-3] ,spl[-2], spl[-1]])).replace('_', ' ') + ' \\\\ \n\\hline \n'
     pos+=1
