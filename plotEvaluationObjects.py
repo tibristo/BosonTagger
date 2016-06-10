@@ -259,7 +259,7 @@ def getDataFrame(recreate_csv=False, keys=['features_l_2_10_v6'], file_id = 'val
     else:
         files = [f for f in os.listdir('evaluationObjects/') if matchAll(f,keys) and f.endswith(compress_id) and f.find('full') == -1]
     print 'total number of objects: ' + str(len(files))
-
+    #print files
     # check that the file exists if we have decided not to recreate the csv file
     if not recreate_csv:
         filefound = False
@@ -448,7 +448,7 @@ def main(args):
     if args.evaluate:
 
                     
-        jobids = [f for f in os.listdir('evaluationObjects/') if matchAll(f,ksplit) and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+        jobids = [f for f in os.listdir('evaluationObjects/') if matchAll(f,ksplit) and f.find('_full.pickle')==-1]# and f.endswith('full.'+compress_id)]
         print 'total number of objects: ' + str(len(jobids))
         total = len(jobids)
 

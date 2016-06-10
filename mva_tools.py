@@ -134,7 +134,7 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
     # to finish my thesis, so whatever.  The algorithm name should have the pt range in it in gev
     # At this point things are narrowed down to the point where we are only considering two
     # pt ranges: 400-1600 GeV or 800-1200 GeV, so just look for those.
-    ptrange = ''
+    ptrange = '400<p_{T}^{Truth}<1200 GeV'
     if key.find('400_1600') != -1:
         ptrange = '400<p_{T}^{Truth}<1600 GeV'
     elif key.find('800_1200') != -1:
@@ -181,7 +181,7 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
         p.SetTextColor(ROOT.kBlack);
         p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
     # check that the matrix folder exists, if not, create it
-    tc.SaveAs("corr_matrices/corr_matrix_"+file_id+".pdf")
+    tc.SaveAs("corr_matrices/corr_matrix_"+file_id+'_'+sampletype+".pdf")
 
 
 
@@ -530,9 +530,13 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     validation_score = model.score(X_validation, y_validation, sample_weight=w_test)
     prob_predict_valid = model.predict_proba(X_validation)[:,1]
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid, sample_weight=w_test)
-    
 
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=model.decision_function(X_train), decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    try:
+        df = model.decision_function(X_train)
+    except AttributeError:
+        df = []
+        
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=df, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx, w_validation)
     # set all of the scores
     y_val_pred = model.predict(X_validation)
@@ -583,7 +587,11 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
         print 'could not locate the full dataset'
         return roc_bkg_rej
     print m.taggers
-    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+    try:
+        df = model.decision_function(X_train)
+    except AttributeError:
+        df = []
+    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', df, sig_tr_idx, bkg_tr_idx, bkg_rej_train)
         
     return roc_bkg_rej#bkgrej#validation_score
 
@@ -666,8 +674,9 @@ def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_data
             ('learning_rate', [0.3])
             ])
     if rfc:
-        model = RandomForestClassifier(n_estimators=10000,random_state=0,n_jobs=-1)
-        params = []
+        model = RandomForestClassifier(n_estimators=500,random_state=0,n_jobs=8)
+        params = OrderedDict([('n_estimators',[500])])
+        label += 'RFC'
     
     from sklearn.grid_search import ParameterGrid
     all_parameters = list(ParameterGrid(params))
@@ -783,7 +792,7 @@ def main(args):
 
     #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
-    '''
+    
     base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     
     params = OrderedDict([
@@ -791,7 +800,7 @@ def main(args):
         ('n_estimators', np.linspace(20, 80, 5, dtype=np.int)),
         ('learning_rate', np.linspace(0.1, 0.3, 3))
     ])
-    '''
+    
     # best performing parameteres for jz5_v2 WITHOUT weighting the validation samples
     '''
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.3]},
@@ -799,7 +808,7 @@ def main(args):
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.1]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
-    '''
+    
     # best performing parameteres for jz5_v2 WITH weighting the validation samples
 
     params = [{'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.3]},
@@ -807,7 +816,7 @@ def main(args):
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.1]}]
-
+    '''
     #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
     #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
     #            min_samples_split=2, min_weight_fraction_leaf=0.0,
@@ -840,7 +849,7 @@ def main(args):
         # trainvars for mc15_jz5_v2
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
         # now adding nTracks!
-        trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']#, 'nTracks']
+        trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Aplanarity']#, 'nTracks']
         # seeing if removing sphericity and aplanarity will help.  Looking at the distributions there is probably too much overlap.
         # the peaks overlap, but bkg has a long tail.
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow', 'Sphericity', 'nTracks']
