@@ -18,7 +18,7 @@ import math
 import argparse
 
 # some common variables and their latex format
-label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$",'EEC_D2_2':r"$D^{(\beta=2)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$", 'PlanarFlow':r"\textit{P}", 'ThrustMin':r"$T_{min}$",'Sphericity':r"$\textit{S}$",'Tau21':r"$\tau_{21}$",'ThrustMaj':r"$T_{maj}$",'Dip12':r"$D_{12}$",'TauWTA2TauWTA1':r"$\tau^{WTA}_{21}$",'YFilt':r"$YFilt$",'Mu12':r"$\mu_{12}$",'ZCUT12':r"$\sqrt{z_{12}}$",'Tau2':r"$\tau_2$",'nTracks':r"$nTrk$"}
+label_dict = {'TauWTA2':r"$\tau^{WTA}_{2}$",'EEC_C2_1':r"$C^{(\beta=1)}_{2}$",'EEC_C2_2':r"$C^{(\beta=2)}_{2}$",'EEC_D2_1':r"$D^{(\beta=1)}_{2}$",'EEC_D2_2':r"$D^{(\beta=2)}_{2}$", 'SPLIT12':r"$\sqrt{d_{12}}$",'Aplanarity':r"$\textit{A}$", 'PlanarFlow':r"\textit{P}", 'ThrustMin':r"$T_{min}$",'Sphericity':r"$\textit{S}$",'Tau21':r"$\tau_{21}$",'ThrustMaj':r"$T_{maj}$",'Dip12':r"$D_{12}$",'TauWTA2TauWTA1':r"$\tau^{WTA}_{21}$",'YFilt':r"$YFilt$",'Mu12':r"$\mu_{12}$",'ZCUT12':r"$\sqrt{z_{12}}$",'Tau2':r"$\tau_2$",'nTracks':r"$nTrk$" ,'label':'ID'}
 
    
 
@@ -199,6 +199,7 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', samplet
     import matplotlib.pylab as plt
     plt.rc('text',usetex=True)
     from sklearn.externals import joblib
+    import numpy.lib.recfunctions as nf
     import numpy as np
 
     # create an output folder for the correlation matrices
@@ -206,22 +207,45 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', samplet
         os.makedirs('corr_matrices')
 
     # load the cross validation folds
+    taggers.append('label')
     for cv in cv_split_filenames:
         X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
             'persist/'+cv, mmap_mode='c')
         # the number of cols gives us the number of variables and size of the matrix
         matrix_size = len(taggers)
+        # I also want to see the correlation with the class label...  Need to add an extra column for this.
+        #X_train_app = nf.append_fields(X_train, names=['label'], data = [y_train], usemask=False)
+        tmp_train = np.zeros((X_train.shape[0], X_train.shape[1]+1))
+        tmp_train[:,:-1] = X_train
+        tmp_train[:,X_train.shape[1]] = y_train
+
+        tmp_valid = np.zeros((X_validation.shape[0], X_validation.shape[1]+1))
+        tmp_valid[:,:-1] = X_validation
+        tmp_valid[:,X_validation.shape[1]] = y_validation
+        #print tmp.shape
+        #np.append(X_train, y_train.transpose(), axis =1)
+        #print type(X_train_app['f0'])
+        #
+        #print X_train_app['f0'].dtype.names
+        #X_validation_app = nf.append_fields(X_validation, names=['label'], data = [y_validation], usemask=False)
+        #np.append(X_validation, y_validation, axis =1)
         # get the covariance matrix for training data
-        corr_train = np.corrcoef(X_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the corr method
+        print cv
+        
+        corr_train = np.corrcoef(tmp_train, rowvar=0) #rowvar transposes the matrix to get rows, cols to be cols, rows to work with the corr method
         drawMatrix(key, corr_train, "Correlation Matrix for training data cv split "+str(cv), taggers, matrix_size, file_id='train_'+str(cv)+key, sampletype = sampletype)
-        corr_valid = np.corrcoef(X_validation, rowvar=0)
+        corr_valid = np.corrcoef(tmp_valid, rowvar=0)
         drawMatrix(key, corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key, sampletype = sampletype)
         
     # load the full dataset
+    '''
     X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
-    corr_full = np.corrcoef(X, rowvar=0)
+    X_full_app = nf.append_fields(X, names=['label'], data = [y], usemask=False)
+    corr_full = np.corrcoef(X_full_app, rowvar=0)
+    matrix_size = len(taggers)
+    print taggers
     drawMatrix(key, corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full", sampletype =sampletype)
-    
+    '''
     # get the covariance matrix for the 
 
 
@@ -394,7 +418,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.close(fig)
 
 
-def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train):
+def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train, df_weights=None):
     import os
     from sklearn.externals import joblib
     import numpy as np
@@ -424,6 +448,10 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
     m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, model_eval_obj.params, job_id, model_eval_obj.taggers, model_eval_obj.Algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=df_train, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
+
+    if df_weights is not None:
+        m_full.setDFWeights(df_weights)
+    
     # get the indices in the full sample
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
@@ -647,7 +675,7 @@ def cross_validation(data, model, params, iterations, variables, ovwrite=True, o
     # find the efficiency for both signal and bkg
     signal_eff = data.loc[data['label']==1]['eff'].values[0]
     bkg_eff = data.loc[data['label']==0]['eff'].values[0]
-
+    print variables
     # create the cross validation splits and write them to disk
     filenames = persist_cv_splits(X, y, w, variables, n_cv_iter=iterations, name='data', suffix="_"+suffix_tag+"_%03d.pkl", test_size=0.25, scale=scale,random_state=None, overwrite=ovwrite, overwrite_full=ovwrite_full, signal_eff=signal_eff, bkg_eff=bkg_eff, onlyFull=onlyFull)
 
@@ -782,7 +810,7 @@ def main(args):
     parser.set_defaults(weighted=True)
     parser.set_defaults(plotCV=False)
     parser.set_defaults(onlyFull=False)
-    parser.set_defaults(plotCorrMatrix=True)
+    parser.set_defaults(plotCorrMatrix=False)
     parser.set_defaults(allVars = False)
     parser.set_defaults(createFoldsOnly=False)
     parser.set_defaults(rfc=False)
@@ -872,10 +900,6 @@ def main(args):
     weight_flag = '_weighted' if weight_plots else ''
     
     
-    if False:#plotCorrMatrix:
-        filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
-        plotCorrelation(filenames, full_dataset, trainvars, key=args.key)
-
     # perhaps this part should be moved so that it can be run at the same time as the other stuff? in a single call...
     if args.plotCV:
         filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
@@ -908,9 +932,17 @@ def main(args):
     data = pd.read_csv('csv/'+args.algorithm+'_'+sampletype+'.csv')
 
     if args.plotCorrMatrix:
-        X = data[allvars].values
+        filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
+        plotCorrelation(filenames, full_dataset, allvars, key=args.key)
+        # full
+        if 'label' in allvars:
+            tags = allvars
+        else:
+            tags = allvars+['label']
+        X = data[tags].values
+        #_app = data
         corr_matrix = np.corrcoef(X, rowvar=0)
-        drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", allvars, len(allvars), file_id= args.fileid, sampletype = sampletype)#"full_allvars_mc15")
+        drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", tags, len(tags), file_id= args.fileid, sampletype = sampletype)#"full_allvars_mc15")
 
     # just create the folds
 

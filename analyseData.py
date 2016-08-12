@@ -14,120 +14,8 @@ import pickle
 import root_numpy as rn
 import ROOT as rt
 
-'''
-def rootAnalyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_files):
-        # second option would be run through data, filling in the stuff as we go.  Doesn't require
-    # data to be read in as df or recarray, but it's probably way slower.
-    for data_file in data_files:
-        tfile = rt.TFile(data_file)
-        tree = tfile.Get('dibjet')
 
-        tfile_out = rt.TFile(data_file.replace('.root', 'scored_v2.root'), 'recreate')
-        tree_out = tree.CloneTree(1)
-        
-        entries = tree.GetEntries()
-
-        # create branches for all of the variables, just do it by hand because blahhhhh
-        jetTrim1_bdt = np.zeros(1,dtype=float)
-        jetTrim2_bdt = np.zeros(1,dtype=float)
-        jetTrim1_dnn = np.zeros(1,dtype=float)
-        jetTrim2_dnn = np.zeros(1,dtype=float)
-        
-        #tree_out.Branch('jetTrim1_bdt', jetTrim1_bdt, 'jetTrim1_bdt/D')
-        #tree_out.Branch('jetTrim2_bdt', jetTrim2_bdt, 'jetTrim2_bdt/D')
-        #tree_out.Branch('jetTrim1_dnn', jetTrim1_dnn, 'jetTrim1_dnn/D')
-        #tree_out.Branch('jetTrim2_dnn', jetTrim2_dnn, 'jetTrim2_dnn/D')
-        
-
-        tree_out.Branch('jetTrim1_bdt_nontrk', jetTrim1_bdt, 'jetTrim1_bdt_nontrk/D')
-        tree_out.Branch('jetTrim2_bdt_nontrk', jetTrim2_bdt, 'jetTrim2_bdt_nontrk/D')
-        tree_out.Branch('jetTrim1_dnn_nontrk', jetTrim1_dnn, 'jetTrim1_dnn_nontrk/D')
-        tree_out.Branch('jetTrim2_dnn_nontrk', jetTrim2_dnn, 'jetTrim2_dnn_nontrk/D')
-        
-        bdt_idx = {'EEC_C2_1':0,'SPLIT12':1,'EEC_D2_1':2,'TauWTA2TauWTA1':3,'PlanarFlow':4,'Sphericity':5, 'Aplanarity':6}#, 'nTracks':7}
-        bdt_predict_arr = np.zeros(7,dtype=float)# 8 when using nTracks!
-        #bdt_predict_arr = np.recarray((1,), dtype=[('EEC_C2_1',float),('SPLIT12', float),('EEC_D2_1',float), ('TauWTA2TauWTA1', float), ('PlanarFlow', float), ('Sphericity', float), ('Aplanarity', float), ('nTracks', int)])
-        bdt_predict_arr_2 = np.zeros(7,dtype=float)# 8 when using nTracks!
-
-        dnn_predict_arr = np.recarray((1,), dtype=[('eec_c2_1',float),('eec_d2_1',float),('aplanarity',float),('split12',float), ('tauwta2tauwta1',float), ('planarflow',float), ('sphericity',float), ('ntracks',int)])
-        dnn_predict_arr_2 = np.recarray((1,), dtype=[('eec_c2_1',float),('eec_d2_1',float),('aplanarity',float),('split12',float), ('tauwta2tauwta1',float), ('planarflow',float), ('sphericity',float), ('ntracks',int)])
-
-        for e in range(entries):
-            tree.GetEntry(e)
-
-            if e%1000 == 0:
-                print e
-            # score for bdt/ dnn
-            # have to stick the
-            #for b in bdt_vars:
-            bdt_predict_arr[bdt_idx['EEC_C2_1']] = tree.jetTrim1_c2beta1
-            bdt_predict_arr[bdt_idx['EEC_D2_1']] = tree.jetTrim1_d2beta1
-            bdt_predict_arr[bdt_idx['Aplanarity']] = tree.jetTrim1_aplanarity
-            bdt_predict_arr[bdt_idx['SPLIT12']] = tree.jetTrim1_groosplit12/1000
-            bdt_predict_arr[bdt_idx['TauWTA2TauWTA1']] = tree.jetTrim1_grootau21
-            bdt_predict_arr[bdt_idx['PlanarFlow']] = tree.jetTrim1_planarflow
-            bdt_predict_arr[bdt_idx['Sphericity']] = tree.jetTrim1_sphericity
-            bdt_predict_arr[bdt_idx['nTracks']] = tree.jetTrim1_ungrngtrk
-            
-            bdt_predict_arr_2[bdt_idx['EEC_C2_1']] = tree.jetTrim2_c2beta1
-            bdt_predict_arr_2[bdt_idx['EEC_D2_1']] = tree.jetTrim2_d2beta1
-            bdt_predict_arr_2[bdt_idx['Aplanarity']] = tree.jetTrim2_aplanarity
-            bdt_predict_arr_2[bdt_idx['SPLIT12']] = tree.jetTrim2_groosplit12/1000
-            bdt_predict_arr_2[bdt_idx['TauWTA2TauWTA1']] = tree.jetTrim2_grootau21
-            bdt_predict_arr_2[bdt_idx['PlanarFlow']] = tree.jetTrim2_planarflow
-            bdt_predict_arr_2[bdt_idx['Sphericity']] = tree.jetTrim2_sphericity
-            bdt_predict_arr_2[bdt_idx['nTracks']] = tree.jetTrim2_ungrngtrk
-            if np.any(np.isnan(bdt_predict_arr)) or not np.all(np.isfinite(bdt_predict_arr_2)):
-                jetTrim1_bdt[0] = 0
-                jetTrim1_dnn[0] = 0
-                jetTrim2_bdt[0] = 0
-                jetTrim2_dnn[0] = 0
-                tree_out.Fill()
-                continue
-            
-            j1_bdt_pred = bdt_model.predict_proba(bdt_predict_arr)[:,1]
-            j2_bdt_pred = bdt_model.predict_proba(bdt_predict_arr_2)[:,1]
-            jetTrim1_bdt[0] = j1_bdt_pred[0]
-            jetTrim2_bdt[0] = j2_bdt_pred[0]
-
-            means = {}
-            std = {}
-            for i, v in enumerate(dnn_scaler.variables):
-                means[v] = dnn_scaler.means[i]
-                std[v] = dnn_scaler.std[i]
-                
-            dnn_predict_arr['eec_c2_1'][0] = (tree.jetTrim1_c2beta1 - means['eec_c2_1']) / std['eec_c2_1']
-            dnn_predict_arr['eec_d2_1'][0] = (tree.jetTrim1_d2beta1 - means['eec_d2_1']) / std['eec_d2_1']
-            dnn_predict_arr['aplanarity'][0] = (tree.jetTrim1_aplanarity - means['aplanarity'])/ std['aplanarity']
-            dnn_predict_arr['split12'][0] = (tree.jetTrim1_groosplit12/1000 - means['split12']) / std['split12']
-            dnn_predict_arr['tauwta2tauwta1'][0] = (tree.jetTrim1_grootau21 - means['tauwta2tauwta1']) / std['tauwta2tauwta1']
-            dnn_predict_arr['planarflow'][0] = (tree.jetTrim1_planarflow - means['planarflow']) / std['planarflow']
-            dnn_predict_arr['sphericity'][0] = (tree.jetTrim1_sphericity - means['sphericity']) / std['sphericity']
-            dnn_predict_arr['ntracks'][0] = tree.jetTrim1_ungrngtrk
-
-            dnn_predict_arr_2['eec_c2_1'][0] = (tree.jetTrim2_c2beta1 - means['eec_c2_1']) / std['eec_c2_1']
-            dnn_predict_arr_2['eec_d2_1'][0] = (tree.jetTrim2_d2beta1 - means['eec_d2_1']) / std['eec_d2_1']
-            dnn_predict_arr_2['aplanarity'][0] = (tree.jetTrim2_aplanarity - means['aplanarity'])/ std['aplanarity']
-            dnn_predict_arr_2['split12'][0] = (tree.jetTrim2_groosplit12/1000 - means['split12']) / std['split12']
-            dnn_predict_arr_2['tauwta2tauwta1'][0] = (tree.jetTrim2_grootau21 - means['tauwta2tauwta1']) / std['tauwta2tauwta1']
-            dnn_predict_arr_2['planarflow'][0] = (tree.jetTrim2_planarflow - means['planarflow']) / std['planarflow']
-            dnn_predict_arr_2['sphericity'][0] = (tree.jetTrim2_sphericity - means['sphericity']) / std['sphericity']
-            dnn_predict_arr_2['ntracks'][0] = tree.jetTrim2_ungrngtrk
-            
-            j1_dnn_pred = dnn_model.predict(dnn_predict_arr)[0]
-            #print j1_dnn_pred[0][0]
-            j2_dnn_pred = dnn_model.predict(dnn_predict_arr_2)[0]
-            jetTrim1_dnn[0] = j1_dnn_pred[0][0]
-            jetTrim2_dnn[0] = j2_dnn_pred[0][0]
-
-            tree_out.Fill()
-        tfile_out.Write()
-        tfile_out.Close()
-'''
-
-
-
-def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_files):
+def analyse(bdt_models, bdt_taggers, dnn_models, dnn_taggers, dnn_scaler, data_files):
     # using bdt_model
     # bdt_model.predict_proba(data)
 
@@ -232,10 +120,20 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         bdt_data_arr = bdt_data.view(np.float32).reshape(bdt_data.shape + (-1,))
         bdt_data_arr_2 = bdt_data_2.view(np.float32).reshape(bdt_data_2.shape + (-1,))
 
-        bdt_proba = bdt_model.predict_proba(bdt_data_arr)[:,1]
-        bdt_proba_2 = bdt_model.predict_proba(bdt_data_arr_2)[:,1]
-        # scale data
-
+        bdt_proba = None
+        bdt_proba_2 = None
+        for m in bdt_models:
+            if bdt_proba is not None:
+                bdt_proba += m.predict_proba(bdt_data_arr)[:,1]
+                bdt_proba_2 += m.predict_proba(bdt_data_arr_2)[:,1]
+            else:
+                bdt_proba = m.predict_proba(bdt_data_arr)[:,1]
+                bdt_proba_2 = m.predict_proba(bdt_data_arr_2)[:,1]
+            # scale data
+        bdt_proba/=float(len(bdt_models))
+        bdt_proba_2/=float(len(bdt_models))
+        
+        
         for i, v in enumerate(dnn_scaler.variables):
             # reverse lookup for v
             #print v
@@ -257,11 +155,25 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         dnn_data_2.dtype.names = [dnn_ivd[d] for d in dnn_data_2.dtype.names]
             
         # do we have to rename the data fields to get this to work?
-        dnn_predictions = dnn_model.predict(dnn_data)[0]
-        dnn_predictions.dtype.names = ['jetTrim1_dnn']
-        dnn_predictions_2 = dnn_model.predict(dnn_data_2)[0]
-        dnn_predictions_2.dtype.names = ['jetTrim2_dnn']
+        dnn_predictions = None
+        for m in dnn_models:
+            if dnn_predictions is not None:
+                dnn_predict1 = m.predict(dnn_data)[0]
+                dnn_predict1.dtype.names = ['jetTrim1_dnn']
+                dnn_predict2 = m.predict(dnn_data_2)[0]
+                dnn_predict2.dtype.names = ['jetTrim2_dnn']
+                for n in xrange(len(dnn_predict1['jetTrim1_dnn'])):
+                    dnn_predictions['jetTrim1_dnn'][n] += dnn_predict1['jetTrim1_dnn'][n]
+                    dnn_predictions_2['jetTrim2_dnn'][n] += dnn_predict2['jetTrim2_dnn'][n]
+            else:
+                dnn_predictions = m.predict(dnn_data)[0]
+                dnn_predictions.dtype.names = ['jetTrim1_dnn']
+                dnn_predictions_2 = m.predict(dnn_data_2)[0]
+                dnn_predictions_2.dtype.names = ['jetTrim2_dnn']
 
+        for n in xrange(len(dnn_predictions['jetTrim1_dnn'])):
+            dnn_predictions['jetTrim1_dnn'][n] /= float(len(dnn_models))
+            dnn_predictions_2['jetTrim2_dnn'][n] /= float(len(dnn_models))
         # set all of the nan index ones to zero
         for n in np.unique(np.concatenate((no_values, nan_idx))):#nan_idx:
             dnn_predictions['jetTrim1_dnn'][n] = 0
@@ -276,7 +188,7 @@ def analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, data_fil
         # now add them to the data file and write it out
         #data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
         data_scored = nf.append_fields(data_arr, names=['jetTrim1_bdt','jetTrim2_bdt','jetTrim1_dnn','jetTrim2_dnn'], data=[bdt_proba, bdt_proba_2, dnn_predictions, dnn_predictions_2], usemask = False)
-        rn.array2root(data_scored, data_file.replace('.root','_scored_nonTrk.root'),'dibjet','recreate')
+        rn.array2root(data_scored, data_file.replace('.root','_scored_nonTrk_avg_vTest.root'),'dibjet','recreate')
             
             
 
@@ -290,7 +202,55 @@ def main(args):
 
     args = parser.parse_args()
     
+    bdtFile =  open(args.bdt_file,'r')
+    bdt_models = []
+    bdt_taggers = None        
     # get the bdt model
+    for l in bdtFile.readlines():
+        with bz2.BZ2File(l.strip(),'r') as p:
+            modelObject = pickle.load(p)
+        bdt_models.append(modelObject.model)
+        # get the variables we use for classification
+        bdt_taggers = modelObject.taggers
+    print bdt_taggers
+    bdtFile.close()
+    # load the dnn schema
+    
+    dnnFile = open(args.dnn_file,'r')
+    dnn_taggers = None
+    dnn_models = []
+    dnn_scalers = []
+    for l in dnnFile.readlines():
+        dnn_file_obj = open(l.strip(),'r')
+        schema = yaml.load(dnn_file_obj)
+        dnn_model = apy.NeuralNet()
+        print schema
+        print type(schema)
+        #for dnn_tagger_file, specifications in schema['taggers'].iteritems():
+        if len(schema['taggers'].keys()) == 0:
+            print 'no taggers specified in the input schema! Check input dnn-file'
+            return
+        dnn_tagger_file=schema['taggers'].keys()[0]
+        print dnn_tagger_file
+        dnn_model.load(dnn_tagger_file)
+        dnn_models.append(dnn_model)
+        print 'read'
+        #break
+        # now we can use dnn_tagger.predict(data)[0]    
+        dnn_taggers = dnn_model.inputs
+        # load scaler
+    print args.dnn_scaler
+    with open(args.dnn_scaler, 'r') as p:
+        dnn_scaler = pickle.load(p)
+    #dnn_scalers.append(dnn_scaler_tmp)
+    with open(args.data_input_file, 'r') as f:
+        input_file_list = f.read().splitlines()
+
+    dnnFile.close()
+    analyse(bdt_models, bdt_taggers, dnn_models, dnn_taggers, dnn_scaler, input_file_list)
+    
+    # get the bdt model
+    '''
     with bz2.BZ2File(args.bdt_file,'r') as p:
         modelObject = pickle.load(p)
     bdt_model = modelObject.model
@@ -321,6 +281,7 @@ def main(args):
     with open(args.data_input_file, 'r') as f:
         input_file_list = f.read().splitlines()
     analyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, input_file_list)
+    '''
     #rootAnalyse(bdt_model, bdt_taggers, dnn_model, dnn_taggers, dnn_scaler, input_file_list)
 
 if __name__ == '__main__':

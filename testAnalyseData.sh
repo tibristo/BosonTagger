@@ -1,4 +1,19 @@
-python analyseData.py --dnn-file=../boosted_framework/WTaggingNN/trained_full/config-trained-paramID_20mc15_nonTrk_v3_bkg_v1ID_0.yaml --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_000_scaler.pkl --bdt-file=evaluationObjects/paramID_44mc15_nonTrk_v3_4_12ID_0.pbz2 --data-input-file=data_vvjj.txt
+#python analyseData.py --dnn-file=../boosted_framework/WTaggingNN/trained_full/config-trained-paramID_17mc15_nonTrk_v3_bkg_v1ID_1.yaml --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=evaluationObjects/paramID_31mc15_nonTrk_v3_4_12ID_5.pbz2 --data-input-file=qcd_v9.txt
+
+#python analyseData.py --dnn-file=dnnFile.txt --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=bdtFile.txt --data-input-file=qcd_v9.txt
+#python analyseData.py --dnn-file=dnnFile.txt --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=bdtFile.txt --data-input-file=data_v9.txt
+
+python analyseData.py --dnn-file=dnnFile35.txt --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=bdtFile.txt --data-input-file=testsig_v9.txt
+
+
+#python analyseTesting.py --dnn-file=../boosted_framework/WTaggingNN/trained_full/config-trained-paramID_17mc15_nonTrk_v3_bkg_v1ID_1.yaml --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=evaluationObjects/paramID_31mc15_nonTrk_v3_4_12ID_5.pbz2 --data-input-file=aktesting.txt
+#python analyseTesting.py --dnn-file=dnnFile.txt --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_001_scaler.pkl --bdt-file=bdtFile.txt --data-input-file=aktesting.txt
+
+
+#data_v9.txt
+
+
+#python analyseData.py --dnn-file=../boosted_framework/WTaggingNN/trained_full/config-trained-paramID_12mc15_nonTrk_v3_bkg_v1ID_0.yaml --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nonTrk_v3_400_1200_mw_mergedscaletrain_cv_000_scaler.pkl --bdt-file=evaluationObjects/paramID_31mc15_nonTrk_v3_4_12ID_1.pbz2 --data-input-file=data_vvjj.txt
 
 
 #python analyseData.py --dnn-file=../boosted_framework/WTaggingNN/trained_full/config-trained-paramID_2mc15_nTrk_v3_bkg_v1ID_2.yaml --dnn-scaler=/Disk/ds-sopa-group/PPE/atlas/users/tibristo/boosted_framework/WTaggingNN/folds/AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_nTrk_v3_400_1200_mw_mergedscaletrain_cv_002_scaler.pkl --bdt-file=evaluationObjects/paramID_0mc15_nTrk_v1_bkg_v4ID_2.pbz2 --data-input-file=data_vvjj.txt

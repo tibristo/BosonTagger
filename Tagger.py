@@ -280,9 +280,9 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             varexp = branchname + '>>' + histname
             # apply the selection to the tree and store the output in the histogram
             if branchname.find('_m')==-1:
-                trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight+'*(nTracks<'+nTracks+')')
+                trees[datatype].Draw(varexp,cutstring_mass+cutstringandweight)#+'*(nTracks<'+nTracks+')')
             else:
-                trees[datatype].Draw(varexp,cutstring+cutstringandweight+'*(nTracks<'+nTracks+')')
+                trees[datatype].Draw(varexp,cutstring+cutstringandweight)#+'*(nTracks<'+nTracks+')')
 
             # if the histogram is not empty then normalise it
             
@@ -339,7 +339,7 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             # need to store the variable in this histogram
             varexpfull = branchname + ' >>' + histname+'_full'
 
-            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)"+'*(nTracks<'+nTracks+')')
+            trees[datatype].Draw(varexpfull,cutstring+cutstringandweight+"*(jet_" +Algorithm + "_m < 1200*1000)" + " * (jet_" +Algorithm + "_m > 0)")#+'*(nTracks<'+nTracks+')')
             histInt = hist_full.Integral()
             # now scale
             if histInt != 0.0:
@@ -353,12 +353,12 @@ def analyse(Algorithm, plotbranches, plotreverselookup, plotconfig, trees, cutst
             #save this histogram to the no mass window histo dictionary
             hist_nomw[histname+'_full'] = hist_full.Clone()
 
-            if datatype == 'sig':
+            if False:#datatype == 'sig':
                 if full_int !=0:
                     signal_eff = float(mw_int/full_int)
                 else:
                     signal_eff = 0.0
-            else:
+            if False:#else:
                 if full_int != 0:
                     bkg_eff = float(mw_int/full_int)
                 else:
@@ -762,7 +762,7 @@ def main(args):
     massWindowCut = False
     if args.massWindowCut.lower() == 'true':
         massWindowCut = True
-
+    #ptreweight = False
     # output path for storing individual variable plots - there are a lot of these so it is 
     # useful to be able to store these in a separate folder
     varpath += fileid +'/'

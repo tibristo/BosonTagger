@@ -38,6 +38,9 @@ class modelEvaluation:
     def setOutputPrefix(self, prefix):
         self.output_prefix = prefix
 
+    def setDFWeights(self, df_weights):
+        self.df_weights = df_weights
+        
     def rejFromTPR(self):
         # this is here to calculate the 50% eff from the fpr and tpr
         # find 0.5 tpr
@@ -120,13 +123,14 @@ class modelEvaluation:
 
         bins = 100
         # when creating the plots do it over the range of all probas (scores)
-        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
+        discriminant_bins = np.linspace(0,1,bins)#np.min(discriminant), np.max(discriminant), bins)
 
         hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
 
         # fill the signal and background histograms
         if weights is not None:
+            print 'weights is not none******************'
             fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
             fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
         else:
@@ -343,8 +347,12 @@ class modelEvaluation:
         df_sig = TH1F("Signal Decision Function", "Score", 100, -1.0, 1.0)
         df_bkg = TH1F("Background Decision Function", "Score", 100, -1.0, 1.0)
         # fill the histograms with the df
-        fill_hist(df_sig,self.decision_function[self.df_sig_idx])
-        fill_hist(df_bkg,self.decision_function[self.df_bkg_idx])
+        if self.df_weights is not None:
+            fill_hist(df_sig,self.decision_function[self.df_sig_idx],self.df_weights[self.df_sig_idx])
+            fill_hist(df_bkg,self.decision_function[self.df_bkg_idx],self.df_weights[self.df_bkg_idx])
+        else:
+            fill_hist(df_sig,self.decision_function[self.df_sig_idx])
+            fill_hist(df_bkg,self.decision_function[self.df_bkg_idx])
         # normalise
         if df_sig.Integral() != 0:
             df_sig.Scale(1./df_sig.Integral())
