@@ -120,7 +120,7 @@ class modelEvaluation:
 
         bins = 100
         # when creating the plots do it over the range of all probas (scores)
-        discriminant_bins = np.linspace(np.min(discriminant), np.max(discriminant), bins)
+        discriminant_bins = np.linspace(0,1,bins)
 
         hist_bkg = TH1F("Background Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))
         hist_sig = TH1F("Signal Discriminant","Discriminant",bins, np.min(discriminant), np.max(discriminant))

@@ -199,7 +199,7 @@ isMVA = False
 logy=1
 
 ylabel_power="1/#varepsilon ^{G&T}_{QCD Jets}"
-ylabel_roc="#varepsilon ^{G&T}_{QCD Jets}"
+ylabel_roc="1-#varepsilon ^{G&T}_{QCD Jets}"
 xlabel_power="#varepsilon ^{G&T}_{W}"
 
 

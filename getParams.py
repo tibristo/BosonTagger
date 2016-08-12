@@ -22,7 +22,7 @@ def dnn(infile):
         return tmp
     
     with open(infile) as f:
-        top5 = list(islice(f,6))
+        top5 = list(f)#islice(f,6))
     results = {}
     for i, t in enumerate(top5):
         if i == 0:
@@ -55,7 +55,7 @@ def bdt(infile):
 
     
     with open(infile) as f:
-        top5 = list(islice(f,6))
+        top5 = list(f)#islice(f,6))
     results = {}
     for i,t in enumerate(top5):
         if i == 0:

@@ -6,12 +6,10 @@ f_list = list(f)
 
 
 split_table = True
-title = "DNN"
+title = "BDT"
 
 current = ''
-begin_frame = '\\begin{frame}[t]{BDT Cross Validation Sample Statistics} \n'
-if title == 'DNN':
-    begin_frame = begin_frame.replace('BDT','DNN')
+begin_frame = '\\begin{frame}[t]{'+title+' Cross Validation Sample Statistics} \n'
 end_frame = '\\end{frame}\n'
 begin_table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c|c|c|c|c|}\n'#\\hline\n'
 end_table = '\\end{tabular}\n\\caption{Statistics for training variables in the full dataset and the training and validation samples. For the neural network these are standardised such that they have mean of 0 and a standard deviation of 1.}\n\\end{center}\n\\end{table}\n'
@@ -21,7 +19,7 @@ ev_table = '\\begin{table}[h]\n\\small\n\\begin{center}\n\\begin{tabular}{|l|c|c
 ev_table += ' & '.join(f_list[0].split()).strip().replace('_',' ') + ' \\\\ \n\\hline \n'
 
 pos = 1
-while f_list[pos] != '\n':
+while pos < len(f_list) and f_list[pos] != '\n':
     spl = f_list[pos].strip().split()
     print spl
     ev_table += (' '.join(spl[:-3])).replace('_',' ') + ' & '
