@@ -125,10 +125,12 @@ def recreateFull(job_id, full_dataset, suffix = 'v2', transform_valid_weights = 
         return roc_bkg_rej
     
     print file_full
-    sig_tr_idx = model.df_sig_idx
-    bkg_tr_idx = model.df_bkg_idx
+    sig_tr_idx = y_train == 1#model.df_sig_idx
+    bkg_tr_idx = y_train == 0 #model.df_bkg_idx
     bkg_rej_train = model.ROC_rej_power_05_train
-    mva_tools.evaluateFull(model.model, model, file_full, transform_valid_weights, weight_validation, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+    #if model.weights is not None:
+    df_weights = w_train#model.df_weights
+    mva_tools.evaluateFull(model.model, model, file_full, transform_valid_weights, weight_validation, job_id.replace('.pbz2','').replace('.pickle','')+suffix, model.model.decision_function(X_train), sig_tr_idx, bkg_tr_idx, bkg_rej_train, df_weights)
             
 
 def createDataframe(key, files):
@@ -259,7 +261,7 @@ def getDataFrame(recreate_csv=False, keys=['features_l_2_10_v6'], file_id = 'val
     else:
         files = [f for f in os.listdir('evaluationObjects/') if matchAll(f,keys) and f.endswith(compress_id) and f.find('full') == -1]
     print 'total number of objects: ' + str(len(files))
-
+    #print files
     # check that the file exists if we have decided not to recreate the csv file
     if not recreate_csv:
         filefound = False
@@ -430,7 +432,7 @@ def main(args):
     parser.set_defaults(createcsv=False)
     parser.set_defaults(evaluate=False)
     parser.set_defaults(tx_weight_validation=False)
-    parser.set_defaults(weight_validation=False)
+    parser.set_defaults(weight_validation=True)
     parser.set_defaults(fullid='new_eval')
     
     args = parser.parse_args()
@@ -448,7 +450,7 @@ def main(args):
     if args.evaluate:
 
                     
-        jobids = [f for f in os.listdir('evaluationObjects/') if matchAll(f,ksplit) and f.find('_full.pickle')==-1 and f.endswith('full.'+compress_id)]
+        jobids = [f for f in os.listdir('evaluationObjects/') if matchAll(f,ksplit) and f.find('_full.pbz2')==-1]# and f.endswith('full.'+compress_id)]
         print 'total number of objects: ' + str(len(jobids))
         total = len(jobids)
 

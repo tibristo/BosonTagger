@@ -27,6 +27,7 @@ python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_
 
 # run a test to check that it works and that the efficiencies look legit (68% for signal) (note this overwrites the output from the test above, but not the test_features.txt file)
 python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --runTestCase=True --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl
+#python mva_tools.py --algorithm=AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_v1_200_1000_mw --key=mc15_v1_2_10 --runTestCase=True --rfc --fulldataset=persist/data_mc15_nc_v1_2_10_v1_100.pkl
 
 # now run the entire mva
 startcluster8
