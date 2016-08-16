@@ -522,10 +522,6 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     # set up array with the scaling factors
     sig_count = (1/float(np.count_nonzero(sig_tr_idx)))
     bkg_count = (1/float(np.count_nonzero(bkg_tr_idx)))
-    sig_scaling = sig_tr_idx*sig_count
-    bkg_scaling = bkg_tr_idx*bkg_count
-    tot_scaling = sig_scaling+bkg_scaling
-
     #w_train = w_train*tot_scaling
     # the weight transformation was very successful on the dnn, so I'm going to try it here too
     # implementation of the weight transform done on the 6th of Nov 2015.
@@ -624,6 +620,131 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     return roc_bkg_rej#bkgrej#validation_score
 
 
+
+
+def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True):
+    """Function executed by a worker to evaluate a model on a CV split
+
+    Usage:
+    cv_split_filename:
+    model:
+    params:
+    
+    """
+    import pickle
+    import bz2
+    import os
+    from sklearn.externals import joblib
+    import numpy as np
+    from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
+    import modelEvaluation as me
+    import sys
+
+
+    import numpy as np
+    import tflearn
+    #import cv_fold
+    print cv_split_filename
+    X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
+        cv_split_filename, mmap_mode='c')
+
+    # get the indices in the validation sample
+    sig_idx = y_validation == 1
+    bkg_idx = y_validation == 0
+    # get the indices in the training sample
+    sig_tr_idx = y_train == 1
+    bkg_tr_idx = y_train == 0
+
+    net = tflearn.input_data(shape=[None, 6])
+    net = tflearn.fully_connected(net, 32)
+    net = tflearn.fully_connected(net, 32)
+    net = tflearn.fully_connected(net, 2, activation='softmax')
+    net = tflearn.regression(net)
+
+    
+    #if weighted:
+        #model.fit(X_train, y_train, w_train)
+    #else:
+    #    model.fit(X_train, y_train)
+
+    model = tflearn.DNN(net)
+    # Start training (apply gradient descent algorithm)
+    #acc = tflearn.Accuracy()
+    model.fit(X_train, y_train, validation_set=(X_validation, y_validation), n_epoch=10, batch_size=16, show_metric=True)
+
+    # we want to do this for both the validation sample AND the full sample so that we
+    # can compare it with the cut-based tagger.
+    if weighted:
+        w_test = w_validation
+    else:
+        w_test = None
+    
+    validation_score = model.score(X_validation, y_validation)#, sample_weight=w_test)
+    prob_predict_valid = model.predict(X_validation)[:,1]
+    fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid, sample_weight=w_test)
+
+        
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=df, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    m.setProbas(prob_predict_valid, sig_idx, bkg_idx, w_validation)
+    # set all of the scores
+    y_val_pred = model.predict(X_validation)
+    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation, sample_weight=w_test), -1, -1, -1)
+    y_train_pred = model.predict(X_train)
+    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight = w_train), -1, -1, -1 )
+)
+    # create the output root file for this.
+    m.toROOT()
+    # score to return
+    roc_bkg_rej = m.getRejPower()
+    # calculate the training score as well
+    prob_predict_train = model.predict(X_train)[:,1]
+    bkg_rej_train = m.calculateBkgRej(prob_predict_train, sig_tr_idx, bkg_tr_idx, w_train)
+    m.setTrainRejection(bkg_rej_train)
+
+    # save the model for later
+    f_name = 'evaluationObjects/'+job_id+'.pbz2'
+    try:
+        with bz2.BZ2File(f_name,'w') as d:
+            pickle.dump(m, d)
+            d.close()
+    except:
+        msg = 'unable to dump '+job_id+ ' object'
+        with bz2.BZ2File(f_name,'w') as d:
+            pickle.dump(msg, d)
+
+    
+    # do this for the full dataset
+    # try reading in the memmap file
+    # the easiest way to find the name of the file is to take the cv_split_filename
+    # and then search backwards to find an underscore. The number between this underscore
+    # and the file extension, pkl, should be 100 for this file. It is written this
+    # way in the persist_cv_ method in this file.
+    if full_dataset == '':
+        underscore_idx = cv_split_filename.rfind('_')
+        if underscore_idx == -1:
+            print 'could not locate the full dataset'
+            # return the rejection on the validation set anyway
+            return roc_bkg_rej
+        file_full = cv_split_filename[:underscore_idx+1]+'100.pkl'
+    else:
+        file_full = full_dataset
+    # check that this file exists
+    if not os.path.isfile(file_full):
+        print 'could not locate the full dataset'
+        return roc_bkg_rej
+
+    try:
+        df = model.decision_function(X_train)
+    except AttributeError:
+        df = []
+
+    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', df, sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+        
+    return roc_bkg_rej#bkgrej#validation_score
+
+
+
+
 def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True, transform_weights=False, transform_valid_weights=False, weight_validation=False):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
@@ -713,71 +834,10 @@ def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_data
         compute_evaluation(cv_split_filename, model, params, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
         #plotSamples(cv_split_filename, trainvars)
         return
-'''        
-def runTestForest():
-    from sklearn.ensemble import RandomForestClassifier
-    feat_labels = df_wine.columns[1:]
-    forest = RandomForestClassifier(n_estimators=10000,random_state=0,n_jobs=-1)
-    forest.fit(X_train, y_train)
-    importances = forest.feature_importances_
-    indices = np.argsort(importances)[::-1]
-    for f in range(X_train.shape[1]):
-        print("%2d) %-*s %f" % (f + 1, 30, feat_labels[f],importances[indices[f]]))
 
-    # plot it
-    plt.title('Feature Importances')
-    plt.bar(range(X_train.shape[1]),
-            importances[indices],
-            color='lightblue',
-            align='center')
-    plt.xticks(range(X_train.shape[1]),
-               feat_labels, rotation=90)
-    plt.xlim([-1, X_train.shape[1]])
-    plt.tight_layout()
-    plt.show()
-        
-def runTestRegression():
-    from sklearn.linear_model import LogisticRegression
-    LogisticRegression(penalty='l1')
-    lr = LogisticRegression(penalty='l1', C=0.1)
-    lr.fit(X_train_std, y_train)
-    print('Training accuracy:', lr.score(X_train_std, y_train))
-
-    print('Test accuracy:', lr.score(X_test_std, y_test))
-    print lr.intercept_
-    print lr.coef_
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = plt.subplot(111)
-    colors = ['blue', 'green', 'red', 'cyan',
-              'magenta', 'yellow', 'black',
-              'pink', 'lightgreen', 'lightblue',
-              'gray', 'indigo', 'orange']
-    weights, params = [], []
-    for c in np.arange(-4, 6):
-        lr = LogisticRegression(penalty='l1',
-                                C=10**c,
-                                random_state=0)
-        lr.fit(X_train_std, y_train)
-        weights.append(lr.coef_[1])
-        params.append(10**c)
-        weights = np.array(weights)
-        for column, color in zip(range(weights.shape[1]), colors):
-            plt.plot(params, weights[:, column],
-                     label=df_wine.columns[column+1],
-                     color=color)
-            plt.axhline(0, color='black', linestyle='--', linewidth=3)
-            plt.xlim([10**(-5), 10**5])
-            plt.ylabel('weight coefficient')
-            plt.xlabel('C')
-            plt.xscale('log')
-            plt.legend(loc='upper left')
-            ax.legend(loc='upper center',
-                      bbox_to_anchor=(1.38, 1.03),
-                      ncol=1, fancybox=True)
-            plt.show()
-
-'''    
+def runTFlowTest(cv_split_filename, trainvars, algo, label = 'test', full_dataset=''):
+    label+='TFlow'
+    compute_tflow(cv_split_filename, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset)
     
 def main(args):
     '''
@@ -836,56 +896,23 @@ def main(args):
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.1]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[71],'learning_rate':[0.2]},
               {'base_estimator':[DecisionTreeClassifier(max_depth=3)],'n_estimators':[80],'learning_rate':[0.3]}]
-    
-    # best performing parameteres for jz5_v2 WITH weighting the validation samples
-
-    params = [{'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.3]},
-              {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[80],'learning_rate':[0.2]},
-              {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[45],'learning_rate':[0.2]},
-              {'base_estimator':[DecisionTreeClassifier(max_depth=4)],'n_estimators':[71],'learning_rate':[0.2]},
-              {'base_estimator':[DecisionTreeClassifier(max_depth=5)],'n_estimators':[62],'learning_rate':[0.1]}]
-    '''
-    #{'n_estimators': 20, 'base_estimator': DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=5,
-    #            max_features=None, max_leaf_nodes=None, min_samples_leaf=1,
-    #            min_samples_split=2, min_weight_fraction_leaf=0.0,
-    #            random_state=None, splitter='best'), 'learning_rate': 0.70000000000000007} param id: 269
-
-    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_matchedM_loose_v2_200_1000_mw'
-    #algorithm = ''
-    #algorithm = 'AntiKt10LCTopoTrimmedPtFrac5SmallR20_13tev_mc15_notcleaned_v1_200_1000_mw'
-
-    # these were used for dc14
-    #allvars = ['Aplanarity','ThrustMin','Sphericity','Tau21','ThrustMaj','EEC_C2_1','EEC_C2_2','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','Tau2','EEC_D2_2','PlanarFlow']# features v1
-    #trainvars = ['EEC_C2_1','EEC_C2_2','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2'] # features_l_2_10_v2
-
+    '''    
     # these are for the mc15 samples
     #allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow']# features v1
     # now adding nTracks!
     allvars = ['Aplanarity','ThrustMin','Sphericity','ThrustMaj','EEC_C2_1','Dip12','SPLIT12','TauWTA2TauWTA1','EEC_D2_1','YFilt','Mu12','TauWTA2','ZCUT12','PlanarFlow']#, 'nTracks']# features v1
-    # trainvars for mc15 200-1000 AK10
-    #trainvars = ['EEC_C2_1','SPLIT12','Aplanarity','EEC_D2_1','TauWTA2']
-    # trainvars for mc15 1000-1500 AK10
-    #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow']
-    # train vars for mc15_jz5_v1
-    #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','ZCUT12','Aplanarity']
 
     
     # if we are running the bdt (or other classifier) with all of the variables
     if args.allVars == True:
         trainvars = allvars
     else:
-        # trainvars for mc15_jz5_v2
-        #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Sphericity','Aplanarity']
         # now adding nTracks!
         trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow','Aplanarity']#, 'nTracks']
         # seeing if removing sphericity and aplanarity will help.  Looking at the distributions there is probably too much overlap.
         # the peaks overlap, but bkg has a long tail.
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow', 'Sphericity', 'nTracks']
         
-    print trainvars
-    #key = 'mc15_v1_2_10_v6'
-    #key = 'mc15_nc_v1_2_10_v1'
-
     compress = True
     file_type = 'pbz2' # .pickle or .pbz2
 
