@@ -58,10 +58,8 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X[train])
             X_test_scaled = scaler.transform(X[test])
-            #fold = cv_fold.cv_fold(X_train_scaled, y[train], w[train], X_test_scaled, y[test], w[test])
             fold = (X_train_scaled, y[train], w[train], X_test_scaled, y[test], w[test])
         else:
-            #fold = cv_fold.cv_fold(X[train], y[train], w[train], X[test], y[test], w[test])
             fold = (X[train], y[train], w[train], X[test], y[test], w[test])
 
         joblib.dump(fold, cv_split_filename)
@@ -222,13 +220,7 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', samplet
         tmp_valid = np.zeros((X_validation.shape[0], X_validation.shape[1]+1))
         tmp_valid[:,:-1] = X_validation
         tmp_valid[:,X_validation.shape[1]] = y_validation
-        #print tmp.shape
-        #np.append(X_train, y_train.transpose(), axis =1)
-        #print type(X_train_app['f0'])
-        #
-        #print X_train_app['f0'].dtype.names
-        #X_validation_app = nf.append_fields(X_validation, names=['label'], data = [y_validation], usemask=False)
-        #np.append(X_validation, y_validation, axis =1)
+
         # get the covariance matrix for training data
         print cv
         
@@ -237,16 +229,6 @@ def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', samplet
         corr_valid = np.corrcoef(tmp_valid, rowvar=0)
         drawMatrix(key, corr_valid, "Correlation Matrix for validation data cv split "+str(cv), taggers, matrix_size, file_id='valid_'+str(cv)+key, sampletype = sampletype)
         
-    # load the full dataset
-    '''
-    X,y,w,eff = joblib.load(full_dataset,mmap_mode='c')
-    X_full_app = nf.append_fields(X, names=['label'], data = [y], usemask=False)
-    corr_full = np.corrcoef(X_full_app, rowvar=0)
-    matrix_size = len(taggers)
-    print taggers
-    drawMatrix(key, corr_full, "Correlation Matrix for full dataset", taggers, matrix_size, file_id="full", sampletype =sampletype)
-    '''
-    # get the covariance matrix for the 
 
 
 def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger = False, weight_plots = False):
@@ -418,7 +400,7 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.close(fig)
 
 
-def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weight_validation, job_id, df_train, sig_tr_idx, bkg_tr_idx, bkg_rej_train, df_weights=None):
+def evaluateFull(model, model_eval_obj, file_full, weight_validation, job_id, df_train=[], sig_tr_idx=[], bkg_tr_idx=[], bkg_rej_train=0.0, df_weights=None, bdt=True):
     import os
     from sklearn.externals import joblib
     import numpy as np
@@ -431,27 +413,27 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
     #print X_full.shape
     print efficiencies
-    if transform_valid_weights and weight_validation:
-        for idx in xrange(0, w_full.shape[0]):
-            if y_full[idx] == 1:
-                w_full[idx] = 1.0
-            else:
-                w_full[idx] = np.arctan(1./w_full[idx])
     if not weight_validation:
         w_full_tmp = None
     else:
         w_full_tmp = w_full
-    full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
-    prob_predict_full = model.predict_proba(X_full)[:,1]
+    if bdt:
+        full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
+        prob_predict_full = model.predict_proba(X_full)[:,1]
+    else:
+        y_full = np.reshape(y_full, (-1,1))
+        full_score = model.evaluate(X_full, y_full)
+        prob_predict_full = model.predict(X_full)[:,1]
+
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight=w_full_tmp)
     # need to set the maximum efficiencies for signal and bkg
-    m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, model_eval_obj.params, job_id, model_eval_obj.taggers, model_eval_obj.Algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=df_train, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    if bdt:
+        m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, model_eval_obj.params, job_id, model_eval_obj.taggers, model_eval_obj.Algorithm, full_score, file_full,feature_importances=model.feature_importances_, decision_function=df_train, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    else:
+        m_full = me.modelEvaluation(fpr_full, tpr_full, thresh_full, model, model_eval_obj.params, job_id, model_eval_obj.taggers, model_eval_obj.Algorithm, full_score, file_full)
     m_full.setSigEff(efficiencies[0])
     m_full.setBkgEff(efficiencies[1])
 
-    if df_weights is not None:
-        m_full.setDFWeights(df_weights)
-    
     # get the indices in the full sample
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
@@ -459,14 +441,14 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
     m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full_tmp)
     # set the different scoresx
     y_pred_full = model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp), precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
+    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp),precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
     m_full.setScores('train',accuracy=model_eval_obj.train_accuracy, precision=model_eval_obj.train_precision, recall=model_eval_obj.train_recall, f1=model_eval_obj.train_f1)
     # write this into a root file
     m_full.toROOT()
     # save the train score
     m_full.setTrainRejection(bkg_rej_train)
-    m_full.plotDecisionFunction()
-
+    if bdt:
+        m_full.plotDecisionFunction()
 
     # save the model to use later.
 
@@ -484,7 +466,7 @@ def evaluateFull(model, model_eval_obj, file_full, transform_valid_weights, weig
         d.close()
         #print 'unable to dump '+job_id+ '_full object:', sys.exc_info()[0]
         
-def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True, transform_weights=True, transform_valid_weights=False, weight_validation=False):
+def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='', weight_validation=False):
     """Function executed by a worker to evaluate a model on a CV split
 
     Usage:
@@ -522,22 +504,6 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     # set up array with the scaling factors
     sig_count = (1/float(np.count_nonzero(sig_tr_idx)))
     bkg_count = (1/float(np.count_nonzero(bkg_tr_idx)))
-    #w_train = w_train*tot_scaling
-    # the weight transformation was very successful on the dnn, so I'm going to try it here too
-    # implementation of the weight transform done on the 6th of Nov 2015.
-    # copied from the create_folds.py file in the WTaggingNN setup
-    if transform_weights:
-        for idx in xrange(0, w_train.shape[0]):
-            if y_train[idx] == 1:
-                w_train[idx] = 1.0
-            else:
-                w_train[idx] = np.arctan(1./w_train[idx])
-    if transform_valid_weights:# and weight_validation:
-        for idx in xrange(0, w_validation.shape[0]):
-            if y_validation[idx] == 1:
-                w_validation[idx] = 1.0
-            else:
-                w_validation[idx] = np.arctan(1./w_validation[idx])
 
     if weighted:
         model.fit(X_train, y_train, w_train)
@@ -615,14 +581,14 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
         df = model.decision_function(X_train)
     except AttributeError:
         df = []
-    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', df, sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+    evaluateFull(model,m, file_full, weight_validation, job_id+'_full', df, sig_tr_idx, bkg_tr_idx, bkg_rej_train)
         
     return roc_bkg_rej#bkgrej#validation_score
 
 
 
 
-def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset='',compress=True):
+def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, algorithm='', full_dataset=''):
     """Function executed by a worker to evaluate a model on a CV split
 
     Usage:
@@ -655,22 +621,38 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
     sig_tr_idx = y_train == 1
     bkg_tr_idx = y_train == 0
 
+
+    params = OrderedDict([
+        ('layer1',[32]),
+        ('layer2',[32]),
+        ('activation',['softmax'])
+        ])
+    
     net = tflearn.input_data(shape=[None, 6])
     net = tflearn.fully_connected(net, 32)
     net = tflearn.fully_connected(net, 32)
     net = tflearn.fully_connected(net, 2, activation='softmax')
     net = tflearn.regression(net)
-
-    
-    #if weighted:
-        #model.fit(X_train, y_train, w_train)
-    #else:
-    #    model.fit(X_train, y_train)
-
+    print X_train.shape
+    print y_train.shape
+    print y_train
+    y_train_blah = np.empty([y_train.shape[0], 2])
+    for y, yy in enumerate( y_train):
+        y_train_blah[y][0] = float(yy)
+        y_train_blah[y][1] = float( not yy)
+    y_validation_blah = np.empty([y_validation.shape[0], 2])
+    for y, yy in enumerate( y_validation):
+        y_validation_blah[y][0] = float(yy)
+        y_validation_blah[y][1] = float( not yy)
+    #y_train = np.reshape(y_train,(-1,1))
+    print type(y_train_blah[0][0])
+    print np.where(y_train_blah > 0)
+    #raw_input()
+    #y_validation = np.reshape(y_validation, (-1,1))
     model = tflearn.DNN(net)
     # Start training (apply gradient descent algorithm)
     #acc = tflearn.Accuracy()
-    model.fit(X_train, y_train, validation_set=(X_validation, y_validation), n_epoch=10, batch_size=16, show_metric=True)
+    model.fit(X_train, y_train_blah, validation_set=(X_validation, y_validation_blah), n_epoch=1, batch_size=16, show_metric=True)
 
     # we want to do this for both the validation sample AND the full sample so that we
     # can compare it with the cut-based tagger.
@@ -679,19 +661,25 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
     else:
         w_test = None
     
-    validation_score = model.score(X_validation, y_validation)#, sample_weight=w_test)
-    prob_predict_valid = model.predict(X_validation)[:,1]
+    validation_score = model.evaluate(X_validation, y_validation_blah)#, sample_weight=w_test)
+    prob_predict_valid = model.predict(X_validation)
+    #print prob_predict_valid
+    #print len(prob_predict_valid)
+    prob_predict_valid = np.transpose(prob_predict_valid)[1]
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid, sample_weight=w_test)
 
         
-    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=df, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
+    m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx, w_validation)
     # set all of the scores
     y_val_pred = model.predict(X_validation)
-    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation, sample_weight=w_test), -1, -1, -1)
+    y_val_pred = np.transpose(y_val_pred)[1]
+    
+    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation, sample_weight=w_test))#, -1, -1, -1)
     y_train_pred = model.predict(X_train)
-    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight = w_train), -1, -1, -1 )
-)
+    y_train_pred = np.transpose(y_train_pred)[1]
+    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight = w_train))#, -1, -1, -1 )
+
     # create the output root file for this.
     m.toROOT()
     # score to return
@@ -733,19 +721,14 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
         print 'could not locate the full dataset'
         return roc_bkg_rej
 
-    try:
-        df = model.decision_function(X_train)
-    except AttributeError:
-        df = []
-
-    evaluateFull(model,m, file_full, transform_valid_weights, weight_validation, job_id+'_full', df, sig_tr_idx, bkg_tr_idx, bkg_rej_train)
+    #evaluateFull(model, m, file_full, job_id+'_full', bkg_rej_train=bkg_rej_train,bdt=False)
         
     return roc_bkg_rej#bkgrej#validation_score
 
 
 
 
-def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='', compress=True, transform_weights=False, transform_valid_weights=False, weight_validation=False):
+def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo, id_tag = 'cv', weighted=True, full_dataset='',  weight_validation=False):
     """Launch all grid search evaluation tasks."""
     from sklearn.grid_search import ParameterGrid
     all_tasks = []
@@ -756,7 +739,7 @@ def grid_search(lb_view, model, cv_split_filenames, param_grid, variables, algo,
        
         for j, cv_split_filename in enumerate(cv_split_filenames):    
             t = lb_view.apply(
-                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, compress=compress, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
+                compute_evaluation, cv_split_filename, model, params, job_id='paramID_'+str(i)+id_tag+'ID_'+str(j), taggers=variables, weighted=weighted,algorithm=algo, full_dataset=full_dataset, weight_validation=weight_validation)
             task_for_params.append(t) 
         
         all_tasks.append(task_for_params)
@@ -810,7 +793,7 @@ def printProgress(tasks):
 
 
 
-def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', transform_weights=False, transform_valid_weights=False, weight_validation=False, rfc = False):
+def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_dataset='', weight_validation=False, rfc = False):
     
     from sklearn.ensemble import RandomForestClassifier
     base_estimators = [DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#min_weight_fraction_leaf=0.0
@@ -831,7 +814,7 @@ def runTest(cv_split_filename, model, trainvars, algo, label = 'test', full_data
     all_parameters = list(ParameterGrid(params))
     
     for i, params in enumerate(all_parameters):
-        compute_evaluation(cv_split_filename, model, params, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset, transform_weights=transform_weights, transform_valid_weights=transform_valid_weights, weight_validation=weight_validation)
+        compute_evaluation(cv_split_filename, model, params, job_id = label, taggers = trainvars, weighted=True, algorithm=algo, full_dataset=full_dataset, weight_validation=weight_validation)
         #plotSamples(cv_split_filename, trainvars)
         return
 
@@ -851,6 +834,7 @@ def main(args):
     parser.add_argument('--plotCorrMatrix', dest='plotCorrMatrix',action='store_true', help = 'Plot the correlation matrix. Usually set the fileid parameter at the same time as this.')
     parser.add_argument('--createFoldsOnly', dest='createFoldsOnly',action='store_true', help = 'Create the cv splits only, without running any computation.')
     parser.add_argument('--runTestCase', type=bool, default=False, help = 'Run a test of the BDT with the current set of variables. Useful for checking the setup is correct and for getting the feature_importances for a single run.')
+    parser.add_argument('--runTestTFlow', type=bool, default=False, help = 'Run a test of the BDT with the current set of variables. Useful for checking the setup is correct and for getting the feature_importances for a single run.')
     parser.add_argument('--test-id', dest='testid', default = 'test', help = 'The name of the output files from the test run (default: test)')
     parser.add_argument('--allVars', dest='allVars',action='store_true', help = 'Use all of the variables. This is useful at the beginning when it is not yet clear which variables should be used for training.')
     parser.add_argument('--plotCV', dest='plotCV', action='store_true', help = 'Plot the cv splits and get stats about the variables in the cv splits.')
@@ -859,13 +843,9 @@ def main(args):
     parser.add_argument('--folds', type=int, default=10, help = 'Number of cv folds to create.')
     # should be using a subparser here, but whatever.
     parser.add_argument('--onlyFull', dest='onlyFull',action='store_true', help = 'If creating folds should only the full dataset be done or not?')
-    parser.add_argument('--transform-weights', dest='txweights',action='store_true', help = "if weights must be transformed")
-    parser.add_argument('--transform-valid-weights', dest='txvalweights',action='store_true', help = "if validation weights must be transformed")
     parser.add_argument('--weight-validation', dest='weightval',action='store_true', help = "if weights must be applied during validation and testing")
     parser.add_argument('--no-weight-train', dest='weighted',action='store_false', help = "Turn off weighting for training.")
     parser.add_argument('--RFC', dest='rfc', action='store_true', help = 'If running RandomTreesClassifier for the testing.')
-    parser.set_defaults(txweights=False)
-    parser.set_defaults(txvalweights=False)
     parser.set_defaults(weightval=False)
     parser.set_defaults(weighted=True)
     parser.set_defaults(plotCV=False)
@@ -878,8 +858,6 @@ def main(args):
     print 'allVars: ' + str(args.allVars)
     model = AdaBoostClassifier()
 
-    #base_estimators = [DecisionTreeClassifier(max_depth=3,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=4,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto"), DecisionTreeClassifier(max_depth=5,min_weight_fraction_leaf=0.01,class_weight="auto",max_features="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
-    #base_estimators = [DecisionTreeClassifier(max_depth=3,class_weight="auto"), DecisionTreeClassifier(max_depth=4,class_weight="auto"), DecisionTreeClassifier(max_depth=5,class_weight="auto")]#, DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     
     base_estimators = [DecisionTreeClassifier(max_depth=3), DecisionTreeClassifier(max_depth=4), DecisionTreeClassifier(max_depth=5), DecisionTreeClassifier(max_depth=6), DecisionTreeClassifier(max_depth=8), DecisionTreeClassifier(max_depth=10),DecisionTreeClassifier(max_depth=15)]
     
@@ -913,7 +891,6 @@ def main(args):
         # the peaks overlap, but bkg has a long tail.
         #trainvars = ['EEC_C2_1','SPLIT12','EEC_D2_1','TauWTA2TauWTA1','PlanarFlow', 'Sphericity', 'nTracks']
         
-    compress = True
     file_type = 'pbz2' # .pickle or .pbz2
 
     trainvars_iterations = [trainvars]
@@ -950,7 +927,7 @@ def main(args):
             combined_stats.write('\n')
 
 
-    if not (args.createFoldsOnly or args.plotCorrMatrix or args.runTestCase or args.runMVA):
+    if not (args.createFoldsOnly or args.plotCorrMatrix or args.runTestCase or args.runMVA or args.runTestTFlow):
         sys.exit()
         
     import pandas as pd
@@ -986,8 +963,15 @@ def main(args):
         if args.testSample.find('DEFAULT') != -1:
             args.testSample = args.testSample.replace('DEFAULT',args.key)
         print trainvars
-        runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval, rfc = args.rfc)
-
+        runTest(args.testSample, model, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset, weight_validation=args.weightval, rfc = args.rfc)
+    if args.runTestTFlow:
+        #testSample = 'persist/data_mc15_v1_2_10_v6_000.pkl'
+        if args.testid == 'test' and args.fileid != '':
+            args.testid = args.fileid
+        if args.testSample.find('DEFAULT') != -1:
+            args.testSample = args.testSample.replace('DEFAULT',args.key)
+        print trainvars
+        runTFlowTest(args.testSample, trainvars, args.algorithm, label=args.testid, full_dataset=full_dataset)
     if not args.runMVA:
         sys.exit(0)
         
@@ -1005,7 +989,7 @@ def main(args):
     for t in trainvars_iterations:
         filenames = cross_validation(data, model, params, args.folds, t, ovwrite=False, ovwrite_full=False, suffix_tag=args.key, scale=False)
         allparms, alltasks = grid_search(
-            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=args.weighted, full_dataset=full_dataset,compress=compress, transform_weights=args.txweights, transform_valid_weights = args.txvalweights, weight_validation=args.weightval)
+            lb_view, model, filenames, params, t, args.algorithm, id_tag=args.key, weighted=args.weighted, full_dataset=full_dataset, weight_validation=args.weightval)
 
 
         prog = printProgress(alltasks)
