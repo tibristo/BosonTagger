@@ -400,17 +400,39 @@ def plotSamples(cv_split_filename, full_dataset, taggers, key = '', first_tagger
         plt.close(fig)
 
 
-def evaluateFull(model, model_eval_obj, file_full, weight_validation, job_id, df_train=[], sig_tr_idx=[], bkg_tr_idx=[], bkg_rej_train=0.0, df_weights=None, bdt=True):
+def evaluateFull(model, model_eval_obj, file_full, weight_validation, job_id, df_train=[], sig_tr_idx=[], bkg_tr_idx=[], bkg_rej_train=0.0, df_weights=None, bdt=True, scaler=None, autoencoder=None):
     import os
     from sklearn.externals import joblib
     import numpy as np
     from sklearn.metrics import roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
     import modelEvaluation as me
     import sys
-
     import numpy as np
+    import tensorflow as tf
+    taggers = model_eval_obj.taggers
+
+    def input_fn(x,y, w):
+        print x[:,0]
+        cols = {t: tf.constant(x[:,i],dtype=tf.float64,name=t) for i,t in enumerate(taggers)}
+        colsw = {'weight' : tf.constant(w)}
+        feature_cols = dict(cols.items()+colsw.items())
+        print feature_cols.keys()
+        print feature_cols['Aplanarity']
+        y_tr = tf.constant(y,dtype=tf.float32)
+        return feature_cols,y_tr
+
+    
     #print file_full
     X_full, y_full, w_full, efficiencies = joblib.load(file_full, mmap_mode='c')
+
+    if scaler is not None:
+        X_full = scaler.transform(X_full)
+    if autoencoder is not None:
+        X_full = autoencoder.transform(X_full)
+
+    def full_input_fn():
+        return input_fn(X_full, y_full, w_full)
+    
     #print X_full.shape
     print efficiencies
     if not weight_validation:
@@ -421,10 +443,10 @@ def evaluateFull(model, model_eval_obj, file_full, weight_validation, job_id, df
         full_score = model.score(X_full, y_full, sample_weight=w_full_tmp)
         prob_predict_full = model.predict_proba(X_full)[:,1]
     else:
-        y_full = np.reshape(y_full, (-1,1))
-        full_score = model.evaluate(X_full, y_full)
-        prob_predict_full = model.predict(X_full)[:,1]
-
+        #y_full = np.reshape(y_full, (-1,1))
+        full_score = accuracy_score(y_full, model.predict(input_fn=full_input_fn), sample_weight=w_full)
+        prob_predict_full = model.predict_proba(input_fn=full_input_fn)[:,1]
+    print prob_predict_full.shape
     fpr_full, tpr_full, thresh_full = roc_curve(y_full, prob_predict_full, sample_weight=w_full_tmp)
     # need to set the maximum efficiencies for signal and bkg
     if bdt:
@@ -438,10 +460,10 @@ def evaluateFull(model, model_eval_obj, file_full, weight_validation, job_id, df
     sig_full_idx = y_full == 1
     bkg_full_idx = y_full == 0
     # set the probabilities and the true indices of the signal and background
-    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full_tmp)
+    m_full.setProbas(prob_predict_full, sig_full_idx, bkg_full_idx, w_full)
     # set the different scoresx
-    y_pred_full = model.predict(X_full)
-    m_full.setScores('test',accuracy=accuracy_score(y_pred_full, y_full, sample_weight=w_full_tmp),precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
+    #y_pred_full = model.predict_proba()
+    m_full.setScores('test',accuracy=full_score,precision=-1,recall=-1,f1=-1)#precision=precision_score(y_pred_full, y_full, sample_weight=w_full_tmp), recall=recall_score(y_pred_full, y_full, sample_weight=w_full_tmp), f1=f1_score(y_pred_full, y_full, sample_weight=w_full_tmp))
     m_full.setScores('train',accuracy=model_eval_obj.train_accuracy, precision=model_eval_obj.train_precision, recall=model_eval_obj.train_recall, f1=model_eval_obj.train_f1)
     # write this into a root file
     m_full.toROOT()
@@ -608,12 +630,30 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
 
 
     import numpy as np
-    import tflearn
+    #import tflearn as tf
+    import tensorflow as tf
+    import tensorflow.contrib.learn as skflow
     #import cv_fold
     print cv_split_filename
     X_train, y_train, w_train, X_validation, y_validation, w_validation = joblib.load(
         cv_split_filename, mmap_mode='c')
 
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_validation = scaler.transform(X_validation)
+    autoencoder = None
+    #autoencoder = skflow.TensorFlowDNNAutoencoder(hidden_units=[10, 20, 10])
+    #X_train = autoencoder.fit_transform(X_train)
+    #X_validation = autoencoder.transform(X_validation)
+
+    def input_fn(x,y, w):
+        cols = {t: tf.constant(x[:,i],dtype=tf.float64,name=t) for i,t in enumerate(taggers)}
+        colsw = {'weight' : tf.constant(w)}
+        feature_cols = dict(cols.items()+colsw.items())
+        y_tr = tf.constant(y,dtype=tf.float64)
+        return feature_cols,y_tr
+    
     # get the indices in the validation sample
     sig_idx = y_validation == 1
     bkg_idx = y_validation == 0
@@ -621,18 +661,20 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
     sig_tr_idx = y_train == 1
     bkg_tr_idx = y_train == 0
 
-
+    
     params = OrderedDict([
         ('layer1',[32]),
         ('layer2',[32]),
         ('activation',['softmax'])
         ])
     
+    '''
     net = tflearn.input_data(shape=[None, 6])
     net = tflearn.fully_connected(net, 32)
     net = tflearn.fully_connected(net, 32)
     net = tflearn.fully_connected(net, 2, activation='softmax')
-    net = tflearn.regression(net)
+    net = tflearn.logistic_regression(net)
+    
     print X_train.shape
     print y_train.shape
     print y_train
@@ -647,12 +689,36 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
     #y_train = np.reshape(y_train,(-1,1))
     print type(y_train_blah[0][0])
     print np.where(y_train_blah > 0)
+    '''
     #raw_input()
     #y_validation = np.reshape(y_validation, (-1,1))
-    model = tflearn.DNN(net)
+    #model = tflearn.DNN(net)
+
+    def my_model(X, y):
+        """This is DNN with 10, 20, 10 hidden layers, and dropout of 0.5 probability."""
+        layers = skflow.ops.dnn(X, [10, 32, 10])
+        return skflow.models.logistic_regression(layers, y, class_weight=[0.8,0.2])
+
+    print taggers
+    c2  = tf.contrib.layers.real_valued_column('EEC_C2_1')
+    d2  = tf.contrib.layers.real_valued_column('EEC_D2_1')
+    split12  = tf.contrib.layers.real_valued_column('SPLIT12')
+    t21  = tf.contrib.layers.real_valued_column('TauWTA2TauWTA1')
+    pf  = tf.contrib.layers.real_valued_column('PlanarFlow')
+    ap  = tf.contrib.layers.real_valued_column('Aplanarity')
+    
+    model = skflow.DNNClassifier(hidden_units=[10, 40, 40, 10], n_classes=2, weight_column_name='weight', feature_columns=[c2,split12,d2,t21,pf,ap], optimizer='SGD')#, dropout=0.5) #activation_fn=tf.nn.tanh, 
+    #model = skflow.TensorFlowEstimator(model_fn=my_model, n_classes=2)#skflow.TensorFlowDNNClassifier(hidden_units=[10, 20, 10], n_classes=2)
+    
     # Start training (apply gradient descent algorithm)
     #acc = tflearn.Accuracy()
-    model.fit(X_train, y_train_blah, validation_set=(X_validation, y_validation_blah), n_epoch=1, batch_size=16, show_metric=True)
+    #print X_train.keys()
+    def train_input_fn():
+        return input_fn(X_train,y_train, w_train)
+    def validation_input_fn():
+        return input_fn(X_validation, y_validation, w_validation)
+
+    model.fit(input_fn=train_input_fn, steps = 1000)#, validation_set=(X_validation, y_validation_blah), n_epoch=1, batch_size=16, show_metric=True)
 
     # we want to do this for both the validation sample AND the full sample so that we
     # can compare it with the cut-based tagger.
@@ -661,32 +727,30 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
     else:
         w_test = None
     
-    validation_score = model.evaluate(X_validation, y_validation_blah)#, sample_weight=w_test)
-    prob_predict_valid = model.predict(X_validation)
-    #print prob_predict_valid
-    #print len(prob_predict_valid)
-    prob_predict_valid = np.transpose(prob_predict_valid)[1]
+    #validation_score = model.evaluate(X_validation, y_validation_blah)#, sample_weight=w_test)
+    validation_score = accuracy_score(y_validation, model.predict(input_fn=validation_input_fn), sample_weight=w_test)
+    prob_predict_valid = model.predict_proba(input_fn=validation_input_fn)[:,1]
     fpr, tpr, thresholds = roc_curve(y_validation, prob_predict_valid, sample_weight=w_test)
 
-        
+    print validation_score
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename)
     m.setProbas(prob_predict_valid, sig_idx, bkg_idx, w_validation)
-    # set all of the scores
-    y_val_pred = model.predict(X_validation)
-    y_val_pred = np.transpose(y_val_pred)[1]
     
-    m.setScores('test',accuracy=accuracy_score(y_val_pred, y_validation, sample_weight=w_test))#, -1, -1, -1)
-    y_train_pred = model.predict(X_train)
-    y_train_pred = np.transpose(y_train_pred)[1]
-    m.setScores('train',accuracy=accuracy_score(y_train_pred, y_train, sample_weight = w_train))#, -1, -1, -1 )
+    m.setScores('test',accuracy=validation_score)#, -1, -1, -1)
+    y_train_pred = model.predict(input_fn=train_input_fn)
+    train_accuracy = accuracy_score(y_train, y_train_pred, sample_weight=w_train)
+
+    m.setScores('train',accuracy=train_accuracy)#, -1, -1, -1 )
 
     # create the output root file for this.
     m.toROOT()
     # score to return
     roc_bkg_rej = m.getRejPower()
+    print roc_bkg_rej
     # calculate the training score as well
-    prob_predict_train = model.predict(X_train)[:,1]
+    prob_predict_train = model.predict_proba(input_fn=train_input_fn)[:,1]
     bkg_rej_train = m.calculateBkgRej(prob_predict_train, sig_tr_idx, bkg_tr_idx, w_train)
+    print bkg_rej_train
     m.setTrainRejection(bkg_rej_train)
 
     # save the model for later
@@ -721,7 +785,7 @@ def compute_tflow(cv_split_filename, job_id = '', taggers = [], weighted=True, a
         print 'could not locate the full dataset'
         return roc_bkg_rej
 
-    #evaluateFull(model, m, file_full, job_id+'_full', bkg_rej_train=bkg_rej_train,bdt=False)
+    evaluateFull(model, m, file_full, True, job_id+'_full', bkg_rej_train=bkg_rej_train,bdt=False, scaler=scaler, autoencoder=autoencoder)
         
     return roc_bkg_rej#bkgrej#validation_score
 

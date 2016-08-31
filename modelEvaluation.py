@@ -246,6 +246,9 @@ class modelEvaluation:
 
         # fill the signal and background histograms
         if weights is not None:
+            print len(discriminant), len(weights), len(bkg_idx)
+            print discriminant[bkg_idx]
+            print weights[bkg_idx]
             fill_hist(hist_bkg,discriminant[bkg_idx], weights[bkg_idx])
             fill_hist(hist_sig,discriminant[signal_idx], weights[signal_idx])
         else:
