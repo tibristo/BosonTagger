@@ -31,8 +31,6 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
     import numpy.lib.recfunctions as nf
     #cv = StratifiedKFold(y,n_cv_iter)
     cv = StratifiedShuffleSplit(y, n_cv_iter, test_size = test_size)#KFold(y,n_cv_iter)
-    #cv = ShuffleSplit(X.shape[0], n_iter=n_cv_iter,
-    #    test_size=test_size, random_state=random_state)
     cv_split_filenames = []
 
     # persist the original files as well.
@@ -58,10 +56,8 @@ def persist_cv_splits(X, y, w, variables, n_cv_iter=5, name='data', prefix='pers
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X[train])
             X_test_scaled = scaler.transform(X[test])
-            #fold = cv_fold.cv_fold(X_train_scaled, y[train], w[train], X_test_scaled, y[test], w[test])
             fold = (X_train_scaled, y[train], w[train], X_test_scaled, y[test], w[test])
         else:
-            #fold = cv_fold.cv_fold(X[train], y[train], w[train], X[test], y[test], w[test])
             fold = (X[train], y[train], w[train], X[test], y[test], w[test])
 
         joblib.dump(fold, cv_split_filename)
@@ -93,6 +89,8 @@ def round_sigfigs(num, sig_figs):
 def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', drawATLAS = False, sampletype = 'combined'):
     import ROOT
     ROOT.gROOT.SetBatch(1)
+    orig_label_size = ROOT.gStyle.GetLabelSize()
+    ROOT.gStyle.SetLabelSize(orig_label_size*1.6,"XY")
     #ROOT.gStyle.SetPaintTextFormat("4.1f")
     corr_hist = ROOT.TH2F(title,title,matrix_size, 1, matrix_size+1, matrix_size, 1, matrix_size+1)
     # we can set the labels of the covariance matrices from label_dict
@@ -109,8 +107,9 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
         # only want to draw the top diagonal!
         for col in range(len(corr_matrix)): # col = x
             # also, axis in corr_matrix is 0->n down the y axis, but n+1->1 in corr_hist
+            #print corr_matrix[row][col]
             if col < row +1:
-                corr_hist.SetBinContent(col+1, row+1, round_sigfigs(corr_matrix[row][col], 3))
+                corr_hist.SetBinContent(col+1, row+1, round_sigfigs(corr_matrix[row][col], 2))
             else:
                 corr_hist.SetBinContent(col+1, row+1, -1.1)
     # create the canvas and set up the latex and legends
@@ -122,9 +121,10 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
     ROOT.gPad.SetBottomMargin(0.10)
     ROOT.gPad.SetLeftMargin(0.1)
     ROOT.gPad.SetRightMargin(0.15)
+
     corr_hist.SetTitle("")
     corr_hist.SetStats(0)
-    corr_hist.SetMarkerSize(0.7)
+    corr_hist.SetMarkerSize(1.2)
     corr_hist.Draw("TEXTCOLZ")
     corr_hist.GetZaxis().SetTitle('Linear Correlation')
     corr_hist.GetZaxis().SetRangeUser(-1.0,1.0)
@@ -182,7 +182,7 @@ def drawMatrix(key, corr_matrix, title, taggers, matrix_size, file_id = '', draw
         p.DrawLatex(0.68,0.91,"Simulation Work in Progress");#"Internal Simulation");
     # check that the matrix folder exists, if not, create it
     tc.SaveAs("corr_matrices/corr_matrix_"+file_id+'_'+sampletype+".pdf")
-
+    ROOT.gStyle.SetLabelSize(orig_label_size,"XY")
 
 
 def plotCorrelation(cv_split_filenames, full_dataset, taggers, key = '', sampletype='combined'):
@@ -562,6 +562,8 @@ def compute_evaluation(cv_split_filename, model, params, job_id = '', taggers = 
     try:
         df = model.decision_function(X_train)
     except AttributeError:
+        print 'no decision function'
+        print model
         df = []
         
     m = me.modelEvaluation(fpr, tpr, thresholds, model, params, job_id, taggers, algorithm, validation_score, cv_split_filename, feature_importances=model.feature_importances_, decision_function=df, decision_function_sig = sig_tr_idx, decision_function_bkg = bkg_tr_idx)
@@ -927,19 +929,21 @@ def main(args):
         sys.exit()
         
     import pandas as pd
-    sampletype = 'merged'
+    sampletype = 'bkg'
     #data = pd.read_csv('csv/'+args.algorithm+'_merged.csv')
     data = pd.read_csv('csv/'+args.algorithm+'_'+sampletype+'.csv')
 
     if args.plotCorrMatrix:
         filenames = [f for f in os.listdir('persist/') if f.find(args.key) != -1 and f.find('100.')==-1 and f.endswith('pkl')]
-        plotCorrelation(filenames, full_dataset, allvars, key=args.key)
+        #plotCorrelation(filenames, full_dataset, allvars, key=args.key)
         # full
-        if 'label' in allvars:
-            tags = allvars
-        else:
-            tags = allvars+['label']
+
+        #if 'label' in allvars:
+        tags = allvars
+        #else:
+        #    tags = allvars+['label']
         X = data[tags].values
+        print tags
         #_app = data
         corr_matrix = np.corrcoef(X, rowvar=0)
         drawMatrix(args.key, corr_matrix, "Correlation Matrix for full dataset", tags, len(tags), file_id= args.fileid, sampletype = sampletype)#"full_allvars_mc15")

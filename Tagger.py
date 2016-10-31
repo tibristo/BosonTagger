@@ -924,7 +924,7 @@ def main(args):
 
     # default branches to be plotted
     #branches = ['mc_event_weight', 'jet_CamKt12Truth_pt', 'jet_CamKt12Truth_eta']#, 'avgIntPerXing']
-    branches = ['mc_event_weight', 'jet_'+AlgorithmTruth+'_pt', 'jet_'+AlgorithmTruth+'_eta']#, 'avgIntPerXing']
+    branches = ['mc_event_weight']#, 'jet_'+AlgorithmTruth+'_pt', 'jet_'+AlgorithmTruth+'_eta']#, 'avgIntPerXing']
 
     # set up the full branch names for each variable
     if not plotTruth:

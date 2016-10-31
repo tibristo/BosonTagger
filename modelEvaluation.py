@@ -27,6 +27,7 @@ class modelEvaluation:
         self.ROC_rej_power_05_train = -1
         self.signal_train_events = -1
         self.bkg_train_events = -1
+        self.df_weights = None
 
     def setNumberTrainEvents(self, signal=-1, background=-1):
         self.signal_train_events = signal
